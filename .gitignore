@@ -41,6 +41,9 @@ bin/
 /nbproject/load-path.rc
 /nbproject/genfiles.properties
 
+### VS Code ###
+.vscode/
+docker-compose.yml
 ### Logs y archivos temporales del sistema ###
 *.log
 *.tmp
