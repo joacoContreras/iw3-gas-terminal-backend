@@ -9,18 +9,18 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
-@Configuration
-@EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@Configuration // Modifica el comportamiento de spring
+@EnableWebSecurity // Habilita
+@EnableMethodSecurity(prePostEnabled = true) // Cada endpoint pueda tenre seguridad pre (autenticacion) y post (filtre resultados)
 public class SecurityConfiguration {
-    @Bean
+    @Bean // Lo hace candidato de instanciacion
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // CORS: https://developer.mozilla.org/es/docs/Web/HTTP/CORS
         // CSRF: https://developer.mozilla.org/es/docs/Glossary/CSRF
         http.cors(CorsConfigurer::disable);
         http.csrf(AbstractHttpConfigurer::disable);
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/**").permitAll()
+                .requestMatchers("/**").permitAll() // deshabilitar seguridad
                 .anyRequest().authenticated());
         return http.build();
     }

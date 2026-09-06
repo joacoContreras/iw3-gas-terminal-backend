@@ -1,5 +1,8 @@
 package ar.edu.iua.iw3.controllers;
 
+import java.util.Collections;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,6 +28,7 @@ public class ProductRestController extends BaseRestController {
     @GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> list() {
         try {
+            Map<String, Object> responseMap = Collections.singletonMap("products", productBusiness.list());
             return new ResponseEntity<>(productBusiness.list(), HttpStatus.OK);
         } catch (BusinessException e) {
             return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
