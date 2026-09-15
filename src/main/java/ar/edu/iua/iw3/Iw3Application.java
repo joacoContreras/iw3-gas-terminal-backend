@@ -1,6 +1,7 @@
 package ar.edu.iua.iw3;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -19,6 +20,10 @@ public class Iw3Application implements CommandLineRunner {
 
 	@Autowired
 	private IProductBusiness productService;
+
+	@Value("${spring.profiles.active:default}")
+	private String profile;
+
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -46,6 +51,8 @@ public class Iw3Application implements CommandLineRunner {
 	// 	log.debug(productService.load(1).toString());
 	// 	log.debug(productService.load("Arroz").toString());
 	// 	log.debug(productService.load("Leche").toString());
+
+		log.info("Perfil Activo {}", profile);
 	}
 
 }

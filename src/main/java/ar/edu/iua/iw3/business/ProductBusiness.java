@@ -6,34 +6,36 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.FoundException;
+import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Product;
 import ar.edu.iua.iw3.model.persistence.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
 
-@Service // Este es el candidato a instanciar cuando alguien quiera algo de tipo IProductBusiness
-@Slf4j // Sistema de log para java
+@Service
+@Slf4j
 public class ProductBusiness implements IProductBusiness {
 
-    // IOC
+    // IoC
     @Autowired
     private ProductRepository productDAO;
-    
+
     @Override
     public List<Product> list() throws BusinessException {
         try {
-            // TODO Auto-generated method stub
             return productDAO.findAll();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
     }
-    
+
     @Override
-    public Product load(long id) throws NotFoundException, BusinessException {
+    public Product load(Long id) throws NotFoundException, BusinessException {
+        if (id == null) {
+            throw NotFoundException.builder().message("No se encuentra el Producto id=null").build();
+        }
         Optional<Product> r;
         try {
             r = productDAO.findById(id);
@@ -42,9 +44,9 @@ public class ProductBusiness implements IProductBusiness {
             throw BusinessException.builder().ex(e).build();
         }
         if (r.isEmpty()) {
-            throw NotFoundException.builder().message("No se encuentra el Producto de id=" + id).build();
+            throw NotFoundException.builder().message("No se encuentra el Producto id=" + id).build();
         }
-        return r.get(); // Devuelve un optional, que puede tener un Product dentro
+        return r.get();
     }
 
     @Override
@@ -56,10 +58,11 @@ public class ProductBusiness implements IProductBusiness {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
-        if(r.isEmpty()) {
+        if (r.isEmpty()) {
             throw NotFoundException.builder().message("No se encuentra el Producto '" + product + "'").build();
         }
         return r.get();
+
     }
 
     @Override
@@ -81,9 +84,8 @@ public class ProductBusiness implements IProductBusiness {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
-
     }
-    
+
     @Override
     public Product update(Product product) throws NotFoundException, BusinessException {
         load(product.getId());
@@ -93,7 +95,6 @@ public class ProductBusiness implements IProductBusiness {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
         }
-
     }
 
     @Override

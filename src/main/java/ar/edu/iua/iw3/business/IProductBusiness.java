@@ -11,7 +11,7 @@ import ar.edu.iua.iw3.model.Product;
 public interface IProductBusiness {
     public List<Product> list() throws BusinessException;
 
-    public Product load(long id) throws NotFoundException, BusinessException;
+    public Product load(Long id) throws NotFoundException, BusinessException;
 
     public Product load(String product) throws NotFoundException, BusinessException;
 
@@ -20,5 +20,4 @@ public interface IProductBusiness {
     public Product update(Product product) throws NotFoundException, BusinessException;
 
     public void delete(long id) throws NotFoundException, BusinessException;
-
 }
