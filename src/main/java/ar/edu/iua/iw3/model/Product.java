@@ -21,7 +21,7 @@ public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // Marca el atributo id como PK auto-incremental
-    private long id;
+    private Long id;
 
     @Column(length = 100, unique = true)
     private String product;
