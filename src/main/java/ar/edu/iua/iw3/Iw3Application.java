@@ -5,13 +5,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import ar.edu.iua.iw3.business.IProductBusiness;
 import ar.edu.iua.iw3.model.Product;
 import lombok.extern.slf4j.Slf4j;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = { "ar.edu.iua.iw3", "integration" })
+@EntityScan(basePackages = { "ar.edu.iua.iw3.model", "integration.cli1.model", "integration.cli2.model" })
+@EnableJpaRepositories(basePackages = { "ar.edu.iua.iw3.model.persistence", "integration.cli1.model.persistence",
+		"integration.cli2.model.persistence" })
 @Slf4j
 public class Iw3Application extends SpringBootServletInitializer implements CommandLineRunner {
 
