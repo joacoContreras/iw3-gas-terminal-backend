@@ -1,4 +1,4 @@
-package integration.cli2.model;
+package ar.edu.iua.iw3.integration.cli2.model;
 
 import java.io.Serializable;
 

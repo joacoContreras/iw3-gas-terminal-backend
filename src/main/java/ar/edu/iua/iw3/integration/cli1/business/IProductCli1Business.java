@@ -1,11 +1,11 @@
-package integration.cli1.business;
+package ar.edu.iua.iw3.integration.cli1.business;
 
 import java.util.List;
 
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
-import integration.cli1.model.ProductCli1;
+import ar.edu.iua.iw3.integration.cli1.model.ProductCli1;
 
 public interface IProductCli1Business {
 

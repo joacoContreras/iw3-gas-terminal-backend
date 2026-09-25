@@ -1,4 +1,4 @@
-package integration.cli2.controllers;
+package ar.edu.iua.iw3.integration.cli2.controllers;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
+import ar.edu.iua.iw3.integration.cli2.model.business.IProductCli2Business;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
-import integration.cli2.model.business.IProductCli2Business;
 
 @RestController
 @RequestMapping(Constants.URL_INTEGRATION_CLI2 + "/products")

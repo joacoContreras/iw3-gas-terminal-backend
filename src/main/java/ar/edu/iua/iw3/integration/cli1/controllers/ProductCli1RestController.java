@@ -1,4 +1,4 @@
-package integration.cli1.controllers;
+package ar.edu.iua.iw3.integration.cli1.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
@@ -18,9 +18,9 @@ import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
+import ar.edu.iua.iw3.integration.cli1.business.IProductCli1Business;
+import ar.edu.iua.iw3.integration.cli1.model.ProductCli1;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
-import integration.cli1.business.IProductCli1Business;
-import integration.cli1.model.ProductCli1;
 
 @RestController
 @RequestMapping(Constants.URL_INTEGRATION_CLI1 + "/products")

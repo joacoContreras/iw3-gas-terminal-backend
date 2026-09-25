@@ -1,4 +1,4 @@
-package integration.cli1.model;
+package ar.edu.iua.iw3.integration.cli1.model;
 
 import ar.edu.iua.iw3.model.Product;
 import jakarta.persistence.Column;
