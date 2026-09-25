@@ -1,7 +1,5 @@
 package ar.edu.iua.iw3.model;
 
-import java.security.Identity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -19,11 +17,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-
 public class Category {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(length = 100, unique = true)

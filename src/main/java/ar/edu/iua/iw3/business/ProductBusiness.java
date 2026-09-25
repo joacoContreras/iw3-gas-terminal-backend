@@ -3,7 +3,6 @@ package ar.edu.iua.iw3.business;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import ar.edu.iua.iw3.business.exception.BusinessException;
@@ -17,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ProductBusiness implements IProductBusiness {
 
-    // IoC
-    @Autowired
     private ProductRepository productDAO;
 
     @Override
