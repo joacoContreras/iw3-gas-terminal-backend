@@ -11,12 +11,10 @@ public class NotFoundException extends Exception {
         super(message, ex);
     }
 
-    @Builder
     public NotFoundException(String message) {
         super(message);
     }
 
-    @Builder
     public NotFoundException(Throwable ex) {
         super(ex);
     }

@@ -5,12 +5,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BusinessException extends Exception{
 
-    @Builder
     public BusinessException(String message) {
         super(message);
     }
 
-    @Builder
     public BusinessException(Throwable ex) {
         super(ex);
     }
@@ -19,5 +17,4 @@ public class BusinessException extends Exception{
     public BusinessException(String message, Throwable ex) {
         super(message, ex);
     }
-    
 }
