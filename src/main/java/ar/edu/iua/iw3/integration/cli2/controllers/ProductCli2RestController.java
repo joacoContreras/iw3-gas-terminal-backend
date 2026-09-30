@@ -6,10 +6,13 @@ import java.util.Date;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,8 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
+import ar.edu.iua.iw3.integration.cli2.model.ProductCli2;
+import ar.edu.iua.iw3.integration.cli2.model.ProductCli2SlimV1JsonSerializer;
 import ar.edu.iua.iw3.integration.cli2.model.business.IProductCli2Business;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
+import ar.edu.iua.iw3.util.JsonUtiles;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ser.std.StdSerializer;
 
 @RestController
 @RequestMapping(Constants.URL_INTEGRATION_CLI2 + "/products")
@@ -32,18 +40,39 @@ public class ProductCli2RestController extends BaseRestController {
 
     @GetMapping(value = "/list-expired", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> listExpired(
-            @RequestParam(name = "since", required = false, defaultValue = "1970-01-01 00:00:00") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date since) {
+            @RequestParam(name = "since", required = false, defaultValue = "1970-01-01 00:00:00") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date since,
+            @RequestParam(name = "slim", required = false, defaultValue = "v0") String slimVersion) {
         try {
             Calendar c = Calendar.getInstance();
             c.setTime(since);
             if (c.get(Calendar.YEAR) == 1970) {
                 since = new Date();
             }
-            return new ResponseEntity<>(productBusiness.listExpired(since), HttpStatus.OK);
-        } catch (BusinessException e) {
+            StdSerializer<ProductCli2> ser = null;
+            if (slimVersion.equalsIgnoreCase("v1")) {
+                ser = new ProductCli2SlimV1JsonSerializer(ProductCli2.class);
+            } else {
+                return new ResponseEntity<>(productBusiness.listExpired(since), HttpStatus.OK);
+            }
+            String result = JsonUtiles.getObjectMapper(ProductCli2.class, ser, null)
+                    .writeValueAsString(productBusiness.listExpired(since));
+            return new ResponseEntity<>(result, HttpStatus.OK);
+        } catch (BusinessException | JacksonException e) {
             return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+    @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> add(@RequestBody ProductCli2 product) {
+        try {
+            ProductCli2 res = productBusiness.add(product);
+            HttpHeaders responseHeaders = new HttpHeaders();
+            responseHeaders.set("location", Constants.URL_INTEGRATION_CLI2 + "/products/" + res.getId());
+            return new ResponseEntity<>(responseHeaders, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+    }
 }

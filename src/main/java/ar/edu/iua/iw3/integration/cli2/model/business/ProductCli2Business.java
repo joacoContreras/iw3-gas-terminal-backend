@@ -28,4 +28,14 @@ public class ProductCli2Business implements IProductCli2Business {
         }
     }
 
+    @Override
+    public ProductCli2 add(ProductCli2 product) throws BusinessException {
+        try {
+            return productDAO.save(product);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw BusinessException.builder().ex(e).build();
+        }
+    }
+
 }
