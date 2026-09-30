@@ -9,5 +9,6 @@ import ar.edu.iua.iw3.integration.cli2.model.ProductCli2;
 
 public interface IProductCli2Business {
     public List<ProductCli2> listExpired(Date date) throws BusinessException;
-
+    public ProductCli2 add(ProductCli2 product) throws BusinessException;
+    
 }
