@@ -1,6 +1,17 @@
 # IW3 - Proyecto Spring Boot
 
 Proyecto universitario / práctico desarrollado con Java, Spring Boot y MySQL.
+Liquid Gas Terminal API (Backend)
+
+Servicio backend encargado del núcleo transaccional y la lógica de negocio para la administración integral de órdenes de carga de gas líquido. Diseñado bajo arquitectura REST desacoplada y preparado para operar en entornos contenerizados.
+
+### Responsabilidades principales:
+* **Integración externa:** Sincronización e ingesta de órdenes de carga desde sistemas externos (SAP) y balanzas de planta (TMS - Terminal Manager System)[cite: 1, 2].
+* **Control de acceso y carga:** Generación y validación de contraseñas de activación de 5 dígitos para habilitar el bombeo y entrega de producto según el preset configurado[cite: 2].
+* **Telemetría en tiempo real:** Recepción, validación y almacenamiento periódico de variables críticas del caudalímetro másico (masa acumulada, caudal, densidad y temperatura)[cite: 2].
+* **Conciliación automática:** Cálculo de diferencias volumétricas/másicas entre balanza y caudalímetro al registrarse el pesaje final (tara vs. pesaje final vs. masa acumulada)[cite: 4].
+* **Seguridad y auditoría:** Control de acceso mediante roles, registro de transiciones de estados (1 a 4) y despacho de alertas automáticas por exceso de temperatura[cite: 7, 9].
+* **Documentación técnica:** Especificación completa de endpoints con OpenAPI / Swagger[cite: 8].
 
 ---
 
