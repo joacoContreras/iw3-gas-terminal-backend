@@ -14,4 +14,6 @@ public interface IProductCli1Business {
 	public List<ProductCli1> list() throws BusinessException;
 
 	public ProductCli1 add(ProductCli1 product) throws FoundException, BusinessException;
+
+	public ProductCli1 addExternal(String json) throws FoundException, BusinessException;
 }
