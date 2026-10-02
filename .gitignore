@@ -56,3 +56,4 @@ Thumbs.db
 ### Archivos de configuración local y credenciales (Recomendado) ###
 application-local.properties
 application-local.yml
+deploy.sh
