@@ -6,7 +6,7 @@ public interface ProductCli2SlimView {
 
     Long getId();
     String getProduct();
-    Double getPrecio();
+    Double getPrice();
 
     Category getCategory();
     interface Category {

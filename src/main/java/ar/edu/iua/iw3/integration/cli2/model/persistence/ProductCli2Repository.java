@@ -12,5 +12,5 @@ import ar.edu.iua.iw3.integration.cli2.model.ProductCli2SlimView;
 @Repository
 public interface ProductCli2Repository extends JpaRepository<ProductCli2, Long> {
     public List<ProductCli2> findByExpirationDateBeforeOrderByExpirationDateDesc(Date expirationDate);
-    public List<ProductCli2SlimView> findByOrderByPrecioDesc();
+    public List<ProductCli2SlimView> findByOrderByPriceDesc();
 }

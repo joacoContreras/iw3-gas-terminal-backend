@@ -42,7 +42,7 @@ public class ProductCli2Business implements IProductCli2Business {
     @Override
     public List<ProductCli2SlimView> listSlim() throws BusinessException {
         try {
-            return productDAO.findByOrderByPrecioDesc();
+            return productDAO.findByOrderByPriceDesc();
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw BusinessException.builder().ex(e).build();
