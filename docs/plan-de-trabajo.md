@@ -44,6 +44,10 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 7 | Distinguir "activada" de "tara registrada" | Se agrega el campo `activationDateTime` a la orden. | Fase 3 |
 | 8 | Densidad | Se valida literal según la consigna: `0 < densidad < 1`. | Fase 3 |
 | 9 | Git | Una rama por fase; commits atómicos por funcionalidad, de no más de 100 líneas. | Todas |
+| 10 | Renombrar el contenedor del compose a `iw3-gas-mysql` (hallazgo H-4) | **Pendiente.** Recomendado. | Fase 1 |
+| 11 | Permitir `/error` y corregir el `produces` del login (H-1 y H-2, en un mismo cambio) | **Pendiente.** Recomendado. | Fase 1 |
+| 12 | Incorporar `getUserLogged()` en `BaseRestController` (H-10) | **Pendiente.** Recomendado. | Fase 1 |
+| 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | **Pendiente.** | Antes de la Fase 1 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
