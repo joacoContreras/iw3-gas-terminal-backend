@@ -38,7 +38,7 @@ docker compose up -d
 *(o `docker-compose up -d` en versiones anteriores de Docker)*
 
 ### 2. Ver Estado del Contenedor
-Verifica si el contenedor `iw3-mysql` está corriendo y saludable:
+Verifica si el contenedor `iw3-gas-mysql` está corriendo y saludable:
 ```bash
 docker compose ps
 ```
@@ -63,7 +63,7 @@ docker compose down -v
 
 ### 6. Acceder a la Consola MySQL dentro del Contenedor
 ```bash
-docker exec -it iw3-mysql mysql -u root -proot iw3_db
+docker exec -it iw3-gas-mysql mysql -u root -proot iw3_db
 ```
 
 ---
