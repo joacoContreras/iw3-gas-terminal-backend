@@ -120,3 +120,17 @@ Una fase termina cuando: la funcionalidad está implementada y probada; se respe
 metodología de la cátedra; los archivos y funciones están documentados; el recorrido de los
 datos está explicado; la guía tiene al menos diez preguntas con respuesta; las limitaciones
 están registradas y los criterios de aceptación fueron verificados.
+
+## 8. Notas técnicas verificadas
+
+Comprobadas ejecutando sobre una copia del commit de `main` (14/10/2026).
+
+- **Paquete de excepciones.** El TP usa `ar.edu.iua.iw3.business.exception`; la cátedra
+  conserva la errata `...business.execption`. Los archivos de la clase 9 (`EmailBusiness`,
+  `Scheduler`, `MailRestController`) importan `execption`: copiados tal cual al TP fallan con
+  `package ar.edu.iua.iw3.business.execption does not exist`. Al incorporarlos hay que
+  cambiar ese import.
+- **Base de datos inalcanzable en producción.** Con el perfil `mysqlprod` y un host de base
+  que no resuelve, la aplicación termina en unos 15 s con código de salida 1, tras consumir
+  unos 33 s de CPU. Con reinicio automático del contenedor eso es un bucle de arranques que
+  mantiene la CPU alta. Con la base accesible, la CPU en reposo es de 0 %.
