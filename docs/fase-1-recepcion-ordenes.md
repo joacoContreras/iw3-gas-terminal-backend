@@ -95,3 +95,56 @@ También aplica las decisiones aprobadas: retiro del demo (1), contenedor `iw3-g
 | `src/test/.../datasets` | 1 (`add_postman.csv`) |
 
 Los archivos retirados siguen en el historial de git (rama `main`, commit `c3b62de`).
+
+## 4. Recorrido de la petición `POST /api/v1/integration/sap/orders`
+
+| Paso | Componente | Qué hace |
+|---|---|---|
+| 1 | `JWTAuthorizationFilter.doFilterInternal` | Valida el JWT y deja el usuario en el `SecurityContextHolder` |
+| 2 | `SecurityConfiguration` (`anyRequest().authenticated()`) | Sin token válido responde 401 |
+| 3 | `DispatcherServlet` + Jackson | Convierte el JSON en `Order` (con `Truck`, `Driver`, `Customer`, `Product`). JSON ilegible: 400. `Content-Type` ajeno: 415 |
+| 4 | `OrderSapRestController.add` | Obtiene el usuario con `getUserLogged()` y llama al negocio |
+| 5 | `OrderValidator.validate` | Junta todos los errores de entrada; si hay, `BadRequestException` |
+| 6 | `OrderBusiness.findByNumber` | Si el número ya existe, `FoundException` |
+| 7 | `OrderBusiness.syncTruck/Driver/Customer/Product` | Busca por `externalCode`, actualiza o crea, y guarda |
+| 8 | `OrderRepository.save` | `INSERT` en `orders` con estado 1 y fecha de recepción |
+| 9 | `OrderBusiness.logStatus` | `INSERT` en `order_status_logs` (de `null` a 1, con el actor) |
+| 10 | `OrderSapRestController.add` | Responde 201 con `location: /api/v1/orders/{orderNumber}`, sin cuerpo |
+
+Los pasos 5 a 9 ocurren en una sola transacción. Ante `FoundException` o `BadRequestException`
+no se escribió nada; ante cualquier otra falla se revierte todo.
+
+## 5. Funciones y métodos relevantes
+
+**`OrderSapRestController.add`** — `SRC/integration/sap/controllers/OrderSapRestController.java`
+
+- *Responsabilidad:* traducir la petición HTTP del sistema externo en una llamada al negocio y el resultado en un código HTTP.
+- *Recibe:* `@RequestBody Order order`. *Devuelve:* `ResponseEntity<?>`: 201 con `location`, o un `StandartResponse` de error.
+- *Usa:* `getUserLogged()` (de `BaseRestController`), `IOrderBusiness.add` e `IStandartResponseBusiness.build`.
+- *Errores:* `BadRequestException` → 400; `FoundException` → 302; `BusinessException` → 500.
+
+**`OrderBusiness.add`** — `SRC/business/OrderBusiness.java`
+
+- *Responsabilidad:* regla del Punto 1: validar, rechazar repetidos, sincronizar entidades, crear la orden en estado 1 y auditar.
+- *Recibe:* `Order order` y `String actor`. *Devuelve:* la `Order` persistida (con `id`, estado y fecha de recepción).
+- *Validaciones:* `OrderValidator.validate`; número de orden no repetido.
+- *Datos:* lee `orders` y las cuatro tablas externas; escribe en `trucks`, `truck_tanks`, `drivers`, `customers`, `gas_products`, `orders` y `order_status_logs`.
+- *Detalle:* crea una `Order` nueva y copia solo `orderNumber`, `plannedLoadDateTime`, `preset` y las entidades sincronizadas; `status` y `receptionDateTime` los fija el backend.
+- *Errores:* `BadRequestException`, `FoundException`, `BusinessException` (cualquier otra falla, con rollback).
+
+**`OrderValidator.validate`** — `SRC/business/OrderValidator.java`
+
+- *Responsabilidad:* revisar la orden recibida sin tocar la base.
+- *Recibe:* `Order`. *Devuelve:* `List<String>` con un mensaje por problema (vacía si es válida).
+- *Reglas:* `orderNumber > 0`; `plannedLoadDateTime` presente; `preset > 0`; camión con código y patente, al menos una cisterna con número y capacidad `> 0` y sin números repetidos; chofer con código, nombre y apellido; cliente con código y razón social; producto con código y nombre; largos acotados a la columna.
+
+**`OrderBusiness.syncTruck`** (y `syncDriver`, `syncCustomer`, `syncProduct`)
+
+- *Responsabilidad:* aplicar el código externo como clave de integración.
+- *Detalle:* `findByExternalCode(code.trim())`; si no existe crea una entidad nueva; copia los atributos del cliente (nunca su `id`) y guarda. En el camión compara el cisternado con `sameTanks` y lo reemplaza solo si cambió.
+
+**`OrderBusiness.logStatus`** — registra `OrderStatusLog(order, from, to, ahora, actor, observaciones)`; si el actor llega vacío usa `"sistema"`.
+
+**`OrderStatusConverter`** — `SRC/model/OrderStatusConverter.java`: `convertToDatabaseColumn` guarda el número 1–4 y `convertToEntityAttribute` lo vuelve a enum. Con `autoApply = true` rige para todo atributo `OrderStatus`.
+
+**`BaseRestController.getUserLogged`** — devuelve el `User` del `SecurityContextHolder` (el que arma `JWTAuthorizationFilter`) o `null`. De ahí sale el actor del log.
