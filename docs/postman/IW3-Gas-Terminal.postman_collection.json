@@ -204,6 +204,45 @@
             },
             "description": "Punto 1: sincroniza camión, chofer, cliente y producto y crea la orden en estado 1."
           }
+        },
+        {
+          "name": "Consultar la orden creada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 1 y datos recibidos', () => {",
+                  "  pm.expect(o.status).to.eql(1);",
+                  "  pm.expect(o.orderNumber).to.eql(Number(pm.collectionVariables.get('orderNumber')));",
+                  "  pm.expect(o.preset).to.eql(15000);",
+                  "  pm.expect(o.truck.externalCode).to.eql('TRK-001');",
+                  "  pm.expect(o.truck.tanks).to.have.lengthOf(2);",
+                  "});",
+                  "pm.test('la fecha de recepción la asigna el backend', () => pm.expect(o.receptionDateTime).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumber}}"
+              ]
+            }
+          }
         }
       ]
     }
