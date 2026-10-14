@@ -16,7 +16,5 @@ public interface ICategoryBusiness {
 
     public Category add(Category category) throws FoundException, BusinessException;
 
-    public Category update(Category category) throws NotFoundException, BusinessException;
 
-    public void delete(long id) throws NotFoundException, BusinessException;
 }

@@ -84,26 +84,4 @@ public class CategoryBusiness implements ICategoryBusiness {
             throw BusinessException.builder().ex(e).build();
         }
     }
-
-    @Override
-    public Category update(Category category) throws NotFoundException, BusinessException {
-        load(category.getId());
-        try {
-            return categoryDAO.save(category);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
-        }
-    }
-
-    @Override
-    public void delete(long id) throws NotFoundException, BusinessException {
-        load(id);
-        try {
-            categoryDAO.deleteById(id);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
-        }
-    }
 }
