@@ -600,3 +600,48 @@ el servidor no guarde sesión y cada pedido se autentique solo con su token.
 login, `CustomAuthenticationManager` llama a `PasswordEncoder.matches(plano, hash)`. Para
 sembrar el usuario de prueba generé el hash con `GET /demo/encodepass`, un endpoint de demo de
 la cátedra que hay que cerrar antes de desplegar.
+
+**8.** La capa de negocio lanza excepciones propias, todas *checked*: `NotFoundException`,
+`FoundException` y `BusinessException`. Cada método del controller las atrapa y arma la
+respuesta con `IStandartResponseBusiness.build(status, ex, message)`: `NotFoundException`
+→ 404, `FoundException` → 302 y `BusinessException` → 500. Ejemplo verificado:
+`GET /api/v1/products/999` devuelve 404 con
+`{"message": "No se encuentra el Producto id=999", "code": 404, ...}`.
+
+**9.** Porque es la convención de la cátedra: en todos los controllers `FoundException` se
+traduce a `HttpStatus.FOUND` (por ejemplo en `ProductRestController.add`). Reconozco que 302
+es semánticamente una redirección y que 409 Conflict describiría mejor un duplicado.
+Decidimos mantener la convención para ser coherentes con el material (decisión 4) y dejarlo
+documentado en Swagger. Verificado: el segundo `POST` del mismo producto devuelve 302 con el
+JSON de error.
+
+**10.** Con token válido devolvió 401 sin cuerpo, y eso no es correcto: debería ser 400.
+Spring sí detecta el error (`HttpMessageNotReadableException`, que
+`DefaultHandlerExceptionResolver` resuelve como 400), pero la respuesta se reenvía
+internamente a `/error` y esa ruta también pasa por la cadena de seguridad; como la sesión es
+STATELESS no hay contexto y `anyRequest().authenticated()` responde 401. Es el hallazgo H-1 y
+se corrige permitiendo `/error`, junto con H-2, en la Fase 1.
+
+**11.** Un perfil de Spring se activa con la propiedad `spring.profiles.active`: por la
+variable `SPRING_PROFILES_ACTIVE`, por `--spring.profiles.active=` o, con el plugin, con
+`-Dspring-boot.run.profiles=`. `-P` activa un perfil de *Maven*, que solo cambia propiedades
+del build (empaquetado, scope de Tomcat), y como `application.properties` no referencia
+`@spring.profiles.active@`, el valor nunca llega al runtime. Lo verifiqué en el log: con
+`-Pmysqldev` dice `Perfil activo default` y con `-Dspring-boot.run.profiles=cli1` dice `cli1`.
+
+**12.** Es el conjunto de resultados conocidos antes de cambiar nada. Acá son 18
+verificaciones (sección 5): compilar, `contextLoads`, login, token inválido, 404/201/302, etc.
+Después de cada fase repito los comandos de la sección 8.4 y comparo. Lo que cambia tiene que
+estar documentado y justificado, por ejemplo H-1, que pasa de 401 a 400 a propósito; lo que
+cambia sin estar documentado es una regresión.
+
+**13.** Para depender de un contrato y no de una clase concreta (inversión de dependencias, la
+D de SOLID). El controller inyecta `IProductBusiness` con `@Autowired` y Spring resuelve la
+implementación `ProductBusiness`. Así se puede cambiar o simular la implementación sin tocar a
+quien la usa. En el TP habrá `IOrderBusiness` y `OrderBusiness` con el mismo esquema.
+
+**14.** `User` tiene `@ManyToMany(fetch = EAGER) Set<Role> roles` con la tabla intermedia
+`userroles(id_user, id_role)`, así que los roles se cargan junto con el usuario.
+`getAuthorities()` los convierte en `GrantedAuthority` y `getAuthoritiesStr()` en la lista de
+nombres que va al claim `roles` del JWT. En cada pedido el filtro reconstruye las
+autoridades desde ese claim, sin consultar la base.
