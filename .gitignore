@@ -57,3 +57,7 @@ Thumbs.db
 application-local.properties
 application-local.yml
 deploy.sh
+### Herramienta de PDF (docs/pdf): paquetes de npm ###
+docs/pdf/node_modules/
+docs/pdf/package.json
+docs/pdf/package-lock.json

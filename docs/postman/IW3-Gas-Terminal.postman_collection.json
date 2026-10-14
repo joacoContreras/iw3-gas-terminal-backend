@@ -1,0 +1,513 @@
+{
+  "info": {
+    "name": "IW3 - Terminal de gas licuado",
+    "description": "Pruebas de la API del TP integrador. Ejecutar la carpeta 00 antes que las demás (guarda el token).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "username",
+      "value": "admin"
+    },
+    {
+      "key": "password",
+      "value": "admin123"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "orderNumber",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Autenticación",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve un JWT de tres partes', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                  "  pm.collectionVariables.set('token', t);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Obtiene el JWT y lo guarda en la variable token. Usuario de prueba: docs/sql/seed-dev-users.sql."
+          }
+        },
+        {
+          "name": "Login con contraseña incorrecta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));",
+                  "pm.test('el cuerpo es un StandartResponse', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.code).to.eql(401);",
+                  "  pm.expect(j.message).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "incorrecta"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Fase 1: recepción de la orden (SAP)",
+      "item": [
+        {
+          "name": "Crear orden",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumber', String(Date.now() % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumber');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumber}},\n  \"plannedLoadDateTime\": \"2026-10-20T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-001\", \"plate\": \"AB123CD\", \"description\": \"Cisterna GLP\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": { \"externalCode\": \"DRV-001\", \"name\": \"Juan\", \"lastName\": \"Perez\", \"document\": \"30111222\" },\n  \"customer\": { \"externalCode\": \"CUS-001\", \"companyName\": \"Gas del Sur SA\", \"contact\": \"compras@gasdelsur.example\" },\n  \"product\": { \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\" }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 1: sincroniza camión, chofer, cliente y producto y crea la orden en estado 1."
+          }
+        },
+        {
+          "name": "Consultar la orden creada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 1 y datos recibidos', () => {",
+                  "  pm.expect(o.status).to.eql(1);",
+                  "  pm.expect(o.orderNumber).to.eql(Number(pm.collectionVariables.get('orderNumber')));",
+                  "  pm.expect(o.preset).to.eql(15000);",
+                  "  pm.expect(o.truck.externalCode).to.eql('TRK-001');",
+                  "  pm.expect(o.truck.tanks).to.have.lengthOf(2);",
+                  "});",
+                  "pm.test('la fecha de recepción la asigna el backend', () => pm.expect(o.receptionDateTime).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumber}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Historial de estados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('un registro: creación en estado 1', () => {",
+                  "  pm.expect(log).to.have.lengthOf(1);",
+                  "  pm.expect(log[0].fromStatus).to.eql(null);",
+                  "  pm.expect(log[0].toStatus).to.eql(1);",
+                  "  pm.expect(log[0].actor).to.eql(pm.collectionVariables.get('username'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumber}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumber}}",
+                "status-log"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear la misma orden (duplicado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('duplicado: 302', () => pm.response.to.have.status(302));",
+                  "pm.test('mensaje de la orden repetida', () => pm.expect(pm.response.json().message).to.include('Se encontró la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumber}},\n  \"plannedLoadDateTime\": \"2026-10-20T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-001\", \"plate\": \"AB123CD\", \"description\": \"Cisterna GLP\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": { \"externalCode\": \"DRV-001\", \"name\": \"Juan\", \"lastName\": \"Perez\", \"document\": \"30111222\" },\n  \"customer\": { \"externalCode\": \"CUS-001\", \"companyName\": \"Gas del Sur SA\", \"contact\": \"compras@gasdelsur.example\" },\n  \"product\": { \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\" }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Convención de la cátedra: FoundException se traduce a 302."
+          },
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "Orden con datos inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('datos inválidos: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('informa los campos con error', () => {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.include('preset');",
+                  "  pm.expect(m).to.include('truck.plate');",
+                  "  pm.expect(m).to.include('driver es obligatorio');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"orderNumber\": 0, \"preset\": -1, \"truck\": { \"externalCode\": \"\", \"tanks\": [] } }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "JSON malformado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON malformado: 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"orderNumber\": ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumber}},\n  \"plannedLoadDateTime\": \"2026-10-20T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-001\", \"plate\": \"AB123CD\", \"description\": \"Cisterna GLP\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": { \"externalCode\": \"DRV-001\", \"name\": \"Juan\", \"lastName\": \"Perez\", \"document\": \"30111222\" },\n  \"customer\": { \"externalCode\": \"CUS-001\", \"companyName\": \"Gas del Sur SA\", \"contact\": \"compras@gasdelsur.example\" },\n  \"product\": { \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\" }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('inexistente: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje', () => pm.expect(pm.response.json().message).to.include('No se encuentra la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "999999999"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

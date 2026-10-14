@@ -1,49 +1,41 @@
 package ar.edu.iua.iw3.model;
 
-import org.hibernate.annotations.ManyToAny;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Producto a cargar (gas liquido). Llega desde el sistema externo identificado
+ * por su codigo externo.
+ * La tabla se llama gas_products porque en las bases creadas con el demo de la
+ * catedra ya existe una tabla "products" con otro esquema.
+ */
 @Entity
-@Table(name = "products")
-@Inheritance(strategy = InheritanceType.JOINED)
+@Table(name = "gas_products")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 public class Product {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Marca el atributo id como PK auto-incremental
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(length = 100, unique = true)
-    private String product;
+	@Column(length = 100, nullable = false, unique = true)
+	private String externalCode;
 
-    private double price;
+	@Column(nullable = false)
+	private String name;
 
-    @Column(columnDefinition = "tinyint default 1")
-    private boolean stock = true;
-
-    @ManyToOne
-    @JoinColumn(name="id_category", nullable = true)
-    private Category category;
-
-    @Override
-    public String toString() {
-        return String.format("id=%s product=%s  price=%s stock=%s", this.getId(), this.getProduct(), this.getPrice(), this.isStock());
-    }
+	/** Descripcion: opcional segun la consigna. */
+	@Column(length = 255)
+	private String description;
 }

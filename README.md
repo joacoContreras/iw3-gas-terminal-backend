@@ -38,7 +38,7 @@ docker compose up -d
 *(o `docker-compose up -d` en versiones anteriores de Docker)*
 
 ### 2. Ver Estado del Contenedor
-Verifica si el contenedor `iw3-mysql` está corriendo y saludable:
+Verifica si el contenedor `iw3-gas-mysql` está corriendo y saludable:
 ```bash
 docker compose ps
 ```
@@ -63,7 +63,7 @@ docker compose down -v
 
 ### 6. Acceder a la Consola MySQL dentro del Contenedor
 ```bash
-docker exec -it iw3-mysql mysql -u root -proot iw3_db
+docker exec -it iw3-gas-mysql mysql -u root -proot iw3_db
 ```
 
 ---
@@ -77,3 +77,19 @@ Una vez que la base de datos esté levantada:
 ```
 
 La aplicación se iniciará en `http://localhost:8080`.
+
+---
+
+## 📚 Documentación y pruebas
+
+* **Swagger UI:** `http://localhost:8080/swagger-ui.html` (JSON en `/v3/api-docs`).
+* **Colección Postman:** `docs/postman/IW3-Gas-Terminal.postman_collection.json`. Ejecutar primero la
+  carpeta `00 - Autenticación`; guarda el token.
+* **Usuario de prueba local:** `docs/sql/seed-dev-users.sql` (solo desarrollo).
+* **Plan y guías de estudio por fase:** carpeta `docs/`. Versiones en PDF en `docs/pdf/`.
+
+Para activar un perfil de Spring con el plugin de Maven (el `-P` de Maven no lo activa):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysqldev
+```
