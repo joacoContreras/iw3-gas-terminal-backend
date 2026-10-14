@@ -310,3 +310,73 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 | Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | Pendiente (final) |
 | Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` no están incorporados. Al copiarlos hay que cambiar `business.execption` por `business.exception` (el TP corrigió el nombre del paquete) | Pendiente (final) |
 
+## 11. Cómo ponerlo en marcha en tu carpeta
+
+El repo es **autocontenido**: no usa rutas absolutas ni depende de la carpeta de la cátedra.
+
+**Requisitos:** Git, **JDK 21**, Docker (Docker Desktop en Windows y macOS) y, de forma opcional, Node.js 18+
+para correr Postman por consola y regenerar los PDF. Maven no hace falta: se usa `mvnw`.
+
+```bash
+git clone https://github.com/joacoContreras/iw3-gas-terminal-backend.git
+cd iw3-gas-terminal-backend
+git checkout fase-1-recepcion-ordenes     # mientras no esté integrada a main
+docker compose up -d                      # MySQL 8.0: localhost:3306, base iw3_db, root/root (solo desarrollo)
+./mvnw spring-boot:run                    # Windows: mvnw.cmd spring-boot:run  ->  http://localhost:8080
+```
+
+**Usuario de prueba** (una vez, con la app ya iniciada para que Hibernate cree las tablas):
+
+```bash
+docker exec -i iw3-gas-mysql mysql -uroot -proot iw3_db < docs/sql/seed-dev-users.sql
+# PowerShell: Get-Content docs/sql/seed-dev-users.sql | docker exec -i iw3-gas-mysql mysql -uroot -proot iw3_db
+```
+
+**Comprobar que anda:**
+
+- `POST http://localhost:8080/api/v1/login` con `username=admin` y `password=admin123` devuelve un JWT.
+- Swagger: `http://localhost:8080/swagger-ui.html` (botón *Authorize* con el JWT).
+- Postman: importar `docs/postman/IW3-Gas-Terminal.postman_collection.json` y ejecutar primero la carpeta
+  `00 - Autenticación`. Por consola: `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json`.
+- Tests de Maven: `./mvnw test` (la base debe estar arriba).
+
+**Problemas frecuentes**
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `container name "/iw3-mysql" is already in use` | Tenés el contenedor de la cátedra (o un `main` viejo) | Usar esta rama: el contenedor del TP es `iw3-gas-mysql` |
+| `Communications link failure` o `Connection refused` al arrancar | MySQL no está arriba | Iniciar Docker, `docker compose up -d` y esperar ~20 s la primera vez |
+| `port is already allocated` (3306) | Otro MySQL local | Detenerlo, o cambiar el mapeo del compose y la URL de `application.properties` |
+| 401 en todo | Falta el usuario de prueba o el token | Correr el seed, loguearse y enviar `Authorization: Bearer <jwt>` |
+| `release version 21 not supported` | JDK menor a 21 | Instalar JDK 21 y revisar `JAVA_HOME` |
+| `Permission denied: ./mvnw` (Linux y macOS) | Falta el bit de ejecución | `chmod +x mvnw` |
+| El IDE no compila (Lombok) | Sin *annotation processing* | Activarlo en el IDE o compilar con `./mvnw` |
+| Dice "Perfil activo default" usando `-P` | El `-P` de Maven no activa perfiles de Spring | `-Dspring-boot.run.profiles=<perfil>` |
+| La base conserva columnas viejas | `ddl-auto=update` no borra | `docker compose down -v` y volver a levantar (borra también el seed) |
+
+**Con Claude Code:** abrir la terminal en la **raíz del repo** y ejecutar `claude`; este archivo se carga
+solo. Primer mensaje sugerido: *"Leé CLAUDE.md y docs/plan-de-trabajo.md y decime en qué fase estamos y
+qué falta"*. La memoria personal de Claude **no** se comparte entre integrantes: la fuente común es este
+archivo. Antes de seguir, `git pull`. Para trabajar en paralelo: una persona por fase y por rama, y no editar
+a la vez `CLAUDE.md` ni `docs/plan-de-trabajo.md`.
+
+## 12. Comandos útiles
+
+```bash
+./mvnw -B -DskipTests compile            # compilar
+./mvnw -B test                           # tests (necesita MySQL)
+./mvnw -B -DskipTests package            # genera target/ROOT.war (perfil war-build por defecto)
+java -jar target/ROOT.war --spring.profiles.active=mysqlprod   # como producción; usar SPRING_DATASOURCE_*
+docker exec iw3-gas-mysql mysql -uroot -proot iw3_db -e "SELECT order_number, status FROM orders;"
+docker compose down                      # detiene la base y conserva los datos
+```
+
+Limpiar los datos de prueba del dominio (no toca `users` ni `roles`):
+
+```sql
+SET FOREIGN_KEY_CHECKS=0;
+DELETE FROM order_status_logs; DELETE FROM orders; DELETE FROM truck_tanks; DELETE FROM trucks;
+DELETE FROM drivers; DELETE FROM customers; DELETE FROM gas_products;
+SET FOREIGN_KEY_CHECKS=1;
+```
+
