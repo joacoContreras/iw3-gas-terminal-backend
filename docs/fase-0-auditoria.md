@@ -291,7 +291,8 @@ Son las piezas que las fases siguientes reutilizan o imitan.
 | Tests con base H2 | Ningún perfil de test la configura; `contextLoads` usa MySQL |
 
 ### 8.2 Decisiones pendientes
-n> **Actualización (14/10/2026):** las decisiones 6, 10, 11, 12 y 13 ya están resueltas; ver `docs/plan-de-trabajo.md`.
+
+> **Actualización (14/10/2026):** las decisiones 6, 10, 11, 12 y 13 ya están resueltas; ver `docs/plan-de-trabajo.md`.
 > Esta tabla conserva el estado al cierre de la Fase 0.
 
 | # | Tema | Recomendación | Cuándo |
