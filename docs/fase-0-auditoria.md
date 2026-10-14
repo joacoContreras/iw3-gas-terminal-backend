@@ -528,3 +528,20 @@ Authorization: Bearer <JWT>
 ```
 
 `devInfo` lleva la traza solo con `dev.info.enabled=true` (H-5); en otro caso es `null`.
+
+## G. Preguntas posibles del profesor
+
+1. ¿Qué arquitectura tiene el backend y qué responsabilidad tiene cada capa?
+2. ¿Qué arranca la aplicación y por qué `Iw3Application` extiende `SpringBootServletInitializer`?
+3. ¿Cómo se conecta a la base de datos y quién crea las tablas?
+4. Explicá qué pasa desde que llega `POST /api/v1/login` hasta que se devuelve el token.
+5. ¿Cómo valida el backend el token en cada pedido y qué ocurre si es inválido o venció?
+6. ¿Dónde se define qué rutas son públicas? ¿Por qué STATELESS y CSRF desactivado?
+7. ¿Cómo se guardan y se comparan las contraseñas?
+8. ¿Cómo traduce el backend una excepción de negocio a un código HTTP? Dá un ejemplo.
+9. ¿Por qué un duplicado responde 302 y no 409?
+10. Si mando un JSON malformado con un token válido, ¿qué responde el sistema y es correcto?
+11. ¿Cómo se activa un perfil de Spring y por qué `-Pmysqldev` no lo activa?
+12. ¿Qué es una línea base y cómo comprobarías que un cambio no rompió lo existente?
+13. ¿Para qué sirve la interfaz `IProductBusiness` si hay una sola implementación?
+14. ¿Cómo se relacionan usuarios y roles en la base de datos y cómo llegan al token?
