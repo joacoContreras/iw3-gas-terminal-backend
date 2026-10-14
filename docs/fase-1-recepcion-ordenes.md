@@ -199,3 +199,36 @@ Con la propiedad, la base guarda la hora de Argentina en los seis escenarios.
 | Login con contraseña incorrecta | 401 sin cuerpo | 401 con `StandartResponse` |
 | `/api/v1/products` y `/categories` | 200 | 404 (retirados) |
 | Fechas en la base | UTC | Hora de Argentina |
+
+## 8. Hallazgos y limitaciones de la fase
+
+| ID | Hallazgo | Estado |
+|---|---|---|
+| N-1 | `OrderValidator.validate` no invocaba la validación de chofer, cliente y producto: al partir el commit se perdieron las tres llamadas. Lo detectó la prueba del 400 | Corregido (`fix(business)`) |
+| N-2 | Dos `POST` simultáneos con el mismo número de orden: uno viola la restricción única y responde 500 en lugar de 302 | Pendiente: se acepta para el parcial |
+| N-3 | `GET /api/v1/orders` devuelve todas las órdenes, sin paginación | Pendiente: a revisar con el frontend |
+| N-4 | Las tablas del demo (`products`, `categories`, `cli1_products`, `cli2_*`) siguen en las bases ya creadas; `ddl-auto=update` no borra | Inofensivo: el TP usa `gas_products` |
+| N-5 | Las respuestas de error pesan unos 15 KB porque `dev.info.enabled=true` incluye la traza (H-5) | Pendiente para la etapa de seguridad |
+| N-6 | La ejecución con newman usó `npx newman@6` (descarga a la caché de npm; no se agrega al proyecto) | Informativo |
+
+Sin cambios: H-5 (secretos, `/demo/**`, CORS abierto) y H-9 (desalineación del `pom.xml`, decisión 6).
+
+## 9. Pendientes y criterios de la fase
+
+| Pendiente | Cuándo |
+|---|---|
+| Código HTTP para "estado incorrecto" (propuesta: 409 o 400) | Fase 2 |
+| Roles por endpoint (SAP, TMS, sistema de carga) | Examen final |
+| Subir la rama y abrir la integración a `main` | Cuando se pida |
+| Desplegar en la VM: imagen nueva desde esta rama y variables `SPRING_DATASOURCE_*` | Por definir |
+
+| Criterio | Estado |
+|---|---|
+| Funcionalidad implementada | Cumplido |
+| Metodología de la cátedra respetada (capas, `I*Business`, excepciones, `StandartResponse`, `Constants`) | Cumplido; desvíos justificados en la sección 2 |
+| Verificación con pruebas ejecutadas | Cumplido (sección 6) |
+| Archivos documentados | Cumplido (sección 3) |
+| Funciones explicadas | Cumplido (sección 5) |
+| Recorrido de los datos | Cumplido (secciones 4 y E) |
+| Guía de estudio A–J con preguntas y respuestas | Cumplido |
+| Limitaciones registradas | Cumplido (sección 8) |
