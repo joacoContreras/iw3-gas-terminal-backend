@@ -1,0 +1,97 @@
+{
+  "info": {
+    "name": "IW3 - Terminal de gas licuado",
+    "description": "Pruebas de la API del TP integrador. Ejecutar la carpeta 00 antes que las demás (guarda el token).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "username",
+      "value": "admin"
+    },
+    {
+      "key": "password",
+      "value": "admin123"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "orderNumber",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Autenticación",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve un JWT de tres partes', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                  "  pm.collectionVariables.set('token', t);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Obtiene el JWT y lo guarda en la variable token. Usuario de prueba: docs/sql/seed-dev-users.sql."
+          }
+        }
+      ]
+    }
+  ]
+}
