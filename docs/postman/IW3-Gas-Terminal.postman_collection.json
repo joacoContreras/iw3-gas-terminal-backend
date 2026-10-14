@@ -243,6 +243,44 @@
               ]
             }
           }
+        },
+        {
+          "name": "Historial de estados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('un registro: creación en estado 1', () => {",
+                  "  pm.expect(log).to.have.lengthOf(1);",
+                  "  pm.expect(log[0].fromStatus).to.eql(null);",
+                  "  pm.expect(log[0].toStatus).to.eql(1);",
+                  "  pm.expect(log[0].actor).to.eql(pm.collectionVariables.get('username'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumber}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumber}}",
+                "status-log"
+              ]
+            }
+          }
         }
       ]
     }
