@@ -380,3 +380,51 @@ DELETE FROM drivers; DELETE FROM customers; DELETE FROM gas_products;
 SET FOREIGN_KEY_CHECKS=1;
 ```
 
+## 13. Despliegue en la VM
+
+- La VM (Ubuntu con Docker) corre tres contenedores: `iw3-app` (backend), `iw3-mysql-prod` y `nginx`.
+- **Incidente del 14/10/2026:** `iw3-app` ejecutaba una imagen construida con un commit anterior a
+  `344cc78`, donde `AuthRestController` ya existía pero `SecurityConfiguration` todavía no definía el bean
+  `AuthenticationManager`. Fallaba al arrancar y la política `unless-stopped` lo reinició 334 veces: CPU al
+  100 %. Se cortó con `docker update --restart=no iw3-app` y `docker stop iw3-app`.
+- **Pendiente:** el profesor pidió levantar el backend del TP en la VM. Todavía no se hizo.
+- **Cómo desplegar:**
+  - Construir una imagen nueva desde la rama aprobada.
+  - Variables `SPRING_PROFILES_ACTIVE=mysqlprod` y `SPRING_DATASOURCE_URL`, `_USERNAME`, `_PASSWORD`;
+    **no** depender de los valores por defecto del repo (H-5).
+  - El host de la base debe ser el nombre del servicio MySQL en la misma red de Docker.
+  - Política de reinicio `on-failure:3`, no `unless-stopped`.
+  - Crear un usuario y sus roles en la base de producción (el seed es solo de desarrollo).
+- Sin base accesible, la app muere en ~15 s con código 1 y consume mucha CPU: con reinicio automático es un bucle.
+- El TP usa la tabla `gas_products`, por lo que no choca con la `products` del demo de la base de producción.
+
+## 14. Mapa de documentos
+
+| Documento | Contenido |
+|---|---|
+| `CLAUDE.md` | Este archivo: contexto, estado y reglas |
+| `docs/plan-de-trabajo.md` | Alcance, estados, decisiones, modelo y endpoints propuestos, fases, forma de trabajo |
+| `docs/fase-0-auditoria.md` | Informe de la Fase 0 y guía de estudio |
+| `docs/fase-1-recepcion-ordenes.md` | Informe de la Fase 1 y guía de estudio |
+| `docs/pdf/` | PDF de las fases y script para regenerarlos |
+| `docs/postman/` | Colección Postman |
+| `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
+| `README.md` | Descripción general y base de datos |
+
+**Material de la cátedra** (fuera de este repo, solo lectura): `github.com/magm3333/iw3_2026`, con un commit por
+clase: Spring Boot y Maven (1), JPA (2), REST y excepciones (3), perfiles (4), herencia y multi-cliente (6),
+serializadores y consultas (7), JWT (8), eventos, mail, *scheduler* y `@PreAuthorize` (9). La
+`IW3_Guia_Estudio_Clases.pdf` que circula entre nosotros es un **resumen personal** armado desde esos commits,
+no un documento oficial. La cátedra no tiene ejemplos de Swagger, Postman, Bean Validation ni DTO: en esos
+puntos la explicación es **complementaria** y así se marca en las guías.
+
+## 15. Protocolo al iniciar una sesión
+
+1. Leer este archivo, `docs/plan-de-trabajo.md` y el documento de la fase en curso.
+2. `git status` y `git branch --show-current`: confirmar rama y árbol limpio. `git pull` si corresponde.
+3. Preguntar qué se hace. **No empezar una fase sin aprobación explícita.**
+4. Antes de probar, verificar el entorno: Docker, contenedor `iw3-gas-mysql`, usuario de prueba, puerto 8080 libre.
+5. Probar de verdad (compilar, ejecutar, llamar a los endpoints) y reportar solo lo que se ejecutó.
+6. Al cerrar una fase: actualizar las secciones 2, 5, 8 y 10 de este archivo, redactar el informe y la guía,
+   generar el PDF, presentar el resumen ejecutivo y **esperar la autorización** para continuar.
+7. Push y merge a `main` solo si el usuario lo pide.
