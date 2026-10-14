@@ -77,3 +77,19 @@ Una vez que la base de datos esté levantada:
 ```
 
 La aplicación se iniciará en `http://localhost:8080`.
+
+---
+
+## 📚 Documentación y pruebas
+
+* **Swagger UI:** `http://localhost:8080/swagger-ui.html` (JSON en `/v3/api-docs`).
+* **Colección Postman:** `docs/postman/IW3-Gas-Terminal.postman_collection.json`. Ejecutar primero la
+  carpeta `00 - Autenticación`; guarda el token.
+* **Usuario de prueba local:** `docs/sql/seed-dev-users.sql` (solo desarrollo).
+* **Plan y guías de estudio por fase:** carpeta `docs/`.
+
+Para activar un perfil de Spring con el plugin de Maven (el `-P` de Maven no lo activa):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=mysqldev
+```
