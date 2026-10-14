@@ -462,3 +462,69 @@ String token = JWT.create().withSubject(user.getUsername())
 
 El payload **no está cifrado**, solo firmado: en la prueba se decodificó con Base64 y se
 leyó `{"sub":"admin","roles":["ROLE_ADMIN"],"email":"admin@iw3.local",...}`.
+
+## E. Trazabilidad de los datos
+
+| Pregunta | Login (`POST /api/v1/login`) | Alta de producto (`POST /api/v1/products`) |
+|---|---|---|
+| ¿De dónde vienen los datos? | Formulario HTTP: `username` y `password` | Cuerpo JSON del cliente |
+| ¿Cómo llegan al backend? | `@RequestParam` en `loginExternalOnlyToken` | `@RequestBody Product` (Jackson convierte el JSON a objeto) |
+| ¿Dónde se validan? | `CustomAuthenticationManager.authenticate`: usuario, estado de cuenta y BCrypt | `ProductBusiness.add`: duplicado por id y por nombre |
+| ¿Dónde se transforman? | `User` → claims → JWT firmado | JSON → `Product` → fila de `products` |
+| ¿Dónde se almacenan? | En ningún lado: el token no se guarda (STATELESS) | Tabla `products` (`INSERT` vía `ProductRepository.save`) |
+| ¿Cómo se recuperan? | En cada pedido, el filtro lee el token del header o del parámetro | `GET /api/v1/products` y `/{id}` |
+| ¿Quién los usa después? | `JWTAuthorizationFilter` y `SecurityContextHolder` | El controller, que arma el `location` con el id generado |
+| ¿Qué recibe el cliente? | 200 `text/plain` con el JWT | 201 sin cuerpo y `location: /api/v1/products/{id}` |
+
+La alta de producto es el patrón de las órdenes: la Fase 1 sigue exactamente este camino con
+la orden y sus entidades externas.
+
+## F. Ejemplo práctico de ejecución
+
+Los valores son de la línea base. El usuario `admin` y su contraseña son **ficticios y de uso
+solo local** (ver `docs/sql/seed-dev-users.sql`).
+
+**1. Login**
+
+```
+POST /api/v1/login
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=admin123
+```
+
+Validaciones: usuario existe, cuenta habilitada, `BCrypt.matches` correcto. La base solo se
+lee (`users` y `roles`). Respuesta:
+
+```
+200 OK   Content-Type: text/plain;charset=UTF-8
+<JWT de 256 caracteres: header.payload.firma>
+```
+
+Payload decodificado: `{"sub":"admin","roles":["ROLE_ADMIN"],"email":"admin@iw3.local",
+"version":"1.0.0","exp":<ahora + 3600 s>}`.
+
+**2. Consulta protegida**
+
+```
+GET /api/v1/products
+Authorization: Bearer <JWT>
+```
+
+El filtro valida la firma y la expiración; el controller responde `200` con `[ ]` (tabla
+vacía). Sin el header, la misma petición responde `401`.
+
+**3. Error de negocio**
+
+```
+GET /api/v1/products/999
+Authorization: Bearer <JWT>
+```
+
+`ProductBusiness.load` no encuentra el id y lanza `NotFoundException`; el controller responde:
+
+```json
+{ "message": "No se encuentra el Producto id=999", "code": 404, "devInfo": "<traza>" }
+```
+
+`devInfo` lleva la traza solo con `dev.info.enabled=true` (H-5); en otro caso es `null`.
