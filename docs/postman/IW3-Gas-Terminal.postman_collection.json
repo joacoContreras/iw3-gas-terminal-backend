@@ -331,6 +331,57 @@
           "protocolProfileBehavior": {
             "followRedirects": false
           }
+        },
+        {
+          "name": "Orden con datos inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('datos inválidos: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('informa los campos con error', () => {",
+                  "  const m = pm.response.json().message;",
+                  "  pm.expect(m).to.include('preset');",
+                  "  pm.expect(m).to.include('truck.plate');",
+                  "  pm.expect(m).to.include('driver es obligatorio');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"orderNumber\": 0, \"preset\": -1, \"truck\": { \"externalCode\": \"\", \"tanks\": [] } }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     }
