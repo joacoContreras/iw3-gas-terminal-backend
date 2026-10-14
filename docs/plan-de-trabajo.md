@@ -47,7 +47,7 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 10 | Renombrar el contenedor del compose a `iw3-gas-mysql` (hallazgo H-4) | **Aplicada en la Fase 1.** | Fase 1 |
 | 11 | Permitir `/error` y corregir el `produces` del login (H-1 y H-2, en un mismo cambio) | **Aplicada en la Fase 1.** | Fase 1 |
 | 12 | Incorporar `getUserLogged()` en `BaseRestController` (H-10) | **Aplicada en la Fase 1.** | Fase 1 |
-| 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | **Aprobada** (merge local, sin push). Se ejecuta al iniciar la Fase 1. | Antes de la Fase 1 |
+| 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | **Aplicada:** `main` en `c3b62de`, publicada en GitHub. | Antes de la Fase 1 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
