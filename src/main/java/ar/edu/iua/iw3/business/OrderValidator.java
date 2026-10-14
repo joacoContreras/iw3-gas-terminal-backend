@@ -5,7 +5,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import ar.edu.iua.iw3.model.Customer;
+import ar.edu.iua.iw3.model.Driver;
 import ar.edu.iua.iw3.model.Order;
+import ar.edu.iua.iw3.model.Product;
 import ar.edu.iua.iw3.model.Truck;
 import ar.edu.iua.iw3.model.TruckTank;
 
@@ -59,6 +62,33 @@ final class OrderValidator {
 		}
 	}
 
+	private static void validateDriver(Driver d, List<String> errors) {
+		if (d == null) {
+			errors.add("driver es obligatorio");
+			return;
+		}
+		text(d.getExternalCode(), "driver.externalCode", 100, errors);
+		text(d.getName(), "driver.name", 100, errors);
+		text(d.getLastName(), "driver.lastName", 100, errors);
+	}
+
+	private static void validateCustomer(Customer c, List<String> errors) {
+		if (c == null) {
+			errors.add("customer es obligatorio");
+			return;
+		}
+		text(c.getExternalCode(), "customer.externalCode", 100, errors);
+		text(c.getCompanyName(), "customer.companyName", 255, errors);
+	}
+
+	private static void validateProduct(Product p, List<String> errors) {
+		if (p == null) {
+			errors.add("product es obligatorio");
+			return;
+		}
+		text(p.getExternalCode(), "product.externalCode", 100, errors);
+		text(p.getName(), "product.name", 255, errors);
+	}
 
 	/** Texto obligatorio, no vacio y de largo acotado al de la columna. */
 	private static void text(String value, String field, int max, List<String> errors) {
