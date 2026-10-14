@@ -81,3 +81,38 @@ Rutas bajo `/api/v1` (`Constants.URL_BASE`). Son una propuesta; se confirman en 
 
 Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el formato
 `StandartResponse` de la cátedra. El código para "estado incorrecto" se define en la Fase 2.
+
+## 6. Fases
+
+| Fase | Rama | Entrega | Criterio de aceptación |
+|---|---|---|---|
+| 0 | `fase-0-auditoria` | Línea base ejecutada, hallazgos y guía de estudio de la base. Sin cambios de código. | Se sabe qué existe, qué falta y si se puede implementar. |
+| 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. |
+| 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto, tara inválida). |
+| 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. |
+| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. | Detalle posterior rechazado; transiciones inválidas rechazadas. |
+| 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |
+
+## 7. Forma de trabajo
+
+### Git
+- Una rama por fase, con el nombre de la tabla anterior.
+- Commits atómicos por funcionalidad, de no más de 100 líneas cada uno, con mensaje en
+  español (`tipo(ámbito): descripción`). Por ejemplo: entidad y repositorio, servicio,
+  controller, documentación.
+- Push y merge a `main`: solo por pedido explícito.
+
+### Documentación por fase
+Cada fase deja `docs/fase-N-<tema>.md` con dos partes:
+
+1. **Informe técnico:** inventario de archivos, implementación, funciones y métodos,
+   recorrido de las peticiones y pruebas ejecutadas.
+2. **Guía de estudio (secciones A–J):** objetivo, teoría, arquitectura, código paso a paso,
+   trazabilidad de datos, ejemplo, preguntas, respuestas, errores frecuentes y lista de
+   comprobación para rendir.
+
+### Definición de terminado
+Una fase termina cuando: la funcionalidad está implementada y probada; se respetó la
+metodología de la cátedra; los archivos y funciones están documentados; el recorrido de los
+datos está explicado; la guía tiene al menos diez preguntas con respuesta; las limitaciones
+están registradas y los criterios de aceptación fueron verificados.
