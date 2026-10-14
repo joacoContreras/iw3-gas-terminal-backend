@@ -507,3 +507,39 @@ sincronización con camiones repetidos y la atomicidad.
 confusión (incluso un nombre en común, `Product`). Quedan en el historial de git. Se conservó
 todo lo que sirve de infraestructura: capas, excepciones, `StandartResponse`, `Constants` y
 la seguridad JWT.
+
+## I. Errores frecuentes y puntos difíciles
+
+| Confusión o error | Lo correcto | Dónde se ve |
+|---|---|---|
+| Guardar directamente el `Order` que llega | Copiar solo los campos permitidos: si no, el cliente fija `status` o `id` | `OrderBusiness.add` |
+| Creer que `@Transactional` revierte siempre | Solo ante excepciones *unchecked*, salvo `rollbackFor` | `OrderBusiness.add` |
+| Lanzar `FoundException` dentro del `try` con `catch (Exception)` | Se convierte en `BusinessException` (500 en vez de 302) | Orden de las comprobaciones en `add` |
+| Reemplazar la lista de cisternas con `setTanks(...)` | Con `orphanRemoval = true` hay que mutar la misma colección (`clear` + `addAll`) | `syncTruck` |
+| Pensar que el JSON de entrada pierde enteros como con `JsonUtiles` | El binding directo de Jackson acepta `15000` como `double` | Prueba 4 |
+| Creer que 302 es un error de Spring | Es la convención de la cátedra para `FoundException` | `OrderSapRestController.add` |
+| Mirar solo el JSON para validar la hora | Hay que mirar también el valor crudo de la base (el ida y vuelta lo enmascaraba) | Sección 6, H-8 |
+| Suponer que `ddl-auto=update` limpia el demo | No borra tablas ni columnas: por eso `gas_products` | N-4 |
+| Olvidar que el validador llama a cada sub-validación | Un método existente pero sin invocar no valida nada | Hallazgo N-1 |
+
+**Qué conviene estudiar con más profundidad:**
+
+- Cómo Spring crea el proxy de `@Transactional` y qué pasa con las llamadas internas
+  (`this.metodo()` no pasa por el proxy).
+- Diferencia entre `CascadeType.ALL`, `orphanRemoval` y `fetch = EAGER` en `Truck.tanks`.
+- Por qué `Order` mapea a `orders` y qué otros nombres reservados hay que evitar.
+
+## J. Lista de comprobación para rendir
+
+Puedo defender esta fase si, sin mirar el material, logro:
+
+- [ ] Explicar el recorrido de `POST /integration/sap/orders` con archivo y método de cada paso.
+- [ ] Explicar qué es el código externo y qué decide `findByExternalCode(...).orElseGet(...)`.
+- [ ] Explicar por qué `add` copia campos en lugar de guardar lo recibido.
+- [ ] Explicar la transacción: qué se revierte, por qué `rollbackFor` y cómo lo probé.
+- [ ] Justificar 201, 302, 400, 404 y 500, y decir cuál es convención de la cátedra y cuál no.
+- [ ] Explicar cómo se guarda el estado (enum, conversor, número 1–4).
+- [ ] Explicar de dónde sale el actor del log de estados.
+- [ ] Explicar el problema de la hora en la base y cómo se resolvió.
+- [ ] Ejecutar la colección Postman y leer el resultado.
+- [ ] Explicar qué se retiró del demo y por qué `Product` usa `gas_products`.
