@@ -69,45 +69,4 @@ public class ProductRestController extends BaseRestController {
                     HttpStatus.NOT_FOUND);
         }
     }
-
-    @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> add(@RequestBody Product product) {
-        try {
-            Product res = productBusiness.add(product);
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.set("location", Constants.URL_PRODUCTS + "/" + res.getId());
-            return new ResponseEntity<>(responseHeaders, HttpStatus.CREATED);
-        } catch (BusinessException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (FoundException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.FOUND, e, e.getMessage()), HttpStatus.FOUND);
-        }
-    }
-
-    @PutMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> update(@RequestBody Product product) {
-        try {
-            productBusiness.update(product);
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (BusinessException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @DeleteMapping(value = "/{id}")
-    public ResponseEntity<?> delete(@PathVariable long id) {
-        try {
-            productBusiness.delete(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (BusinessException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (NotFoundException e) {
-            return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
-        }
-    }
 }
