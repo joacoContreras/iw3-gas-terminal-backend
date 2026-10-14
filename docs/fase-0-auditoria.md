@@ -322,3 +322,75 @@ docker exec -i <contenedor> mysql -uroot -proot iw3_db < docs/sql/seed-dev-users
 curl -X POST http://localhost:8080/api/v1/login -d "username=admin&password=admin123"
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/products
 ```
+
+---
+
+# Parte 2 — Guía de estudio de la base del proyecto
+
+## A. Objetivo de la fase
+
+La Fase 0 no agrega funcionalidad. Resuelve un problema previo: antes de construir el
+circuito de órdenes hay que saber **qué hay, qué funciona y qué se rompe**.
+
+Dentro del circuito de órdenes de carga, la base heredada aporta tres cosas que todas las
+fases usan:
+
+1. La API REST en capas (controller, negocio, repositorio).
+2. La autenticación JWT que protege los endpoints que consumen SAP, la balanza (TMS) y el
+   sistema de carga.
+3. El formato estándar de error (`StandartResponse`).
+
+Sin entender esta base no se puede defender cómo se construye el resto.
+
+## B. Conceptos teóricos involucrados
+
+Las clases y los ejemplos salen del repo de la cátedra y de la guía de clases (resumen
+personal, no oficial).
+
+| Concepto | Clase | Dónde se ve en el TP |
+|---|---|---|
+| Maven, `pom.xml`, Spring Boot, `@SpringBootApplication`, IoC | 1 (18/8) | `pom.xml`, `SRC/Iw3Application.java` |
+| JPA, `@Entity`, interfaz + implementación, `@Autowired` | 2 (25/8) | `SRC/model/Product.java`, `SRC/business/IProductBusiness.java` |
+| REST, `@RestController`, `ResponseEntity`, excepciones de dominio | 3 (1/9) | `SRC/controllers/ProductRestController.java`, `SRC/business/exception/*` |
+| Perfiles de Spring y de Maven, `Long` vs `long` | 4 (8/9) | `src/main/resources/application-*.properties`, `pom.xml` |
+| Herencia JPA `JOINED`, perfiles con `ScanConfig` | 6 (22/9) | `SRC/model/Product.java`, `SRC/config/profile/*` |
+| Deserializadores custom, proyecciones, queries nativas | 7 (29/9) | `SRC/util/JsonUtiles.java`, `SRC/model/persistence/ProductRepository.java` |
+| Autenticación vs autorización, BCrypt, JWT, sesión STATELESS | 8 (6/10) | `SRC/auth/**`, `SRC/security/SecurityConfiguration.java` |
+| Eventos, `@Scheduled`, `@PreAuthorize` | 9 (13/10) | **No está en el TP todavía**; se usará en el examen final (alarmas y roles) |
+
+**Explicación complementaria (no vista en clase):**
+
+- *Despacho de errores (`/error`) y Spring Security:* cuando un error no lo maneja un
+  controller, el contenedor reenvía a `/error` y esa ruta también pasa por la cadena de
+  seguridad. Es el origen de H-1.
+- *`docker-compose` y `container_name`:* dos contenedores no pueden compartir nombre
+  en el mismo host. Es el origen de H-4.
+
+## C. Arquitectura y organización del código
+
+```
+Cliente (Postman / sistema externo)
+   │  HTTP + JWT
+   ▼
+Cadena de filtros de Spring Security   SecurityConfiguration, JWTAuthorizationFilter
+   ▼
+Controller (@RestController)           controllers/*, integration/*/controllers
+   ▼
+Business (@Service, interfaz IXxx)     business/*, auth/UserBusiness
+   ▼
+Repository (Spring Data JPA)           model/persistence/*, auth/*Repository
+   ▼
+MySQL (Hibernate, ddl-auto=update)
+```
+
+| Paquete (bajo `SRC`) | Responsabilidad | Por qué está ahí |
+|---|---|---|
+| `controllers` | Traducir HTTP: recibir JSON, elegir el código de estado, armar la respuesta | Es la única capa que conoce HTTP |
+| `business` | Reglas: duplicados, transiciones de estado, excepciones de dominio | Se puede probar y cambiar sin tocar HTTP ni SQL |
+| `model` y `model/persistence` | Entidades y acceso a datos | Aísla el mapeo a tablas |
+| `auth` y `security` | Usuarios, roles, JWT y reglas de acceso | Concentra la seguridad |
+| `util` | Respuesta de error estándar y utilidades JSON | Se comparte entre controllers |
+| `config/profile` | Qué entidades y repositorios se escanean por perfil | Permite variantes por cliente |
+
+Las fases 1 a 5 siguen este mismo esquema: las reglas de la orden irán en `business`, y los
+controllers solo traducirán a HTTP.
