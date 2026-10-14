@@ -38,6 +38,9 @@ final class OrderValidator {
 			errors.add("preset debe ser mayor que 0 (kg)");
 		}
 		validateTruck(order.getTruck(), errors);
+		validateDriver(order.getDriver(), errors);
+		validateCustomer(order.getCustomer(), errors);
+		validateProduct(order.getProduct(), errors);
 		return errors;
 	}
 
