@@ -1,5 +1,6 @@
 package ar.edu.iua.iw3.business;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -7,12 +8,16 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
+import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Customer;
 import ar.edu.iua.iw3.model.Driver;
 import ar.edu.iua.iw3.model.Order;
+import ar.edu.iua.iw3.model.OrderStatus;
 import ar.edu.iua.iw3.model.OrderStatusLog;
 import ar.edu.iua.iw3.model.Product;
 import ar.edu.iua.iw3.model.Truck;
@@ -75,6 +80,43 @@ public class OrderBusiness implements IOrderBusiness {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
 		}
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Order add(Order order, String actor) throws FoundException, BadRequestException, BusinessException {
+		List<String> errors = OrderValidator.validate(order);
+		if (!errors.isEmpty()) {
+			throw BadRequestException.builder().message(String.join("; ", errors)).build();
+		}
+		if (findByNumber(order.getOrderNumber()).isPresent()) {
+			throw FoundException.builder().message("Se encontró la Orden numero=" + order.getOrderNumber()).build();
+		}
+		try {
+			// Se copian solo los campos permitidos: estado y fecha de recepcion los fija el backend
+			Order o = new Order();
+			o.setOrderNumber(order.getOrderNumber());
+			o.setPlannedLoadDateTime(order.getPlannedLoadDateTime());
+			o.setPreset(order.getPreset());
+			o.setTruck(syncTruck(order.getTruck()));
+			o.setDriver(syncDriver(order.getDriver()));
+			o.setCustomer(syncCustomer(order.getCustomer()));
+			o.setProduct(syncProduct(order.getProduct()));
+			o.setStatus(OrderStatus.PENDING_INITIAL_WEIGHING);
+			o.setReceptionDateTime(LocalDateTime.now());
+			o = orderDAO.save(o);
+			logStatus(o, null, o.getStatus(), actor, "Orden recibida desde el sistema externo");
+			return o;
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	/** Registra un cambio de estado en el log de auditoria de la orden. */
+	private void logStatus(Order order, OrderStatus from, OrderStatus to, String actor, String observations) {
+		String who = (actor == null || actor.isBlank()) ? "sistema" : actor;
+		statusLogDAO.save(new OrderStatusLog(null, order, from, to, LocalDateTime.now(), who, observations));
 	}
 
 	/** Consulta por numero de orden envolviendo el error tecnico en BusinessException. */
