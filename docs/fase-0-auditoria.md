@@ -94,3 +94,47 @@ Pruebas del 14/10/2026 contra MySQL real, con el usuario `admin` del seed.
 | 18 | JSON externo (cli1) | `POST …/cli1/products/b2b` con distintas claves de precio | `price`: 0.0 · `price_product`: 0.0 · `product_price` decimal: 50.5 · `product_price` entero: 0.0 (H-6, H-7) |
 
 Los productos creados durante las pruebas se eliminaron.
+
+## 6. Hallazgos
+
+Cada hallazgo indica evidencia, causa, impacto y propuesta. Ninguno se corrigió en esta fase.
+
+### H-1 — Errores sin controller devuelven 401 sin cuerpo (impacto alto)
+
+- **Evidencia:** prueba 14. El log muestra `DefaultHandlerExceptionResolver: Resolved
+  HttpMessageNotReadableException` y `HttpMediaTypeNotSupportedException`.
+- **Causa:** Spring resuelve el error (400/415) y el contenedor reenvía a `/error`;
+  `anyRequest().authenticated()` lo bloquea porque la sesión es STATELESS.
+- **Impacto:** SAP, TMS y el sistema de carga no distinguen un payload inválido de un
+  problema de autenticación. Los casos de error de Postman serían engañosos.
+- **Propuesta:** permitir `/error` en `SecurityConfiguration` (una línea). Es un desvío menor
+  respecto de la cátedra; se aplica en la Fase 1 junto con H-2.
+
+### H-2 — Login fallido pierde el cuerpo (impacto medio)
+
+- **Evidencia:** prueba 9. El log muestra `HttpMessageNotWritableException: No converter for
+  [class StandartResponse]`.
+- **Causa:** `AuthRestController.loginExternalOnlyToken` declara `produces = text/plain`,
+  pero en error devuelve un `StandartResponse` (JSON).
+- **Impacto:** el 401 es correcto por casualidad (vía H-1) y el mensaje se pierde. Si solo se
+  corrige H-1, el login fallido pasaría a 500 (inferido; verificar al corregir).
+- **Propuesta:** corregir H-1 y H-2 en el mismo cambio, con prueba de login fallido.
+
+### H-3 — Los perfiles de Maven no activan el perfil de Spring (impacto medio)
+
+- **Evidencia:** pruebas 16 y 17.
+- **Causa:** `application.properties` no referencia `@spring.profiles.active@` y
+  `spring-boot:run` no propaga las propiedades de los perfiles de Maven.
+- **Impacto:** el README y Postman deben usar `-Dspring-boot.run.profiles=<perfil>` o la
+  variable `SPRING_PROFILES_ACTIVE`. Sin perfil no se aplica ningún `ScanConfig`.
+- **Propuesta:** documentar el comando correcto. Al retirar cli1/cli2 (decisión 1) solo
+  quedan `mysqldev` y `mysqlprod`.
+
+### H-4 — Colisión de nombre del contenedor MySQL (impacto medio)
+
+- **Evidencia:** `docker compose up` falla con "container name /iw3-mysql is already in use".
+- **Causa:** el compose del TP usa `container_name: iw3-mysql`, igual al contenedor de la
+  cátedra (que además usa el puerto 33306 y otra base).
+- **Impacto:** el README no se puede seguir tal cual en esta máquina.
+- **Propuesta:** renombrar a `iw3-gas-mysql` en `docker-compose.yml` y en los comandos del
+  README. Decisión pendiente (ver sección 8).
