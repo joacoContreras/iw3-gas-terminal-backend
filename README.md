@@ -86,7 +86,7 @@ La aplicación se iniciará en `http://localhost:8080`.
 * **Colección Postman:** `docs/postman/IW3-Gas-Terminal.postman_collection.json`. Ejecutar primero la
   carpeta `00 - Autenticación`; guarda el token.
 * **Usuario de prueba local:** `docs/sql/seed-dev-users.sql` (solo desarrollo).
-* **Plan y guías de estudio por fase:** carpeta `docs/`.
+* **Plan y guías de estudio por fase:** carpeta `docs/`. Versiones en PDF en `docs/pdf/`.
 
 Para activar un perfil de Spring con el plugin de Maven (el `-P` de Maven no lo activa):
 
