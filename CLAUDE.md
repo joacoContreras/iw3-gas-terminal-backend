@@ -19,20 +19,20 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 14/10/2026.
+**Última actualización:** 14/10/2026, después de integrar la Fase 1 a `main`.
 
 | | |
 |---|---|
-| **Fase en curso** | **Fase 1 — Recepción y creación de órdenes (Punto 1): implementada, probada y en revisión del equipo** |
-| **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la revisión de la Fase 1 |
+| **Última fase completada** | **Fase 1 — Recepción y creación de órdenes (Punto 1): implementada, probada e integrada en `main`** (PR #2, merge `a330219`, 14/10/2026) |
+| **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la autorización del usuario |
 | Dato pendiente para la Fase 2 | Código HTTP de "estado incorrecto" (recomendado: 409 Conflict) |
-| Rama de la Fase 1 | `fase-1-recepcion-ordenes`: publicada en GitHub, **sin integrar a `main`** |
-| `main` | Llega hasta la Fase 0 (merge `c3b62de`) |
+| `main` | Contiene las Fases 0 y 1 completas (`a330219`); es la base de la Fase 2 |
+| Revisión de la Fase 1 | El PR #2 se mergeó 3 minutos después de abrirse y **sin revisiones ni comentarios** registrados en GitHub; la revisión del equipo sigue pendiente (ver 8.3) |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
 | 0 | Auditoría y línea base | `fase-0-auditoria` | Completada e integrada en `main` |
-| 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada, **en revisión**, sin integrar |
+| 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada e integrada en `main` (PR #2) |
 | 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Pendiente |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Pendiente |
 | 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Pendiente |
@@ -55,12 +55,15 @@
 6. **Seguridad:** no inventar credenciales ni subir secretos. Las de este repo (`root/root`,
    `admin/admin123`) son **solo de desarrollo local**.
 7. **Git:**
-   - Una rama por fase (`fase-N-<tema>`), creada desde la rama anterior o desde `main` según se indique.
+   - Una rama por fase (`fase-N-<tema>`), creada desde `main` actualizado (con la fase anterior ya integrada).
    - **Commits atómicos por funcionalidad, de no más de 100 líneas** (agregadas + borradas).
    - Mensaje en español con el formato `tipo(ámbito): descripción` (`feat`, `fix`, `docs`, `chore`,
      `test`, `build`, `refactor`). Los commits que hace Claude llevan el trailer
      `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
    - **Push y merge a `main` solo cuando el usuario lo pide.**
+   - **Todo cambio a `main` entra por Pull Request.** Acuerdo del equipo (14/10/2026): no se mergea hasta que
+     aprueben **3 de los 4 integrantes**. GitHub todavía **no lo exige** (ver 8.3): hasta entonces, abrir los PR
+     como *borrador* (`draft`) y no mergear sin esas aprobaciones.
 8. **Documentación obligatoria por fase** en `docs/fase-N-<tema>.md`:
    - *Informe técnico:* inventario de archivos (archivo, acción, motivo, responsabilidad), qué se
      implementó y por qué, funciones y métodos (parámetros, retorno, validaciones, dependencias, errores),
@@ -139,7 +142,7 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - Se crearon el plan (`docs/plan-de-trabajo.md`), el informe con su guía (`docs/fase-0-auditoria.md`) y
   el seed del usuario de prueba (`docs/sql/seed-dev-users.sql`).
 
-### Fase 1 — Recepción y creación de órdenes (completada, **en revisión**, rama `fase-1-recepcion-ordenes`)
+### Fase 1 — Recepción y creación de órdenes (completada e integrada en `main`, rama `fase-1-recepcion-ordenes`)
 
 - **Retiro del demo** de la cátedra (decisión 1): `Product`/`Category`, `integration/cli1`, `cli2`,
   `ScanConfig`, `JsonUtiles` y el dataset de productos. Siguen en el historial de git.
@@ -153,6 +156,7 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Swagger** (springdoc) y **colección Postman** (10 requests, 19 aserciones, 0 fallas con newman).
 - **Informe y guía** en `docs/fase-1-recepcion-ordenes.md` y PDF de las Fases 0 y 1 en `docs/pdf/`.
 - **Un bug propio** se detectó probando y se corrigió (el validador no revisaba chofer, cliente ni producto).
+- **Integración:** PR #2 mergeado a `main` el 14/10/2026 (`a330219`) por otro integrante, sin revisiones registradas.
 
 ## 6. Arquitectura y convenciones del código
 
@@ -276,9 +280,35 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 
 ### 8.3 Pendientes transversales
 
-- Revisión de la Fase 1 por el equipo y su integración a `main`.
+- Revisión de la Fase 1 por el equipo: ya está en `main`; dejar comentarios en el PR #2 o abrir un PR con correcciones.
+- **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
+  del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
+  llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
 - Confirmar el código HTTP de "estado incorrecto".
 - Desplegar el backend del TP en la VM (lo pidió el profesor; ver sección 13).
+
+### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
+
+En GitHub: *Settings → Branches → Add branch ruleset* (o una regla de protección clásica) sobre `main`:
+
+- Activar **Require a pull request before merging**.
+- **Required approvals:** cuenta solo a *otras* personas (el autor del PR no suma). Con 4 integrantes, **3**
+  exige que aprueben los otros tres; **2** equivale a "3 de 4" contando al autor. Elegir según el acuerdo.
+- Activar **Dismiss stale pull request approvals when new commits are pushed** y
+  **Require approval of the most recent reviewable push**.
+- Activar **Block force pushes** y **Do not allow bypassing the above settings** (incluye a los admin).
+- Solo cuentan las aprobaciones de cuentas con **permiso de escritura** (*Settings → Collaborators*).
+
+Por consola, con `gh` autenticado como admin:
+
+```bash
+gh api -X PUT repos/joacoContreras/iw3-gas-terminal-backend/branches/main/protection --input - <<'JSON'
+{ "required_status_checks": null, "enforce_admins": true, "restrictions": null,
+  "required_pull_request_reviews": { "required_approving_review_count": 3,
+      "dismiss_stale_reviews": true, "require_last_push_approval": true },
+  "allow_force_pushes": false, "allow_deletions": false }
+JSON
+```
 
 ## 9. Decisiones tomadas
 
@@ -297,6 +327,7 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 | 11 | Permitir `/error` y corregir el `produces` del login | Aplicada |
 | 12 | `getUserLogged()` en `BaseRestController` | Aplicada |
 | 13 | Integrar la Fase 0 a `main` | Aplicada |
+| 14 | Todo cambio a `main` por Pull Request con la aprobación de 3 de los 4 integrantes | Acordada; la protección de rama la debe configurar el dueño del repo (8.3) |
 
 ## 10. Hallazgos y deuda abierta
 
@@ -320,7 +351,6 @@ para correr Postman por consola y regenerar los PDF. Maven no hace falta: se usa
 ```bash
 git clone https://github.com/joacoContreras/iw3-gas-terminal-backend.git
 cd iw3-gas-terminal-backend
-git checkout fase-1-recepcion-ordenes     # mientras no esté integrada a main
 docker compose up -d                      # MySQL 8.0: localhost:3306, base iw3_db, root/root (solo desarrollo)
 ./mvnw spring-boot:run                    # Windows: mvnw.cmd spring-boot:run  ->  http://localhost:8080
 ```
@@ -344,7 +374,7 @@ docker exec -i iw3-gas-mysql mysql -uroot -proot iw3_db < docs/sql/seed-dev-user
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `container name "/iw3-mysql" is already in use` | Tenés el contenedor de la cátedra (o un `main` viejo) | Usar esta rama: el contenedor del TP es `iw3-gas-mysql` |
+| `container name "/iw3-mysql" is already in use` | Tenés el contenedor de la cátedra (o un clon anterior a la Fase 1) | `git pull` en `main`: el contenedor del TP es `iw3-gas-mysql` |
 | `Communications link failure` o `Connection refused` al arrancar | MySQL no está arriba | Iniciar Docker, `docker compose up -d` y esperar ~20 s la primera vez |
 | `port is already allocated` (3306) | Otro MySQL local | Detenerlo, o cambiar el mapeo del compose y la URL de `application.properties` |
 | 401 en todo | Falta el usuario de prueba o el token | Correr el seed, loguearse y enviar `Authorization: Bearer <jwt>` |
@@ -427,4 +457,4 @@ puntos la explicación es **complementaria** y así se marca en las guías.
 5. Probar de verdad (compilar, ejecutar, llamar a los endpoints) y reportar solo lo que se ejecutó.
 6. Al cerrar una fase: actualizar las secciones 2, 5, 8 y 10 de este archivo, redactar el informe y la guía,
    generar el PDF, presentar el resumen ejecutivo y **esperar la autorización** para continuar.
-7. Push y merge a `main` solo si el usuario lo pide.
+7. Push y merge a `main` solo si el usuario lo pide y con las aprobaciones acordadas (decisión 14).

@@ -48,6 +48,7 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 11 | Permitir `/error` y corregir el `produces` del login (H-1 y H-2, en un mismo cambio) | **Aplicada en la Fase 1.** | Fase 1 |
 | 12 | Incorporar `getUserLogged()` en `BaseRestController` (H-10) | **Aplicada en la Fase 1.** | Fase 1 |
 | 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | **Aplicada:** `main` en `c3b62de`, publicada en GitHub. | Antes de la Fase 1 |
+| 14 | Todo cambio a `main` por Pull Request con la aprobación de 3 de los 4 integrantes | **Acordada (14/10/2026).** La protección de rama la configura el dueño del repo | Todas |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -104,7 +105,7 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 - Commits atómicos por funcionalidad, de no más de 100 líneas cada uno, con mensaje en
   español (`tipo(ámbito): descripción`). Por ejemplo: entidad y repositorio, servicio,
   controller, documentación.
-- Push y merge a `main`: solo por pedido explícito.
+- Push y merge a `main`: solo por pedido explícito, y por Pull Request con la aprobación de 3 de los 4 integrantes.
 
 ### Documentación por fase
 Cada fase deja `docs/fase-N-<tema>.md` con dos partes:
