@@ -148,3 +148,54 @@ no se escribió nada; ante cualquier otra falla se revierte todo.
 **`OrderStatusConverter`** — `SRC/model/OrderStatusConverter.java`: `convertToDatabaseColumn` guarda el número 1–4 y `convertToEntityAttribute` lo vuelve a enum. Con `autoApply = true` rige para todo atributo `OrderStatus`.
 
 **`BaseRestController.getUserLogged`** — devuelve el `User` del `SecurityContextHolder` (el que arma `JWTAuthorizationFilter`) o `null`. De ahí sale el actor del log.
+
+## 6. Pruebas y verificación
+
+Todo se ejecutó el 14/10/2026 contra MySQL real (`iw3-gas-mysql`), con el usuario `admin` del seed.
+
+| # | Verificación | Resultado |
+|---|---|---|
+| 1 | `./mvnw -B -q -DskipTests compile` en cada paso | `BUILD SUCCESS` |
+| 2 | Arranque (`spring-boot:run`) | `Started Iw3Application in 13,1 s`; Hibernate creó `trucks`, `truck_tanks`, `drivers`, `customers`, `gas_products`, `orders`, `order_status_logs` |
+| 3 | `POST` sin token | 401 |
+| 4 | `POST` válido con `preset` entero (15000) | 201, `location: /api/v1/orders/90001` |
+| 5 | `GET /orders/90001` | 200; `status: 1`; camión con 2 cisternas; fecha de recepción asignada |
+| 6 | `GET /orders/90001/status-log` | 1 registro: `fromStatus: null`, `toStatus: 1`, `actor: admin` |
+| 7 | Mismo `POST` otra vez | 302 con `StandartResponse` |
+| 8 | Orden con campos inválidos | 400 con los 10 errores en un solo mensaje |
+| 9 | JSON malformado, fecha inválida, `Content-Type` erróneo | 400, 400, 415 |
+| 10 | Orden inexistente, número no numérico, ruta inexistente | 404, 400, 404 |
+| 11 | Login con contraseña incorrecta | 401 **con** `StandartResponse` |
+| 12 | Sincronización: mismo camión con otra patente y mismas cisternas | 201; 1 camión, patente actualizada, cisternas con los mismos ids |
+| 13 | Sincronización: mismo camión con 3 cisternas | 201; cisternas reemplazadas (3 filas nuevas) |
+| 14 | Sincronización: cliente con razón social distinta | Una sola fila de cliente, con la razón social nueva |
+| 15 | Atomicidad: descripción de producto de 300 caracteres (columna de 255) | 500 y **0 filas** de camión, chofer, cliente, producto y orden |
+| 16 | `GET /v3/api-docs` y `/swagger-ui.html` | 200 con las 5 rutas; 302 a `/swagger-ui/index.html` |
+| 17 | `newman run` de la colección | 10 requests, 19 aserciones, 0 fallas |
+
+La colección ejecutada con newman es idéntica byte a byte a `docs/postman/IW3-Gas-Terminal.postman_collection.json`.
+
+### Fechas: medición del hallazgo H-8
+
+| Caso | JVM | URL | `hibernate.jdbc.time_zone` | En la base | En el JSON |
+|---|---|---|---|---|---|
+| Corrida inicial | Argentina | dev | no | 17:49:33 | 14:49:33 |
+| B | UTC | dev | no | 17:51:57 | 14:51:57 |
+| C | UTC | prod | no | 17:52:20 | 14:52:20 |
+| D | Argentina | dev | sí | 14:52:42 | 14:52:42 |
+| E | UTC | dev | sí | 14:53:04 | 14:53:04 |
+| F | UTC | prod | sí | 14:53:26 | 14:53:26 |
+
+Sin la propiedad, MySQL recibía la hora en UTC (3 h adelantada) aunque el JSON se viera bien.
+Con la propiedad, la base guarda la hora de Argentina en los seis escenarios.
+
+## 7. Cambios de comportamiento respecto de la Fase 0
+
+| Petición | Fase 0 | Fase 1 |
+|---|---|---|
+| JSON malformado con token válido | 401 sin cuerpo | 400 |
+| `Content-Type` erróneo | 401 sin cuerpo | 415 |
+| Ruta inexistente | 401 sin cuerpo | 404 |
+| Login con contraseña incorrecta | 401 sin cuerpo | 401 con `StandartResponse` |
+| `/api/v1/products` y `/categories` | 200 | 404 (retirados) |
+| Fechas en la base | UTC | Hora de Argentina |
