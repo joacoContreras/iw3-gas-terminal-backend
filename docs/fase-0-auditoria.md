@@ -138,3 +138,48 @@ Cada hallazgo indica evidencia, causa, impacto y propuesta. Ninguno se corrigió
 - **Impacto:** el README no se puede seguir tal cual en esta máquina.
 - **Propuesta:** renombrar a `iw3-gas-mysql` en `docker-compose.yml` y en los comandos del
   README. Decisión pendiente (ver sección 8).
+
+### H-5 — Seguridad heredada de la cátedra (impacto medio, antes de desplegar)
+
+- **Evidencia:** lectura de `SRC/auth/filters/AuthConstants.java`,
+  `src/main/resources/application*.properties` y `SRC/security/SecurityConfiguration.java`.
+- **Hechos:** la clave de firma del JWT está fija en el código; hay credenciales de base por
+  defecto en `application.properties` y `application-mysqlprod.properties`; `/demo/**` es
+  público (incluye `/demo/encodepass`); CORS acepta cualquier origen; `dev.info.enabled=true`
+  en el perfil por defecto hace que las respuestas de error incluyan la traza completa
+  (visible en la prueba 10).
+- **Propuesta:** mover secretos a variables de entorno y cerrar `/demo/**` en la etapa de
+  seguridad del examen final. Para el parcial, no subir credenciales reales.
+
+### H-6 — `JsonUtiles.getDouble` descarta números enteros (heredado de la cátedra)
+
+- **Evidencia:** prueba 18: `"product_price": 50` se guardó como 0.0 y `50.5` como 50.5.
+- **Causa:** el método exige `isDouble()` y el entero `50` es un `IntNode`.
+- **Impacto:** un `preset` de 5000 o una masa de 1500 se leerían como 0 sin error.
+- **Propuesta:** no reutilizar `JsonUtiles` para los payloads del TP; usar el *binding*
+  directo de Jackson sobre clases de entrada. Si se reutiliza, corregir con `isNumber()`.
+
+### H-7 — Alias con espacios en `ProductCli1JsonDeserializer` (propio del fork)
+
+- **Evidencia:** prueba 18: las claves `price` y `price_product` dieron 0.0.
+- **Causa:** la cátedra usa `"a,b,c".split(",")`; el TP tiene `"a, b, c".split(",")`, por lo
+  que los alias posteriores al primero conservan un espacio y nunca coinciden.
+- **Propuesta:** desaparece al retirar el código demo (decisión 1). Si el patrón vuelve a
+  usarse, separar con `split("\\s*,\\s*")`.
+
+### H-8 — Zona horaria (riesgo a verificar en la Fase 1)
+
+- **Hechos:** la URL JDBC usa `serverTimezone=UTC`; la aplicación fija
+  `America/Argentina/Buenos_Aires` en `Iw3Application.run()`, **después** de iniciar el
+  contexto (el log muestra `Initial TimeZone` luego de `Started`).
+- **Impacto posible:** desfase de 3 h en las fechas y horas de la orden.
+- **Propuesta:** probar con el primer timestamp real (`OrderStatusLog`) y, si hay desfase,
+  fijar `hibernate.jdbc.time_zone`.
+
+### H-9 a H-11 — Menores
+
+| ID | Hallazgo | Propuesta |
+|---|---|---|
+| H-9 | `pom.xml` desalineado: Boot 4.1.0 vs 4.1.1, `java-jwt` 4.4.0 vs 4.6.1, `actuator` y `h2` sin uso. Compila y arranca igual. | Alinear es opcional (decisión 6 pendiente). |
+| H-10 | Falta `BaseRestController.getUserLogged()` y el resto de la clase 9. `Iw3Application` inyecta beans que no usa. | `getUserLogged()` entra en la Fase 1 (actor del log de estados). Lo demás se va con el demo. |
+| H-11 | Avisos de arranque: `HHH90000025` (dialecto explícito) y `open-in-view` activo. | Sin acción. |
