@@ -323,6 +323,16 @@ curl -X POST http://localhost:8080/api/v1/login -d "username=admin&password=admi
 curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/products
 ```
 
+Si el contenedor `iw3-mysql` de la cátedra está en el mismo equipo, `docker compose up`
+falla (H-4). Alternativa que no toca el repo: crear un `override.yml` y levantar con
+`docker compose -f docker-compose.yml -f override.yml up -d`.
+
+```yaml
+services:
+  mysqldb:
+    container_name: iw3-gas-mysql
+```
+
 ---
 
 # Parte 2 — Guía de estudio de la base del proyecto
