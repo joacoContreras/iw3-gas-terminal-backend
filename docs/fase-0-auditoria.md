@@ -51,3 +51,46 @@ En esta máquina ya existía el contenedor `iw3-mysql` de la cátedra (puerto 33
 `docker compose up` falla con "Conflict". La línea base se levantó con un archivo override
 **fuera del repo** que solo cambia el nombre a `iw3-gas-mysql`; el contenedor de la cátedra
 no se tocó (ver hallazgo H-4).
+
+## 4. Qué existe y qué falta
+
+| Área | Estado | Evidencia |
+|---|---|---|
+| Dominio de gas (Orden, Camión, Chofer, Cliente, Producto, detalle, log de estados) | **No existe** | Ninguna clase del dominio en `SRC` |
+| Arquitectura en capas | Existe (demo) | `SRC/model`, `SRC/model/persistence`, `SRC/business`, `SRC/controllers` |
+| Persistencia | Existe | JPA + MySQL con `ddl-auto=update`; sin migraciones |
+| Excepciones y respuesta estándar | Existe | `SRC/business/exception/*`, `SRC/util/StandartResponse*.java` |
+| Seguridad JWT | Existe | `SRC/security`, `SRC/auth/**`; sin usuarios sembrados |
+| Perfiles | Parcial | `SRC/config/profile/*ScanConfig.java`; los perfiles de Maven no activan el de Spring (H-3) |
+| Swagger/OpenAPI | **No existe** | Sin dependencia `springdoc` |
+| Colección Postman | **No existe** | Solo `src/test/java/ar/edu/iua/iw3/datasets/add_postman.csv` (productos demo) |
+| Tests | Mínimo | `Iw3ApplicationTests.contextLoads` |
+| Contenido de la clase 9 de la cátedra | No existe | Eventos, `EmailBusiness`, `Scheduler`, `getUserLogged()`, claim `internalId` |
+| Validación de entrada | No existe | Igual que en la cátedra (sin `@Valid`) |
+
+## 5. Línea base ejecutada
+
+Pruebas del 14/10/2026 contra MySQL real, con el usuario `admin` del seed.
+
+| # | Verificación | Comando o petición | Resultado |
+|---|---|---|---|
+| 1 | Compilación | `./mvnw -B -DskipTests compile` | `BUILD SUCCESS`, 50 fuentes, 15 s. Descargó `actuator`, `h2` y `java-jwt 4.4.0`, que no estaban en caché |
+| 2 | Test existente | `./mvnw -B test` | 1 test, 0 fallas, 14,7 s |
+| 3 | Arranque | `./mvnw -B spring-boot:run` | `Started Iw3Application in 8.8 s` |
+| 4 | Sin token | `GET /api/v1/products` | 401 con `WWW-Authenticate: Basic` |
+| 5 | Login correcto | `POST /api/v1/login` (`username`, `password`) | 200 `text/plain`, JWT HS512 |
+| 6 | Con token | `GET /api/v1/products` + `Bearer` | 200 `[ ]` |
+| 7 | Token por query | `GET /api/v1/products?authtoken=<jwt>` | 200 |
+| 8 | Token inválido o alterado | `Bearer abc.def.ghi` y firma modificada | 401 |
+| 9 | Login fallido | Contraseña incorrecta / usuario inexistente | 401; con contraseña incorrecta el cuerpo viene vacío (H-2) |
+| 10 | Negocio: no encontrado | `GET /api/v1/products/999` | 404 + `StandartResponse` |
+| 11 | Negocio: alta | `POST /api/v1/products` | 201 + `location: /api/v1/products/1` |
+| 12 | Negocio: duplicado | Mismo `POST` | 302 + `StandartResponse` |
+| 13 | Negocio: baja | `DELETE /api/v1/products/1`, luego `GET` | 200, luego 404 |
+| 14 | Errores sin controller | JSON malformado, `Content-Type` erróneo, ruta inexistente (token válido) | 401 sin cuerpo; se esperaba 400, 415 y 404 (H-1) |
+| 15 | Documentación | `GET /v3/api-docs`, `GET /swagger-ui.html` | 401 (no hay springdoc) |
+| 16 | Perfil por Maven | `./mvnw -Pmysqldev spring-boot:run` | Log: `Perfil activo default` (H-3) |
+| 17 | Perfil por Spring | `./mvnw -Dspring-boot.run.profiles=cli1 spring-boot:run` | Log: `Perfil activo cli1`; `/integration/cli1/products` responde |
+| 18 | JSON externo (cli1) | `POST …/cli1/products/b2b` con distintas claves de precio | `price`: 0.0 · `price_product`: 0.0 · `product_price` decimal: 50.5 · `product_price` entero: 0.0 (H-6, H-7) |
+
+Los productos creados durante las pruebas se eliminaron.
