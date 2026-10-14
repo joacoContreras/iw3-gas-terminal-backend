@@ -280,7 +280,10 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 
 ### 8.3 Pendientes transversales
 
-- Revisión de la Fase 1 por el equipo y su integración a `main`.
+- Revisión de la Fase 1 por el equipo: ya está en `main`; dejar comentarios en el PR #2 o abrir un PR con correcciones.
+- **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
+  del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
+  llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
 - Confirmar el código HTTP de "estado incorrecto".
 - Desplegar el backend del TP en la VM (lo pidió el profesor; ver sección 13).
 
