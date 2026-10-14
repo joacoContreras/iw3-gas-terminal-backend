@@ -19,20 +19,20 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 14/10/2026.
+**Última actualización:** 14/10/2026, después de integrar la Fase 1 a `main`.
 
 | | |
 |---|---|
-| **Fase en curso** | **Fase 1 — Recepción y creación de órdenes (Punto 1): implementada, probada y en revisión del equipo** |
-| **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la revisión de la Fase 1 |
+| **Última fase completada** | **Fase 1 — Recepción y creación de órdenes (Punto 1): implementada, probada e integrada en `main`** (PR #2, merge `a330219`, 14/10/2026) |
+| **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la autorización del usuario |
 | Dato pendiente para la Fase 2 | Código HTTP de "estado incorrecto" (recomendado: 409 Conflict) |
-| Rama de la Fase 1 | `fase-1-recepcion-ordenes`: publicada en GitHub, **sin integrar a `main`** |
-| `main` | Llega hasta la Fase 0 (merge `c3b62de`) |
+| `main` | Contiene las Fases 0 y 1 completas (`a330219`); es la base de la Fase 2 |
+| Revisión de la Fase 1 | El PR #2 se mergeó 3 minutos después de abrirse y **sin revisiones ni comentarios** registrados en GitHub; la revisión del equipo sigue pendiente (ver 8.3) |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
 | 0 | Auditoría y línea base | `fase-0-auditoria` | Completada e integrada en `main` |
-| 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada, **en revisión**, sin integrar |
+| 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada e integrada en `main` (PR #2) |
 | 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Pendiente |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Pendiente |
 | 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Pendiente |
@@ -139,7 +139,7 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - Se crearon el plan (`docs/plan-de-trabajo.md`), el informe con su guía (`docs/fase-0-auditoria.md`) y
   el seed del usuario de prueba (`docs/sql/seed-dev-users.sql`).
 
-### Fase 1 — Recepción y creación de órdenes (completada, **en revisión**, rama `fase-1-recepcion-ordenes`)
+### Fase 1 — Recepción y creación de órdenes (completada e integrada en `main`, rama `fase-1-recepcion-ordenes`)
 
 - **Retiro del demo** de la cátedra (decisión 1): `Product`/`Category`, `integration/cli1`, `cli2`,
   `ScanConfig`, `JsonUtiles` y el dataset de productos. Siguen en el historial de git.
@@ -153,6 +153,7 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Swagger** (springdoc) y **colección Postman** (10 requests, 19 aserciones, 0 fallas con newman).
 - **Informe y guía** en `docs/fase-1-recepcion-ordenes.md` y PDF de las Fases 0 y 1 en `docs/pdf/`.
 - **Un bug propio** se detectó probando y se corrigió (el validador no revisaba chofer, cliente ni producto).
+- **Integración:** PR #2 mergeado a `main` el 14/10/2026 (`a330219`) por otro integrante, sin revisiones registradas.
 
 ## 6. Arquitectura y convenciones del código
 
