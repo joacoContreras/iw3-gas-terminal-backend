@@ -362,3 +362,56 @@ return truckDAO.save(t);
   el JSON publique `1` y no `"PENDING_INITIAL_WEIGHING"`.
 - `OrderStatusConverter` (`autoApply = true`) guarda ese número en la columna. Sin él, Hibernate
   usaría el ordinal 0–3 y la base mostraría "0" para el estado 1 de la consigna.
+
+## E. Trazabilidad de los datos
+
+| Pregunta | Alta de la orden (`POST /integration/sap/orders`) | Consulta (`GET /orders/{n}`) |
+|---|---|---|
+| ¿De dónde vienen? | Cuerpo JSON que envía SAP | Parámetro de la ruta |
+| ¿Cómo llegan? | `@RequestBody Order`: Jackson arma `Order` con sus cuatro entidades anidadas y la fecha ISO | `@PathVariable Integer orderNumber` |
+| ¿Dónde se validan? | `OrderValidator.validate` y número no repetido (`findByNumber`) | `OrderBusiness.load` (si no existe, `NotFoundException`) |
+| ¿Dónde se transforman? | `OrderBusiness.add`: copia de campos permitidos, `trim`, estado 1, fecha de recepción; `sync*` por código externo | No se transforman: la entidad se serializa tal cual |
+| ¿Dónde se almacenan? | `trucks`, `truck_tanks`, `drivers`, `customers`, `gas_products`, `orders`, `order_status_logs` | — |
+| ¿Cómo se recuperan? | — | `OrderRepository.findByOrderNumber` |
+| ¿Quién los usa después? | Fase 2 (tara) y siguientes: cargan la orden por número y comprueban su estado | El frontend del examen final |
+| ¿Qué recibe el cliente? | 201 y `location`; o 302, 400 o 500 con `StandartResponse` | La orden en JSON, con `status` numérico |
+
+El actor del log sale del token: `JWTAuthorizationFilter` → `SecurityContextHolder` →
+`getUserLogged()` → `OrderBusiness.logStatus` → columna `actor` de `order_status_logs`.
+
+## F. Ejemplo práctico de ejecución
+
+Los valores son ficticios; el usuario `admin` es el de prueba local.
+
+**1. Petición**
+
+```
+POST /api/v1/integration/sap/orders
+Authorization: Bearer <JWT de admin>
+Content-Type: application/json
+
+{ "orderNumber": 90001, "plannedLoadDateTime": "2026-10-20T08:00:00", "preset": 15000,
+  "truck":    { "externalCode": "TRK-001", "plate": "AB123CD",
+                "tanks": [ {"number": 1, "capacityLiters": 10000}, {"number": 2, "capacityLiters": 5000} ] },
+  "driver":   { "externalCode": "DRV-001", "name": "Juan", "lastName": "Perez" },
+  "customer": { "externalCode": "CUS-001", "companyName": "Gas del Sur SA" },
+  "product":  { "externalCode": "PRD-GLP", "name": "GLP" } }
+```
+
+**2. Validaciones que atraviesa:** número `> 0`, fecha presente, `preset > 0`, camión con
+código, patente y cisternas válidas, chofer, cliente y producto completos, y número no usado.
+
+**3. Cambios en la base** (primera vez):
+
+| Tabla | Filas nuevas |
+|---|---|
+| `trucks` | 1 (`TRK-001`) |
+| `truck_tanks` | 2 (10000 y 5000 litros) |
+| `drivers`, `customers`, `gas_products` | 1 en cada una |
+| `orders` | 1 (`order_number = 90001`, `status = 1`, `reception_date_time = ahora`) |
+| `order_status_logs` | 1 (`from_status = NULL`, `to_status = 1`, `actor = admin`) |
+
+**4. Respuesta:** `201 Created` con `location: /api/v1/orders/90001`.
+
+**5. Repetir la petición:** 302 con `{"message": "Se encontró la Orden numero=90001", "code": 302, ...}`
+y sin escrituras. **Con `preset: -1`:** 400 con el mensaje de todos los campos inválidos.
