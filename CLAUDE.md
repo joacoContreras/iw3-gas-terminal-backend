@@ -227,3 +227,86 @@ Cuerpo de `POST /integration/sap/orders` (resumido; ejemplo completo en la colec
 | `Driver`, `Customer`, `Product` → `drivers`, `customers`, `gas_products` | `externalCode` único |
 | `User`, `Role` → `users`, `roles`, `userroles` | Autenticación (de la cátedra) |
 
+## 8. Qué falta
+
+### 8.1 Fases del parcial (en orden)
+
+**Fase 2 — Pesaje inicial y activación (Punto 2)** · rama `fase-2-pesaje-inicial`
+
+- Endpoint propuesto: `POST /api/v1/integration/tms/orders/{orderNumber}/tare` con `{ "weight": <kg> }`.
+- Reglas: la orden existe (404) y está en estado 1; `weight > 0` (400); guarda la tara y la fecha y hora
+  del pesaje inicial; **genera una contraseña entera de 5 dígitos** (10000 a 99999, `SecureRandom`); pasa a
+  estado 2 y registra el cambio de estado. Responde la contraseña.
+- Estado incorrecto: **409 Conflict** propuesto (confirmar con el equipo; la cátedra no tiene precedente).
+- Cambios probables: campos nuevos en `Order` (`tare`, `initialWeighingDateTime`, `activationPassword`),
+  `IOrderBusiness`, controller en `integration/tms/controllers`, `Constants.URL_INTEGRATION_TMS`, requests
+  de Postman y documentación.
+
+**Fase 3 — Carga y datos en tiempo real (Punto 3)** · rama `fase-3-carga-tiempo-real`
+
+- Activación: `POST /api/v1/integration/loader/activation` con `{ orderNumber, password }`; valida que la
+  orden exista, esté en estado 2 y la contraseña sea correcta; devuelve el `preset` y guarda
+  `activationDateTime` (decisión 7).
+- Detalle: `POST /api/v1/integration/loader/orders/{orderNumber}/details` con masa, densidad, temperatura
+  y caudal; solo en estado 2 y con la orden activada.
+- Validar densidad `0 < d < 1` (decisión 8) y **descartar** caudal ≤ 0, masa ≤ 0 o masa menor que la anterior.
+- Entidad nueva `OrderDetail`; la cabecera de `Order` guarda los últimos valores y su estampa; fechas de
+  inicio y fin de carga. Para el parcial alcanza con guardar todos los registros.
+- A definir: qué responde un registro descartado (propuesta: 200 indicando que no se guardó) y si la
+  activación es idempotente. Llegan datos cada ~1 s: cuidar la eficiencia de la escritura.
+
+**Fase 4 — Cierre de la orden (Punto 4)** · rama `fase-4-cierre-orden`
+
+- `POST /api/v1/integration/loader/orders/{orderNumber}/close`: estado 2 → 3. Desde ahí se rechazan los
+  detalles. Rechazar transiciones inválidas (cerrar dos veces, o desde el estado 1).
+
+**Fase 5 — Pesaje final, conciliación y circuito completo (Punto 5)** · rama `fase-5-conciliacion`
+
+- `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight`: estado 3 → 4 y devuelve la conciliación.
+- `GET /api/v1/orders/{orderNumber}/reconciliation`: solo para estado 4.
+- Promedios con `AVG` sobre los detalles almacenados (decisión 3).
+- Swagger completo, Postman consolidado con *Tests* que simulen el circuito 1 → 4, pruebas de integración y
+  verificación de los requisitos obligatorios del parcial.
+
+### 8.2 Para el examen final
+
+Roles por endpoint (SAP, TMS, sistema de carga, operadores) · alarma de temperatura por e-mail con umbral y
+destinatarios configurables y sin reenvío hasta que se acepte (usar las clases de la cátedra: eventos,
+`EmailBusiness`, `Scheduler`) · frontend completo · endurecimiento de seguridad (H-5) · despliegue.
+
+### 8.3 Pendientes transversales
+
+- Revisión de la Fase 1 por el equipo y su integración a `main`.
+- Confirmar el código HTTP de "estado incorrecto".
+- Desplegar el backend del TP en la VM (lo pidió el profesor; ver sección 13).
+
+## 9. Decisiones tomadas
+
+| # | Decisión | Estado |
+|---|---|---|
+| 1 | Retirar el código demo de la cátedra | Aplicada (Fase 1) |
+| 2 | Mantener `anyRequest().authenticated()`; Postman hace login con un usuario de prueba; roles al final | Vigente |
+| 3 | Implementar los promedios (`AVG`) | Fase 5 |
+| 4 | Duplicado: `FoundException` → 302, como la cátedra | Aplicada |
+| 5 | Identificadores en inglés; comentarios y documentación en español | Vigente |
+| 6 | **No** alinear el `pom.xml` con la cátedra (Boot 4.1.1, java-jwt 4.6.1) | Vigente |
+| 7 | Campo `activationDateTime` para distinguir "activada" de "tara registrada" | Fase 3 |
+| 8 | Validar densidad `0 < d < 1` | Fase 3 |
+| 9 | Una rama por fase y commits atómicos de ≤100 líneas | Vigente |
+| 10 | Contenedor MySQL `iw3-gas-mysql` (evita chocar con el `iw3-mysql` de la cátedra) | Aplicada |
+| 11 | Permitir `/error` y corregir el `produces` del login | Aplicada |
+| 12 | `getUserLogged()` en `BaseRestController` | Aplicada |
+| 13 | Integrar la Fase 0 a `main` | Aplicada |
+
+## 10. Hallazgos y deuda abierta
+
+| ID | Tema | Estado |
+|---|---|---|
+| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties`, `/demo/**` público, CORS abierto, `dev.info.enabled=true` (trazas en las respuestas de error) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
+| H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
+| N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Abierto; aceptado para el parcial |
+| N-3 | `GET /orders` sin paginación | Abierto |
+| N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
+| Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | Pendiente (final) |
+| Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` no están incorporados. Al copiarlos hay que cambiar `business.execption` por `business.exception` (el TP corrigió el nombre del paquete) | Pendiente (final) |
+
