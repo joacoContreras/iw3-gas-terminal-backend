@@ -40,7 +40,7 @@ public class AuthRestController extends BaseRestController {
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
-    @PostMapping(value = Constants.URL_LOGIN, produces = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = Constants.URL_LOGIN)
     public ResponseEntity<?> loginExternalOnlyToken(@RequestParam String username, @RequestParam String password,
             HttpServletRequest request) {
         Authentication auth = null;
@@ -72,7 +72,7 @@ public class AuthRestController extends BaseRestController {
     @Autowired
     private PasswordEncoder pEncoder;
 
-    @GetMapping(value = "/demo/encodepass", produces = MediaType.TEXT_PLAIN_VALUE)
+    @GetMapping(value = "/demo/encodepass")
     public ResponseEntity<?> encodepass(@RequestParam String password) {
         try {
             return new ResponseEntity<String>(pEncoder.encode(password), HttpStatus.OK);
