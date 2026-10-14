@@ -545,3 +545,58 @@ Authorization: Bearer <JWT>
 12. ¿Qué es una línea base y cómo comprobarías que un cambio no rompió lo existente?
 13. ¿Para qué sirve la interfaz `IProductBusiness` si hay una sola implementación?
 14. ¿Cómo se relacionan usuarios y roles en la base de datos y cómo llegan al token?
+
+## H. Respuestas modelo
+
+**1.** Es una arquitectura en capas. El *controller* (`@RestController`, por ejemplo
+`ProductRestController`) solo traduce HTTP: recibe el JSON, llama al negocio y convierte el
+resultado o la excepción en un código de estado. El *business* (`IProductBusiness` y
+`ProductBusiness`, con `@Service`) tiene las reglas, como no permitir duplicados, y lanza
+excepciones propias. El *repository* (`ProductRepository extends JpaRepository`) accede a la
+base con Spring Data JPA, y la *entidad* (`Product`, `@Entity`) es lo que se mapea a la
+tabla. Cada capa solo habla con la de abajo; por eso las reglas de estado de la orden van
+en `OrderBusiness` y no en el controller.
+
+**2.** `@SpringBootApplication`, en `Iw3Application`, junta `@Configuration`,
+`@EnableAutoConfiguration` y `@ComponentScan`. El `main` llama a `SpringApplication.run`, que
+crea el contexto de Spring (el contenedor de inversión de control) y levanta el Tomcat
+embebido. Extiende `SpringBootServletInitializer` para poder desplegarse como WAR en un
+Tomcat externo: el `pom.xml` tiene el perfil `war-build`, activo por defecto, con empaquetado
+`war` y Tomcat en scope `provided`. También implementa `CommandLineRunner`: su `run` fija la
+zona horaria y loguea el perfil activo.
+
+**3.** La conexión está en `application.properties`: `spring.datasource.url` apunta al MySQL
+de `localhost:3306`, base `iw3_db`, con el pool de Hikari. Las tablas las crea Hibernate al
+arrancar porque `spring.jpa.hibernate.ddl-auto=update`: compara las entidades con el esquema
+y agrega lo que falta. No hay migraciones y nunca borra ni renombra columnas. Lo comprobé en
+la línea base: tras `contextLoads` aparecieron `users`, `roles`, `userroles`, `products` y el
+resto. La base corre en Docker con `docker-compose.yml`.
+
+**4.** El filtro JWT no encuentra token y deja pasar como anónimo, y `filterChain` permite
+`POST /login`. Llega a `AuthRestController.loginExternalOnlyToken`, que recibe `username` y
+`password`. Llama a `CustomAuthenticationManager.authenticate`, que busca el usuario con
+`UserBusiness.load` (`UserRepository.findOneByUsernameOrEmail`), valida la cuenta con
+`User.validate()` y compara la contraseña con BCrypt. Si todo está bien, el controller arma
+el JWT con `sub`, `roles`, `email`, `version` y `exp` a una hora, lo firma con HMAC512 y
+responde `200 text/plain`. Si falla devuelve 401, aunque el cuerpo se pierde por H-2.
+
+**5.** `JWTAuthorizationFilter`, que extiende `BasicAuthenticationFilter`, lee
+`Authorization: Bearer …` o `?authtoken=`. `getAuthentication` verifica la firma con
+`AuthConstants.SECRET` y la expiración con java-jwt; si es válido arma un
+`UsernamePasswordAuthenticationToken` con las autoridades del claim `roles` y lo guarda en el
+`SecurityContextHolder`. Si no es válido devuelve `null`, lo registra en el log y el pedido
+sigue anónimo, así que `anyRequest().authenticated()` responde 401. No distingue vencido de
+firma inválida. Y como no consulta la base, un usuario deshabilitado conserva el acceso hasta
+que el token expira.
+
+**6.** En `SecurityConfiguration.filterChain`. Son públicos `POST /api/v1/login`,
+`/v3/api-docs/**`, `/swagger-ui/**`, `/ui/**` y `/demo/**`; todo lo demás exige autenticación.
+CSRF está desactivado porque ese ataque se apoya en cookies de sesión que el navegador envía
+solo, y acá no hay sesión: el cliente manda el token a mano en el header. STATELESS hace que
+el servidor no guarde sesión y cada pedido se autentique solo con su token.
+
+**7.** Con BCrypt: el bean `BCryptPasswordEncoder` está en `SecurityConfiguration`. En
+`users.password` se guarda solo el hash, que incluye la sal y no se puede revertir. En el
+login, `CustomAuthenticationManager` llama a `PasswordEncoder.matches(plano, hash)`. Para
+sembrar el usuario de prueba generé el hash con `GET /demo/encodepass`, un endpoint de demo de
+la cátedra que hay que cerrar antes de desplegar.
