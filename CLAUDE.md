@@ -154,3 +154,76 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Informe y guía** en `docs/fase-1-recepcion-ordenes.md` y PDF de las Fases 0 y 1 en `docs/pdf/`.
 - **Un bug propio** se detectó probando y se corrigió (el validador no revisaba chofer, cliente ni producto).
 
+## 6. Arquitectura y convenciones del código
+
+```
+Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Business) ──▶ Repository ──▶ MySQL
+```
+
+| Paquete (bajo `src/main/java/ar/edu/iua/iw3`) | Contenido |
+|---|---|
+| `controllers` | `BaseRestController` (`getUserLogged()`), `Constants` (URLs), `OrderRestController` |
+| `integration/<sistema>/controllers` | Endpoints por sistema externo. Hoy `sap`; más adelante `tms` y `loader` |
+| `business`, `business/exception` | `I*Business` + `*Business`, `OrderValidator`; excepciones de negocio |
+| `model`, `model/persistence` | Entidades JPA y repositorios Spring Data |
+| `auth`, `security` | Usuarios, roles, JWT y reglas de acceso (de la cátedra) |
+| `config` | `OpenApiConfig` (Swagger con esquema Bearer) |
+| `util` | `StandartResponse` y su servicio (respuesta de error estándar) |
+
+**Convenciones (las de la cátedra, salvo lo marcado):**
+
+- `IXxxBusiness` + `XxxBusiness` con `@Service`, inyección `@Autowired` en el campo, DAOs llamados `xxxDAO`.
+- Excepciones *checked* → HTTP: `NotFoundException` 404, `FoundException` **302** (convención de la
+  cátedra para duplicados), `BusinessException` 500 y `BadRequestException` **400** (extensión nuestra).
+- Controller: `try/catch` por método, `ResponseEntity<?>`, error con
+  `IStandartResponseBusiness.build(status, ex, message)` (JSON `message`, `code`, `devInfo`), y alta con 201
+  + header `location`. La clase `StandartResponse` conserva la errata de la cátedra.
+- Todas las URLs viven en `Constants`, bajo `/api/v1`.
+- Entidades: Lombok (`@Getter @Setter @NoArgsConstructor @AllArgsConstructor`), `@Id` con `IDENTITY`;
+  las que vienen de afuera llevan **`externalCode` (String, único)**.
+- **Nuestro:** el `@RequestBody` se enlaza a la entidad, pero el negocio **copia solo los campos
+  permitidos** (el cliente no fija `id`, estado ni fechas del backend).
+- **Nuestro:** `@Transactional(rollbackFor = Exception.class)` en lo que escribe varias tablas (las
+  excepciones de negocio son *checked* y Spring no revierte por ellas).
+- Validación manual en el negocio, juntando todos los errores en un solo mensaje (sin Bean Validation).
+- **No usar JSON dinámico tipo `JsonUtiles`:** descartaba números enteros (H-6). Usar el binding de Jackson.
+- Fechas: `LocalDateTime`; `spring.jpa.properties.hibernate.jdbc.time_zone` hace que la base guarde la
+  hora de Argentina.
+- Tablas: `orders` (ORDER es reservada) y `gas_products` (la tabla `products` del demo existe en bases
+  viejas con otro esquema). `ddl-auto=update`: crea y agrega, **nunca borra ni renombra**.
+- Seguridad: todo exige JWT salvo `POST /api/v1/login`, `/error`, la documentación y `/demo/**`. El token
+  es HS512, vence en 1 h y viaja en `Authorization: Bearer <jwt>` (o `?authtoken=`).
+- Perfiles de Spring: `mysqldev` y `mysqlprod` (properties). Se activan con
+  `-Dspring-boot.run.profiles=<perfil>` o `SPRING_PROFILES_ACTIVE`; el `-P` de Maven **no** los activa (H-3).
+
+## 7. API y modelo actuales
+
+| Método y ruta | Qué hace | Respuestas |
+|---|---|---|
+| `POST /api/v1/login` | Formulario `username`/`password`; devuelve el JWT en texto | 200, 401 (con JSON) |
+| `POST /api/v1/integration/sap/orders` | **Punto 1**: recibe la orden | 201 + `location`, 302, 400, 401, 500 |
+| `GET /api/v1/orders` | Lista las órdenes (más reciente primero) | 200 |
+| `GET /api/v1/orders/{orderNumber}` | Una orden | 200, 404 |
+| `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
+| `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, **público**, cerrar antes de desplegar) | 200 |
+| `/swagger-ui.html`, `/v3/api-docs` | Documentación OpenAPI | públicos |
+
+Cuerpo de `POST /integration/sap/orders` (resumido; ejemplo completo en la colección Postman):
+
+```json
+{ "orderNumber": 90001, "plannedLoadDateTime": "2026-10-20T08:00:00", "preset": 15000,
+  "truck": { "externalCode": "TRK-001", "plate": "AB123CD",
+             "tanks": [ { "number": 1, "capacityLiters": 10000 }, { "number": 2, "capacityLiters": 5000 } ] },
+  "driver": { "externalCode": "DRV-001", "name": "Juan", "lastName": "Perez" },
+  "customer": { "externalCode": "CUS-001", "companyName": "Gas del Sur SA" },
+  "product": { "externalCode": "PRD-GLP", "name": "GLP" } }
+```
+
+| Entidad (clase → tabla) | Notas |
+|---|---|
+| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime` |
+| `OrderStatusLog` → `order_status_logs` | Estado anterior (`null` al crear) y nuevo, fecha y hora, `actor`, observaciones |
+| `Truck`, `TruckTank` → `trucks`, `truck_tanks` | Camión con su cisternado (una fila por cisterna) |
+| `Driver`, `Customer`, `Product` → `drivers`, `customers`, `gas_products` | `externalCode` único |
+| `User`, `Role` → `users`, `roles`, `userroles` | Autenticación (de la cátedra) |
+
