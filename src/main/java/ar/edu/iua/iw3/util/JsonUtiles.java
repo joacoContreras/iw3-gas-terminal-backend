@@ -14,42 +14,6 @@ import tools.jackson.databind.ser.std.StdSerializer;
 
 public class JsonUtiles {
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-	public static ObjectMapper getObjectMapper(Class clazz, StdSerializer ser, String dateFormat) {
-	
-		String defaultFormat = "yyyy-MM-dd'T'HH:mm:ssZ";
-		if (dateFormat != null)
-			defaultFormat = dateFormat;
-		SimpleDateFormat df = new SimpleDateFormat(defaultFormat, Locale.getDefault());
-		SimpleModule module = new SimpleModule();
-		if (ser != null) {
-			module.addSerializer(clazz, ser);
-		}
-		ObjectMapper mapper = JsonMapper.builder()
-		    .defaultDateFormat(df)
-		    .addModule(module)
-		    .build();
-		return mapper;
-
-	}
-	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static ObjectMapper getObjectMapper(Class clazz, StdDeserializer deser, String dateFormat) {
-		String defaultFormat = "yyyy-MM-dd'T'HH:mm:ssZ";
-		if (dateFormat != null)
-			defaultFormat = dateFormat;
-		SimpleDateFormat df = new SimpleDateFormat(defaultFormat, Locale.getDefault());
-		SimpleModule module = new SimpleModule();
-		if (deser != null) {
-			module.addDeserializer(clazz, deser);
-		}
-		ObjectMapper mapper = JsonMapper.builder()
-		    .defaultDateFormat(df)
-		    .addModule(module)
-		    .build();
-		return mapper;
-	}
-
 	/**
 	 * Obtiene una cadena con la siguiente lógica:
 	 * 1) Busca en cada uno de los atributos definidos en el arreglo "attrs",
