@@ -394,3 +394,71 @@ MySQL (Hibernate, ddl-auto=update)
 
 Las fases 1 a 5 siguen este mismo esquema: las reglas de la orden irán en `business`, y los
 controllers solo traducirán a HTTP.
+
+## D. Explicación del código paso a paso
+
+### D.1 La cadena de seguridad — `SRC/security/SecurityConfiguration.java`
+
+```java
+http.csrf(AbstractHttpConfigurer::disable);
+http.authorizeHttpRequests(auth -> auth
+    .requestMatchers(HttpMethod.POST, Constants.URL_LOGIN).permitAll()
+    /* ... /v3/api-docs/**, /swagger-ui/**, /ui/**, /demo/** ... */
+    .anyRequest().authenticated());
+http.httpBasic(Customizer.withDefaults())
+    .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+http.addFilter(new JWTAuthorizationFilter(authenticationManager()));
+```
+
+| Línea | Qué hace | Si se elimina o cambia |
+|---|---|---|
+| `csrf(...disable)` | Apaga la protección CSRF, pensada para sesiones con cookies | Con CSRF activo, todo `POST` sin token CSRF respondería 403 |
+| `requestMatchers(...).permitAll()` | Lista blanca de rutas sin login | Sin `POST /login` nadie podría obtener un token |
+| `anyRequest().authenticated()` | Todo lo demás exige autenticación (denegar por defecto) | Se vuelve a la API abierta de la clase 3 |
+| `httpBasic(...)` | Aporta el *entry point* que responde 401 con `WWW-Authenticate: Basic` | Cambiaría la forma del 401 (y posiblemente a 403) |
+| `STATELESS` | No crea `HttpSession`; cada pedido debe traer su token | Aparecería `JSESSIONID` y estado en el servidor |
+| `addFilter(JWTAuthorizationFilter)` | Inserta el filtro que lee el JWT | Los tokens se ignorarían y todo daría 401 |
+
+### D.2 El filtro JWT — `SRC/auth/filters/JWTAuthorizationFilter.java`
+
+```java
+String header = req.getHeader(AuthConstants.AUTH_HEADER_NAME);     // "Authorization"
+String param  = req.getParameter(AuthConstants.AUTH_PARAM_NAME);   // "authtoken"
+boolean byHeader = !(header == null || !header.startsWith(AuthConstants.TOKEN_PREFIX));
+boolean byParam  = !(param == null || param.trim().length() < 10);
+if (!byHeader && !byParam) { chain.doFilter(req, res); return; }
+UsernamePasswordAuthenticationToken authentication = getAuthentication(req, byHeader);
+SecurityContextHolder.getContext().setAuthentication(authentication);
+chain.doFilter(req, res);
+```
+
+- Primero decide **de dónde** sale el token. El header tiene prioridad sobre el parámetro, y
+  el parámetro debe tener al menos 10 caracteres.
+- Si no hay token, no hace nada y deja pasar: la decisión de rechazar la toma
+  `anyRequest().authenticated()`, no este filtro.
+- Si hay token, guarda el resultado de `getAuthentication` en el `SecurityContextHolder`,
+  incluso si es `null`. Un token inválido deja el contexto vacío y el pedido sigue como anónimo.
+- *Qué pasaría si se quitara el `return`:* el filtro seguiría y llamaría dos veces a
+  `chain.doFilter`, con respuestas duplicadas.
+
+### D.3 La emisión del token — `SRC/auth/controller/AuthRestController.java`
+
+```java
+String token = JWT.create().withSubject(user.getUsername())
+    .withClaim("roles", new ArrayList<String>(user.getAuthoritiesStr()))
+    .withClaim("email", user.getEmail())
+    .withClaim("version", "1.0.0")
+    .withExpiresAt(new Date(System.currentTimeMillis() + AuthConstants.EXPIRATION_TIME))
+    .sign(Algorithm.HMAC512(AuthConstants.SECRET.getBytes()));
+```
+
+| Elemento | Qué es | Observación |
+|---|---|---|
+| `withSubject` | Claim `sub`: quién es el usuario | El filtro lo usa como `username` |
+| `roles` | Lista de nombres de rol (`ROLE_ADMIN`) | Se convierten en autoridades en cada pedido |
+| `version` | Versión propia del formato del token | Dato de la cátedra, sin efecto funcional |
+| `withExpiresAt` | Claim `exp`: ahora + 1 hora | Vencido el token hay que loguearse de nuevo |
+| `sign(HMAC512)` | Firma simétrica con `SECRET` | Quien conozca `SECRET` puede falsificar tokens (H-5) |
+
+El payload **no está cifrado**, solo firmado: en la prueba se decodificó con Base64 y se
+leyó `{"sub":"admin","roles":["ROLE_ADMIN"],"email":"admin@iw3.local",...}`.
