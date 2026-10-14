@@ -84,27 +84,4 @@ public class ProductBusiness implements IProductBusiness {
             throw BusinessException.builder().ex(e).build();
         }
     }
-
-    @Override
-    public Product update(Product product) throws NotFoundException, BusinessException {
-        load(product.getId());
-        try {
-            return productDAO.save(product);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
-        }
-    }
-
-    @Override
-    public void delete(long id) throws NotFoundException, BusinessException {
-        load(id);
-        try {
-            productDAO.deleteById(id);
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw BusinessException.builder().ex(e).build();
-        }
-    }
-
 }
