@@ -328,7 +328,6 @@ para correr Postman por consola y regenerar los PDF. Maven no hace falta: se usa
 ```bash
 git clone https://github.com/joacoContreras/iw3-gas-terminal-backend.git
 cd iw3-gas-terminal-backend
-git checkout fase-1-recepcion-ordenes     # mientras no esté integrada a main
 docker compose up -d                      # MySQL 8.0: localhost:3306, base iw3_db, root/root (solo desarrollo)
 ./mvnw spring-boot:run                    # Windows: mvnw.cmd spring-boot:run  ->  http://localhost:8080
 ```
@@ -352,7 +351,7 @@ docker exec -i iw3-gas-mysql mysql -uroot -proot iw3_db < docs/sql/seed-dev-user
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `container name "/iw3-mysql" is already in use` | Tenés el contenedor de la cátedra (o un `main` viejo) | Usar esta rama: el contenedor del TP es `iw3-gas-mysql` |
+| `container name "/iw3-mysql" is already in use` | Tenés el contenedor de la cátedra (o un clon anterior a la Fase 1) | `git pull` en `main`: el contenedor del TP es `iw3-gas-mysql` |
 | `Communications link failure` o `Connection refused` al arrancar | MySQL no está arriba | Iniciar Docker, `docker compose up -d` y esperar ~20 s la primera vez |
 | `port is already allocated` (3306) | Otro MySQL local | Detenerlo, o cambiar el mapeo del compose y la URL de `application.properties` |
 | 401 en todo | Falta el usuario de prueba o el token | Correr el seed, loguearse y enviar `Authorization: Bearer <jwt>` |
