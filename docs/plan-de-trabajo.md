@@ -46,3 +46,38 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 9 | Git | Una rama por fase; commits atómicos por funcionalidad, de no más de 100 líneas. | Todas |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
+
+## 4. Modelo de datos propuesto
+
+Propuesta de diseño (no es un requisito de la consigna). Toda entidad que viene de un
+sistema externo lleva `externalCode` (String, único), como `codCli1` en la cátedra.
+
+| Entidad | Atributos principales | Relaciones |
+|---|---|---|
+| `Truck` | externalCode, plate, description\* | 1—N `TruckTank` |
+| `TruckTank` | number, capacityLiters (cisternado) | N—1 `Truck` |
+| `Driver` | externalCode, name, lastName, document\* | — |
+| `Customer` | externalCode, companyName, contact\* | — |
+| `Product` | externalCode, name, description\* | — |
+| `Order` | orderNumber (único), plannedLoadDateTime, preset, status (1–4), activationPassword, tare, finalWeight, activationDateTime, fechas del ciclo, últimos valores de carga | N—1 Truck, Driver, Customer, Product |
+| `OrderDetail` | accumulatedMass, density, temperature, flowRate, timestamp | N—1 `Order` |
+| `OrderStatusLog` | fromStatus, toStatus, dateTime, actor (usuario o proceso), observations\* | N—1 `Order` |
+
+\* opcional.
+
+## 5. Endpoints propuestos
+
+Rutas bajo `/api/v1` (`Constants.URL_BASE`). Son una propuesta; se confirman en cada fase.
+
+| Punto | Método y ruta | Entrada | Salida |
+|---|---|---|---|
+| 1 | `POST /integration/sap/orders` | Orden y sus entidades, con códigos externos | 201 + `location`; 302 si ya existe |
+| 2 | `POST /integration/tms/orders/{orderNumber}/tare` | Tara (kg) | Contraseña de activación (5 dígitos) |
+| 3 | `POST /integration/loader/activation` | `orderNumber`, `password` | Preset (kg) |
+| 3 | `POST /integration/loader/orders/{orderNumber}/details` | Masa, densidad, temperatura, caudal | 200; tratamiento del registro inválido a definir en Fase 3 |
+| 4 | `POST /integration/loader/orders/{orderNumber}/close` | — | 200; orden en estado 3 |
+| 5 | `POST /integration/tms/orders/{orderNumber}/final-weight` | Pesaje final (kg) | Conciliación; orden en estado 4 |
+| 5 | `GET /orders/{orderNumber}/reconciliation` | — | Conciliación (solo estado 4) |
+
+Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el formato
+`StandartResponse` de la cátedra. El código para "estado incorrecto" se define en la Fase 2.
