@@ -415,3 +415,95 @@ código, patente y cisternas válidas, chofer, cliente y producto completos, y n
 
 **5. Repetir la petición:** 302 con `{"message": "Se encontró la Orden numero=90001", "code": 302, ...}`
 y sin escrituras. **Con `preset: -1`:** 400 con el mensaje de todos los campos inválidos.
+
+## G. Preguntas posibles del profesor
+
+1. ¿Qué recorrido sigue una orden desde que SAP la envía hasta que queda guardada?
+2. ¿Por qué la sincronización y las reglas están en `OrderBusiness` y no en el controller?
+3. ¿Qué significa sincronizar por código externo? ¿Qué pasa si el camión ya existe con otra patente?
+4. ¿Cómo se evita que SAP fije el estado, el id o la fecha de recepción de la orden?
+5. ¿Qué pasa si falla algo a mitad de la sincronización?
+6. ¿Para qué sirve `rollbackFor = Exception.class` si ya hay `@Transactional`?
+7. ¿Por qué un número repetido responde 302 y un dato inválido 400?
+8. ¿Dónde se valida y qué diferencia hay entre validar y persistir?
+9. ¿Cómo se guarda el estado de la orden y por qué hace falta un conversor?
+10. ¿Cómo se registra el cambio de estado y quién figura como actor?
+11. ¿Por qué el producto está en la tabla `gas_products` y las órdenes en `orders`?
+12. ¿Qué problema de fechas encontraron y cómo lo resolvieron?
+13. ¿Cómo demostrarías que esta funcionalidad funciona?
+14. ¿Qué se retiró del código de la cátedra y por qué?
+
+## H. Respuestas modelo
+
+**1.** SAP hace `POST /api/v1/integration/sap/orders` con un JWT. `JWTAuthorizationFilter`
+autentica, Jackson arma el `Order` con sus cuatro entidades y `OrderSapRestController.add`
+llama a `OrderBusiness.add`. Ahí `OrderValidator` revisa los datos, `findByNumber` descarta
+repetidos, los `sync*` buscan o crean camión, chofer, cliente y producto por código externo,
+se guarda la orden en estado 1 y `logStatus` registra el primer cambio. El controller responde
+201 con el header `location`.
+
+**2.** Porque son reglas del proceso, no de HTTP: validar, no repetir, sincronizar y auditar.
+El controller solo traduce a HTTP (códigos de estado y `location`). Con esa separación la regla
+se puede reutilizar y probar sin pasar por HTTP, y es el mismo criterio que usa la cátedra con
+`ProductBusiness`.
+
+**3.** Que el sistema externo identifica cada entidad con su propio código y el backend lo usa
+como clave de integración, no el `id` interno. `findByExternalCode` decide: si existe se
+actualizan sus datos (por ejemplo la patente) y si no se crea. Lo verifiqué: una segunda orden
+del mismo camión con otra patente dejó una sola fila de camión con la patente nueva.
+
+**4.** `add` no guarda el objeto que llega: crea un `Order` nuevo y copia solo `orderNumber`,
+`plannedLoadDateTime`, `preset` y las entidades ya sincronizadas. `status` y
+`receptionDateTime` los asigna el backend, y los `id` del cliente se ignoran. En Swagger esos
+campos figuran como solo lectura.
+
+**5.** Se revierte todo. El método es una única transacción, así que si, por ejemplo, el
+producto falla al guardarse, también se deshacen el camión, el chofer y el cliente que ya se
+habían insertado. Lo probé con una descripción de 300 caracteres en una columna de 255: respuesta
+500 y cero filas nuevas.
+
+**6.** Porque por defecto Spring revierte solo ante excepciones *unchecked*, y las de negocio
+de la cátedra (`BusinessException`, `FoundException`) son *checked*. Sin `rollbackFor`, el
+método terminaría con una excepción y la transacción se confirmaría igual, dejando filas
+sueltas.
+
+**7.** El 302 es la convención de la cátedra: `FoundException` se traduce a `HttpStatus.FOUND`
+en todos los controllers; lo dejé así por coherencia (decisión 4), aunque 409 sería más
+preciso. El 400 es una extensión mía: `BadRequestException`, porque un dato inválido es un
+error del cliente y no una falla del servidor como implicaría el 500.
+
+**8.** La validación (`OrderValidator`) mira el contenido y responde "es válido o no", sin
+tocar la base; la persistencia guarda. Se valida primero para no escribir nada ante datos
+inválidos, y además junta todos los errores en un solo mensaje. El único control que necesita
+la base (número repetido) está después, en `OrderBusiness.add`.
+
+**9.** `OrderStatus` es un enum con el número de cada estado. `OrderStatusConverter` (un
+`AttributeConverter` con `autoApply`) guarda ese número en la columna, porque sin él Hibernate
+guardaría el ordinal 0–3 y la consigna habla de estados 1 a 4. En el JSON, `@JsonValue`
+publica el número.
+
+**10.** En `OrderBusiness.add`, dentro de la misma transacción, se inserta un
+`OrderStatusLog` con estado anterior `null`, nuevo 1, fecha y hora, observación y actor. El
+actor sale del token: el filtro deja el `User` en el `SecurityContextHolder` y el controller
+lo obtiene con `getUserLogged()`. En las pruebas figura `admin`.
+
+**11.** `orders` porque `ORDER` es palabra reservada de SQL. `gas_products` porque en las bases
+creadas con el demo de la cátedra ya existe una tabla `products` con otro esquema (incluida la
+de la VM), y `ddl-auto=update` no la reemplazaría: el despliegue fallaría.
+
+**12.** Sin configuración extra, MySQL recibía la hora en UTC: en la base figuraba `17:49`
+cuando eran las `14:49`, aunque el JSON se viera bien porque el ida y vuelta compensaba. Lo
+medí con la JVM en Argentina y en UTC y con la URL de desarrollo y la de producción, y lo
+resolví con `spring.jpa.properties.hibernate.jdbc.time_zone=America/Argentina/Buenos_Aires`:
+en los seis casos la base guarda la hora local.
+
+**13.** Con tres evidencias: la colección Postman (10 requests y 19 aserciones, 0 fallas con
+newman), la batería de peticiones con sus códigos (201, 302, 400, 404, 415, 401) y la
+consulta directa a la base para ver las filas, el estado numérico y la hora. Además probé la
+sincronización con camiones repetidos y la atomicidad.
+
+**14.** El demo de productos y categorías, los paquetes `cli1` y `cli2`, los `ScanConfig` y
+`JsonUtiles` (decisión 1). Eran un ejemplo didáctico que ya no aportaba al dominio y generaba
+confusión (incluso un nombre en común, `Product`). Quedan en el historial de git. Se conservó
+todo lo que sirve de infraestructura: capas, excepciones, `StandartResponse`, `Constants` y
+la seguridad JWT.
