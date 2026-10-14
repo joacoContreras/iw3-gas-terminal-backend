@@ -229,3 +229,52 @@ Rutas de archivo relativas a `SRC`. Los cuatro recorridos corresponden a las pru
 | 2 | `DefaultHandlerExceptionResolver` | La resuelve como 400 y la registra en el log. |
 | 3 | Contenedor de servlets | Reenvía internamente a `/error`. |
 | 4 | `SecurityConfiguration` (`anyRequest().authenticated()`) | `/error` no tiene contexto (STATELESS): responde 401 sin cuerpo. Ver H-1. |
+
+### 7.5 Funciones y métodos relevantes
+
+Son las piezas que las fases siguientes reutilizan o imitan.
+
+**`AuthRestController.loginExternalOnlyToken`** — `SRC/auth/controller/AuthRestController.java`
+
+- *Responsabilidad:* autenticar con usuario y contraseña y emitir un JWT.
+- *Recibe:* `username` y `password` (`@RequestParam`) y `HttpServletRequest` (hoy sin uso: la publicación del evento LOGIN está comentada).
+- *Devuelve:* `ResponseEntity<?>` con el token en texto (200) o un `StandartResponse` de error.
+- *Usa:* `AuthenticationManager`, `IStandartResponseBusiness`, `AuthConstants` (`SECRET`, `EXPIRATION_TIME` = 1 h) y java-jwt.
+- *Datos:* solo lectura de `users` y `roles` (indirecta). No escribe.
+- *Errores:* `AuthenticationServiceException` → 500; cualquier otra `AuthenticationException` → 401. En ambos casos el cuerpo se pierde por H-2.
+
+**`CustomAuthenticationManager.authenticate`** — `SRC/auth/custom/CustomAuthenticationManager.java`
+
+- *Responsabilidad:* validar credenciales contra la base y devolver un `Authentication` con el `User` como principal.
+- *Recibe:* un `Authentication` con nombre y credencial (lo arma `authWrap`).
+- *Devuelve:* `UsernamePasswordAuthenticationToken(user, null, user.getAuthorities())`.
+- *Validaciones:* existe el usuario; `User.validate()` (vencida, credenciales vencidas, bloqueada, deshabilitada); `PasswordEncoder.matches`.
+- *Usa:* `IUserBusiness.load`, `User.validate`, BCrypt. Se registra como bean en `SecurityConfiguration.authenticationManager()`.
+- *Errores:* `BadCredentialsException` (no existe o contraseña inválida), `AccountExpiredException`, `CredentialsExpiredException`, `DisabledException`, `LockedException`, `AuthenticationServiceException` (falla de base).
+
+**`JWTAuthorizationFilter.getAuthentication`** — `SRC/auth/filters/JWTAuthorizationFilter.java`
+
+- *Responsabilidad:* validar el JWT del request y construir el `Authentication`.
+- *Recibe:* `HttpServletRequest` y `byHeader` (header `Bearer` o parámetro `authtoken`).
+- *Devuelve:* `UsernamePasswordAuthenticationToken` con un `User` mínimo (username y email) y las autoridades del claim `roles`; `null` si el token no es válido.
+- *Validaciones:* firma HS512 con `AuthConstants.SECRET` y expiración (`JWT.require(...).verify`).
+- *Datos:* no consulta la base (es stateless).
+- *Errores:* cualquier excepción se registra con `log.error` y devuelve `null`: token vencido y firma inválida son indistinguibles para el cliente.
+- *Cuidado:* el `User` del principal no trae `roles` cargados; las autoridades viven en el `Authentication`, no en `User.getAuthorities()`.
+
+**`ProductBusiness.add`** — `SRC/business/ProductBusiness.java`
+
+- *Responsabilidad:* alta con control de duplicados por id y por nombre.
+- *Recibe:* un `Product`. *Devuelve:* el `Product` persistido, ya con su id.
+- *Validaciones:* ni `load(id)` ni `load(nombre)` deben encontrar un registro; con `id` nulo `load` lanza `NotFoundException`, que `add` descarta a propósito.
+- *Datos:* dos lecturas en `products` y un `INSERT`.
+- *Errores:* `FoundException` (duplicado) y `BusinessException` (falla de base, registrada en el log).
+- *Importancia:* es el patrón que se replica para "la orden ya existe" en la Fase 1.
+
+**`StandartResponseBusiness.build`** — `SRC/util/StandartResponseBusiness.java`
+
+- *Responsabilidad:* armar el cuerpo de error estándar.
+- *Recibe:* `HttpStatus`, `Throwable` y `String message`. *Devuelve:* `StandartResponse` (JSON con `message`, `code` y `devInfo`).
+- *Validaciones:* ninguna; si `message` es nulo se usa `ex.getMessage()`.
+- *Usa:* la propiedad `dev.info.enabled`, que decide si `devInfo` lleva la traza completa.
+- *Lo llama:* el `catch` de cada controller.
