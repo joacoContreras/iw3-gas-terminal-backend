@@ -475,6 +475,37 @@
               "type": "noauth"
             }
           }
+        },
+        {
+          "name": "Orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('inexistente: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje', () => pm.expect(pm.response.json().message).to.include('No se encuentra la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "999999999"
+              ]
+            }
+          }
         }
       ]
     }
