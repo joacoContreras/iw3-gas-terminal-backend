@@ -278,3 +278,47 @@ Son las piezas que las fases siguientes reutilizan o imitan.
 - *Validaciones:* ninguna; si `message` es nulo se usa `ex.getMessage()`.
 - *Usa:* la propiedad `dev.info.enabled`, que decide si `devInfo` lleva la traza completa.
 - *Lo llama:* el `catch` de cada controller.
+
+## 8. Pendientes y criterios de aceptación
+
+### 8.1 Lo que no se verificó
+
+| Elemento | Motivo |
+|---|---|
+| Perfil `mysqlprod` y despliegue como WAR en Tomcat | El host `mysql` y el compose de producción no están en el repo |
+| Zona horaria con fechas reales | Todavía no hay entidades con timestamp (H-8) |
+| Envío de mails y tareas programadas | No existen en el TP (clase 9 sin incorporar) |
+| Tests con base H2 | Ningún perfil de test la configura; `contextLoads` usa MySQL |
+
+### 8.2 Decisiones pendientes
+
+| # | Tema | Recomendación | Cuándo |
+|---|---|---|---|
+| 6 | Alinear `pom.xml` (Boot 4.1.1, `java-jwt` 4.6.1; retirar `actuator` y `h2`) | Opcional: con el `pom.xml` actual compila y arranca | Antes de la Fase 1 |
+| 10 | Renombrar el contenedor a `iw3-gas-mysql` (H-4) | Sí | Fase 1 |
+| 11 | Corregir H-1 y H-2 en un mismo cambio | Sí | Fase 1 |
+| 12 | Incorporar `getUserLogged()` en `BaseRestController` (H-10) | Sí | Fase 1 |
+| 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | A definir | Antes de la Fase 1 |
+
+### 8.3 Criterios de aceptación
+
+| Criterio | Estado |
+|---|---|
+| Auditoría del backend actual | Cumplido (secciones 4 y 5) |
+| Entorno y dependencias verificados | Cumplido (sección 3) |
+| Configuración de la base de datos | Cumplido, con la salvedad de H-4 |
+| Componentes existentes y faltantes identificados | Cumplido (sección 4) |
+| Riesgos, bloqueos y decisiones identificados | Cumplido (secciones 6 y 8.2) |
+| Línea base para detectar regresiones | Cumplido (sección 5, 18 verificaciones) |
+| No modificar innecesariamente el proyecto | Cumplido: sin cambios en `src/` ni en `pom.xml` |
+
+### 8.4 Repetir la línea base
+
+```bash
+docker compose up -d                       # ver H-4 si el nombre del contenedor choca
+./mvnw -B test                             # contextLoads contra MySQL
+./mvnw -B spring-boot:run                  # arranca en http://localhost:8080
+docker exec -i <contenedor> mysql -uroot -proot iw3_db < docs/sql/seed-dev-users.sql
+curl -X POST http://localhost:8080/api/v1/login -d "username=admin&password=admin123"
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/v1/products
+```
