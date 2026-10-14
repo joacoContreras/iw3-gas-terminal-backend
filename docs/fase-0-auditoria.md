@@ -645,3 +645,41 @@ quien la usa. En el TP habrá `IOrderBusiness` y `OrderBusiness` con el mismo es
 `getAuthorities()` los convierte en `GrantedAuthority` y `getAuthoritiesStr()` en la lista de
 nombres que va al claim `roles` del JWT. En cada pedido el filtro reconstruye las
 autoridades desde ese claim, sin consultar la base.
+
+## I. Errores frecuentes y puntos difíciles
+
+| Confusión o error | Lo correcto | Dónde se ve |
+|---|---|---|
+| Creer que un 401 siempre es un problema de token | También aparece cuando falla un error interno y se reenvía a `/error` | H-1, prueba 14 |
+| Confundir 401 con 403 | 401: no sé quién sos; 403: sé quién sos y no tenés permiso. Hoy no hay autorización por rol, solo "estar autenticado" | `SecurityConfiguration` |
+| Creer que el JWT está cifrado | Está firmado, no cifrado: el payload se lee con Base64. No debe llevar datos sensibles | Sección D.3 |
+| Creer que `-Pperfil` activa un perfil de Spring | Es un perfil de Maven; el de Spring se activa con `spring.profiles.active` | H-3 |
+| Creer que `ddl-auto=update` migra la base | Solo crea y agrega; no borra ni renombra columnas | `application.properties` |
+| Esperar que un cambio de rol o de estado de cuenta rija al instante | El token ya emitido sigue valiendo hasta que vence (1 h) | `JWTAuthorizationFilter` |
+| Olvidar que `add` descarta `NotFoundException` a propósito | Con `id` nulo `load` lanza `NotFoundException` y eso significa "no existe, se puede crear" | `ProductBusiness.add` |
+| Dar por válido un JSON numérico con `JsonUtiles.getDouble` | Descarta enteros y devuelve el valor por defecto | H-6, prueba 18 |
+| Separar alias con `", "` y `split(",")` | Los alias quedan con espacio inicial y no coinciden | H-7 |
+| Confundir `long` con `Long` en una entidad | `Long` admite `null` para "sin id"; `long` no | Clase 4, `Product.id` |
+
+**Qué conviene estudiar con más profundidad:**
+
+- El orden de la cadena de filtros de Spring Security y dónde actúa cada uno.
+- Qué es un *dispatch* de error y por qué vuelve a pasar por la seguridad.
+- Diferencia entre `@Autowired(required = false)` y la inyección normal (se usa en los
+  `*Business` de integración para que existan aunque su repositorio esté excluido).
+- Cómo Hibernate traduce nombres (`idUser` → `id_user`) con la estrategia de nombres por defecto.
+
+## J. Lista de comprobación para rendir
+
+Puedo defender esta fase si, sin mirar el material, logro:
+
+- [ ] Dibujar las capas y decir en qué paquete y archivo está cada una.
+- [ ] Explicar el recorrido de `POST /api/v1/login` nombrando archivo y método de cada paso.
+- [ ] Explicar qué hace cada línea de `SecurityConfiguration.filterChain` y qué pasa si se quita.
+- [ ] Decodificar un JWT y decir qué contiene, qué no contiene y por qué no está cifrado.
+- [ ] Explicar cómo `NotFoundException`, `FoundException` y `BusinessException` terminan en 404, 302 y 500.
+- [ ] Explicar por qué un JSON malformado devuelve 401 y qué se hará para corregirlo.
+- [ ] Explicar cómo se activa un perfil de Spring y por qué `-P` no alcanza.
+- [ ] Repetir la línea base con los comandos de 8.4 e interpretar el resultado.
+- [ ] Explicar por qué `JsonUtiles.getDouble` pierde los enteros y por qué no se reutilizará.
+- [ ] Explicar qué existe y qué falta para el dominio de gas, y en qué fase se agrega cada cosa.
