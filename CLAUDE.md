@@ -77,3 +77,80 @@
 10. **Objetivo final:** llegar al segundo parcial con un backend funcional, probado y documentado, y que
     **cada integrante pueda explicar cómo funciona cada parte** (la evaluación es individual).
 
+## 4. La consigna, resumida
+
+### 4.1 El proceso (cinco puntos)
+
+| Punto | Qué ocurre | Estado resultante |
+|---|---|---|
+| 1 | SAP envía la orden: número, camión, chofer, cliente, producto, fecha prevista de carga y preset (kg). Las entidades se relacionan por **código externo** (string) | **1** Pendiente de pesaje inicial |
+| 2 | La balanza (TMS) envía la **tara**; se genera una **contraseña de activación** de 5 dígitos asociada a la orden | **2** Con pesaje inicial registrado |
+| 3 | El sistema de carga envía contraseña + número de orden; si la orden existe, está en el estado esperado y la contraseña es correcta, el backend **devuelve el preset**. Luego llegan datos en tiempo real | sigue en **2** |
+| 4 | Un endpoint **cierra** la orden y bloquea nuevos datos de detalle | **3** Cerrada para carga |
+| 5 | La balanza envía el **pesaje final**; el backend devuelve la **conciliación** | **4** Finalizada |
+
+- Los cambios de estado son **secuenciales y unidireccionales**.
+- Cada cambio queda registrado: fecha y hora, usuario o proceso, observaciones (log de auditoría).
+- El diagrama de estados del PDF rotula el estado 3 como "proceso de carga", pero el anexo y el requisito
+  del final ("tiempo transcurrido, solo estado 2") indican que **los datos de carga llegan en estado 2**.
+
+### 4.2 Datos de carga (Punto 3)
+
+- Cada lectura trae: **masa acumulada** (kg, creciente), **densidad** (entre 0 y 1), **temperatura** (°C),
+  **caudal** (kg/h) y estampa de tiempo. El caudalímetro es másico.
+- **Descartar** el registro si: caudal ≤ 0, masa acumulada ≤ 0 o masa menor que la anterior.
+- La **cabecera** de la orden guarda el último valor válido de cada atributo; el **detalle** guarda el
+  histórico. La frecuencia de almacenamiento puede ser menor que la de recepción (opcional para el parcial:
+  alcanza con guardar todos).
+- Fechas de la orden: recepción inicial, pesaje inicial, inicio de carga (primer registro válido), fin de
+  carga (último registro válido) y pesaje final.
+
+### 4.3 Conciliación (Punto 5)
+
+| Dato | Cálculo |
+|---|---|
+| Pesaje inicial (tara) y pesaje final | Recibidos de la balanza |
+| Producto cargado | Última masa acumulada |
+| Neto por balanza | Pesaje final − pesaje inicial |
+| Diferencia balanza vs. caudalímetro | Neto por balanza − producto cargado |
+| Promedios de temperatura, densidad y caudal | Sobre los datos almacenados |
+
+La conciliación se consulta con un endpoint específico, **solo para órdenes en estado 4**.
+
+### 4.4 Qué se exige en cada instancia
+
+| Instancia | Requisitos |
+|---|---|
+| **Segundo parcial (obligatorio)** | Puntos 1 a 5 como API **sin interfaz gráfica**; documentación **OpenAPI/Swagger**; **colección Postman** que pruebe todas las APIs |
+| Segundo parcial (opcional) | *Tests* de Postman que simulen el circuito completo; frecuencia de almacenamiento configurable; promedios (alcanza con el último valor) |
+| **Examen final** | 100 % de los endpoints; **roles** de usuario; **alarma de temperatura** por e-mail (umbral y destinatarios configurables, sin reenvío hasta que un usuario autorizado la acepte); **frontend** con login, monitoreo en tiempo real (número, estado, camión, preset, carga actual, últimas temperatura, densidad y caudal, filtros y orden), ETA, tiempo transcurrido (solo estado 2), gestión de alarmas y visualización de conciliaciones (solo estado 4) |
+
+Los requisitos del examen final **no** se incorporan al alcance del parcial.
+
+## 5. Qué se hizo
+
+### Fase 0 — Auditoría y línea base (completada, integrada en `main`)
+
+- El repo era una **copia del proyecto de clase** (Product/Category, integraciones cli1/cli2, JWT) sin
+  ninguna línea del dominio de gas. No se tocó código: se midió.
+- **Línea base ejecutada** contra MySQL real (18 verificaciones): compila, arranca, `contextLoads`, login,
+  JWT, convención de errores y perfiles.
+- **11 hallazgos** (H-1 a H-11) con evidencia, causa, impacto y propuesta.
+- Se crearon el plan (`docs/plan-de-trabajo.md`), el informe con su guía (`docs/fase-0-auditoria.md`) y
+  el seed del usuario de prueba (`docs/sql/seed-dev-users.sql`).
+
+### Fase 1 — Recepción y creación de órdenes (completada, **en revisión**, rama `fase-1-recepcion-ordenes`)
+
+- **Retiro del demo** de la cátedra (decisión 1): `Product`/`Category`, `integration/cli1`, `cli2`,
+  `ScanConfig`, `JsonUtiles` y el dataset de productos. Siguen en el historial de git.
+- **Correcciones aprobadas:** contenedor `iw3-gas-mysql` (H-4), `/error` público (H-1), login sin
+  `produces=text/plain` (H-2), `getUserLogged()` (H-10) y fechas guardadas con hora de Argentina (H-8).
+- **Dominio:** `Truck` + `TruckTank`, `Driver`, `Customer`, `Product`, `Order`, `OrderStatusLog` y el enum
+  `OrderStatus` (estados 1 a 4, columna numérica).
+- **Punto 1:** `OrderBusiness.add` valida (400), rechaza el número repetido (302), sincroniza las cuatro
+  entidades por `externalCode`, crea la orden en estado 1 y registra el primer cambio de estado, todo en
+  **una transacción** (si algo falla no queda nada).
+- **Swagger** (springdoc) y **colección Postman** (10 requests, 19 aserciones, 0 fallas con newman).
+- **Informe y guía** en `docs/fase-1-recepcion-ordenes.md` y PDF de las Fases 0 y 1 en `docs/pdf/`.
+- **Un bug propio** se detectó probando y se corrigió (el validador no revisaba chofer, cliente ni producto).
+
