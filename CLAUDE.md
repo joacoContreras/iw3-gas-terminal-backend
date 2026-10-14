@@ -287,6 +287,29 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 - Confirmar el código HTTP de "estado incorrecto".
 - Desplegar el backend del TP en la VM (lo pidió el profesor; ver sección 13).
 
+### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
+
+En GitHub: *Settings → Branches → Add branch ruleset* (o una regla de protección clásica) sobre `main`:
+
+- Activar **Require a pull request before merging**.
+- **Required approvals:** cuenta solo a *otras* personas (el autor del PR no suma). Con 4 integrantes, **3**
+  exige que aprueben los otros tres; **2** equivale a "3 de 4" contando al autor. Elegir según el acuerdo.
+- Activar **Dismiss stale pull request approvals when new commits are pushed** y
+  **Require approval of the most recent reviewable push**.
+- Activar **Block force pushes** y **Do not allow bypassing the above settings** (incluye a los admin).
+- Solo cuentan las aprobaciones de cuentas con **permiso de escritura** (*Settings → Collaborators*).
+
+Por consola, con `gh` autenticado como admin:
+
+```bash
+gh api -X PUT repos/joacoContreras/iw3-gas-terminal-backend/branches/main/protection --input - <<'JSON'
+{ "required_status_checks": null, "enforce_admins": true, "restrictions": null,
+  "required_pull_request_reviews": { "required_approving_review_count": 3,
+      "dismiss_stale_reviews": true, "require_last_push_approval": true },
+  "allow_force_pushes": false, "allow_deletions": false }
+JSON
+```
+
 ## 9. Decisiones tomadas
 
 | # | Decisión | Estado |
