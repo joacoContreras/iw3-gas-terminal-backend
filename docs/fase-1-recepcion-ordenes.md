@@ -220,7 +220,7 @@ Sin cambios: H-5 (secretos, `/demo/**`, CORS abierto) y H-9 (desalineación del 
 | Código HTTP para "estado incorrecto" (propuesta: 409 o 400) | Fase 2 |
 | Roles por endpoint (SAP, TMS, sistema de carga) | Examen final |
 | Revisión del equipo de la Fase 1 (la rama ya se integró a `main`: PR #2, `a330219`, 14/10/2026, sin revisiones registradas) | Pendiente |
-| Desplegar en la VM: imagen nueva desde esta rama y variables `SPRING_DATASOURCE_*` | Por definir |
+| Desplegar en la VM: imagen nueva desde `main` y variables `SPRING_DATASOURCE_*` | Por definir |
 
 | Criterio | Estado |
 |---|---|
