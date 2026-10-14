@@ -296,3 +296,69 @@ SAP ── HTTP + JWT ──▶ OrderSapRestController      integration/sap/cont
 | `*Repository` | Acceso a datos por código externo | Spring Data genera las consultas |
 | `OrderStatus` + converter | Estados 1 a 4 | Un solo lugar define qué estados existen |
 | `OrderStatusLog` | Auditoría | La consigna pide registrar cada cambio de estado |
+
+## D. Explicación del código paso a paso
+
+### D.1 El alta — `SRC/business/OrderBusiness.java`
+
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public Order add(Order order, String actor) throws FoundException, BadRequestException, BusinessException {
+    List<String> errors = OrderValidator.validate(order);
+    if (!errors.isEmpty()) {
+        throw BadRequestException.builder().message(String.join("; ", errors)).build();
+    }
+    if (findByNumber(order.getOrderNumber()).isPresent()) {
+        throw FoundException.builder().message("Se encontró la Orden numero=" + order.getOrderNumber()).build();
+    }
+    try {
+        Order o = new Order();
+        o.setOrderNumber(order.getOrderNumber());   // ... plannedLoadDateTime, preset
+        o.setTruck(syncTruck(order.getTruck()));    // ... driver, customer, product
+        o.setStatus(OrderStatus.PENDING_INITIAL_WEIGHING);
+        o.setReceptionDateTime(LocalDateTime.now());
+        o = orderDAO.save(o);
+        logStatus(o, null, o.getStatus(), actor, "Orden recibida desde el sistema externo");
+        return o;
+    } catch (Exception e) { /* log + BusinessException */ }
+}
+```
+
+| Elemento | Qué hace | Si se elimina o cambia |
+|---|---|---|
+| `@Transactional(rollbackFor = Exception.class)` | Todo el método es una transacción y se revierte ante cualquier excepción | Una falla al sincronizar el producto dejaría creados camión, chofer y cliente sin orden |
+| `OrderValidator.validate` primero | Rechaza antes de tocar la base y junta todos los errores | El cliente corregiría un error por intento, o llegaría a la base con datos inválidos |
+| Chequeo del número **fuera** del `try` | `FoundException` sale tal cual | Dentro del `try`, el `catch (Exception)` la convertiría en `BusinessException` (500 en vez de 302) |
+| `new Order()` y copia de campos | El cliente no controla `id`, `status` ni `receptionDateTime` | Con `save(order)` un cliente podría enviar `status: 4` o un `id` ajeno |
+| `sync*` antes de `save` | La orden referencia filas que ya existen | `save` fallaría por claves foráneas inexistentes |
+| `logStatus` en la misma transacción | El registro de auditoría existe si y solo si existe la orden | Una orden sin historial, o un historial de una orden inexistente |
+
+### D.2 La sincronización — `OrderBusiness.syncTruck`
+
+```java
+String code = in.getExternalCode().trim();
+Truck t = truckDAO.findByExternalCode(code).orElseGet(Truck::new);   // existe o se crea
+t.setExternalCode(code);
+t.setPlate(in.getPlate().trim());
+List<TruckTank> incoming = /* copia de las cisternas recibidas, sin sus ids, ordenadas */;
+if (!sameTanks(t.getTanks(), incoming)) {       // solo si cambió el cisternado
+    t.getTanks().clear();                       // orphanRemoval borra las anteriores
+    t.getTanks().addAll(incoming);
+}
+return truckDAO.save(t);
+```
+
+- `findByExternalCode(...).orElseGet(Truck::new)` es el corazón de la sincronización: el
+  **código externo** decide si se actualiza o se crea; el `id` que mande SAP se ignora.
+- `t.getTanks().clear()` más `addAll` (y no `setTanks(nuevaLista)`) porque la colección tiene
+  `orphanRemoval = true`: reemplazar la referencia haría fallar a Hibernate.
+- `sameTanks` evita borrar y reinsertar cisternas idénticas en cada orden del mismo camión
+  (verificado: los ids de las cisternas no cambian).
+
+### D.3 El estado — `OrderStatus` y `OrderStatusConverter`
+
+- `OrderStatus` define los cuatro estados con su número; `@JsonValue` en `getCode()` hace que
+  el JSON publique `1` y no `"PENDING_INITIAL_WEIGHING"`.
+- `OrderStatusConverter` (`autoApply = true`) guarda ese número en la columna. Sin él, Hibernate
+  usaría el ordinal 0–3 y la base mostraría "0" para el estado 1 de la consigna.
