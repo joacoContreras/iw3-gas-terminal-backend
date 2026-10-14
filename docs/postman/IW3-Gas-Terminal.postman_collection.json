@@ -281,6 +281,56 @@
               ]
             }
           }
+        },
+        {
+          "name": "Crear la misma orden (duplicado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('duplicado: 302', () => pm.response.to.have.status(302));",
+                  "pm.test('mensaje de la orden repetida', () => pm.expect(pm.response.json().message).to.include('Se encontró la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumber}},\n  \"plannedLoadDateTime\": \"2026-10-20T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-001\", \"plate\": \"AB123CD\", \"description\": \"Cisterna GLP\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": { \"externalCode\": \"DRV-001\", \"name\": \"Juan\", \"lastName\": \"Perez\", \"document\": \"30111222\" },\n  \"customer\": { \"externalCode\": \"CUS-001\", \"companyName\": \"Gas del Sur SA\", \"contact\": \"compras@gasdelsur.example\" },\n  \"product\": { \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\" }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Convención de la cátedra: FoundException se traduce a 302."
+          },
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
         }
       ]
     }
