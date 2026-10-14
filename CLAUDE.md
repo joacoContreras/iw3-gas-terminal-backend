@@ -55,12 +55,15 @@
 6. **Seguridad:** no inventar credenciales ni subir secretos. Las de este repo (`root/root`,
    `admin/admin123`) son **solo de desarrollo local**.
 7. **Git:**
-   - Una rama por fase (`fase-N-<tema>`), creada desde la rama anterior o desde `main` según se indique.
+   - Una rama por fase (`fase-N-<tema>`), creada desde `main` actualizado (con la fase anterior ya integrada).
    - **Commits atómicos por funcionalidad, de no más de 100 líneas** (agregadas + borradas).
    - Mensaje en español con el formato `tipo(ámbito): descripción` (`feat`, `fix`, `docs`, `chore`,
      `test`, `build`, `refactor`). Los commits que hace Claude llevan el trailer
      `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
    - **Push y merge a `main` solo cuando el usuario lo pide.**
+   - **Todo cambio a `main` entra por Pull Request.** Acuerdo del equipo (14/10/2026): no se mergea hasta que
+     aprueben **3 de los 4 integrantes**. GitHub todavía **no lo exige** (ver 8.3): hasta entonces, abrir los PR
+     como *borrador* (`draft`) y no mergear sin esas aprobaciones.
 8. **Documentación obligatoria por fase** en `docs/fase-N-<tema>.md`:
    - *Informe técnico:* inventario de archivos (archivo, acción, motivo, responsabilidad), qué se
      implementó y por qué, funciones y métodos (parámetros, retorno, validaciones, dependencias, errores),
@@ -298,6 +301,7 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 | 11 | Permitir `/error` y corregir el `produces` del login | Aplicada |
 | 12 | `getUserLogged()` en `BaseRestController` | Aplicada |
 | 13 | Integrar la Fase 0 a `main` | Aplicada |
+| 14 | Todo cambio a `main` por Pull Request con la aprobación de 3 de los 4 integrantes | Acordada; la protección de rama la debe configurar el dueño del repo (8.3) |
 
 ## 10. Hallazgos y deuda abierta
 
@@ -428,4 +432,4 @@ puntos la explicación es **complementaria** y así se marca en las guías.
 5. Probar de verdad (compilar, ejecutar, llamar a los endpoints) y reportar solo lo que se ejecutó.
 6. Al cerrar una fase: actualizar las secciones 2, 5, 8 y 10 de este archivo, redactar el informe y la guía,
    generar el PDF, presentar el resumen ejecutivo y **esperar la autorización** para continuar.
-7. Push y merge a `main` solo si el usuario lo pide.
+7. Push y merge a `main` solo si el usuario lo pide y con las aprobaciones acordadas (decisión 14).
