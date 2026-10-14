@@ -183,3 +183,49 @@ Cada hallazgo indica evidencia, causa, impacto y propuesta. Ninguno se corrigió
 | H-9 | `pom.xml` desalineado: Boot 4.1.0 vs 4.1.1, `java-jwt` 4.4.0 vs 4.6.1, `actuator` y `h2` sin uso. Compila y arranca igual. | Alinear es opcional (decisión 6 pendiente). |
 | H-10 | Falta `BaseRestController.getUserLogged()` y el resto de la clase 9. `Iw3Application` inyecta beans que no usa. | `getUserLogged()` entra en la Fase 1 (actor del log de estados). Lo demás se va con el demo. |
 | H-11 | Avisos de arranque: `HHH90000025` (dialecto explícito) y `open-in-view` activo. | Sin acción. |
+
+## 7. Recorrido de las peticiones
+
+Rutas de archivo relativas a `SRC`. Los cuatro recorridos corresponden a las pruebas 5, 6, 11-12 y 14.
+
+### 7.1 `POST /api/v1/login` (prueba 5)
+
+| Paso | Componente | Qué hace |
+|---|---|---|
+| 1 | `security/SecurityConfiguration.java` → `filterChain` | La ruta es `permitAll` solo para `POST` a `Constants.URL_LOGIN`. |
+| 2 | `auth/filters/JWTAuthorizationFilter.java` → `doFilterInternal` | No hay header `Bearer` ni `authtoken`: sigue la cadena como anónimo. |
+| 3 | `auth/controller/AuthRestController.java` → `loginExternalOnlyToken` | Recibe `username` y `password` (`@RequestParam`). |
+| 4 | `auth/custom/CustomAuthenticationManager.java` → `authWrap`, `authenticate` | Envuelve usuario y contraseña en un `Authentication` y lo autentica. |
+| 5 | `auth/UserBusiness.java` → `load` → `UserRepository.findOneByUsernameOrEmail` | `SELECT` en `users` con sus `roles` (carga EAGER). |
+| 6 | `auth/User.java` → `validate` | Comprueba cuenta vencida, credenciales vencidas, bloqueo y habilitación. |
+| 7 | `BCryptPasswordEncoder.matches` | Compara la contraseña con el hash guardado. |
+| 8 | `AuthRestController` | Firma el JWT (HS512) con `sub`, `roles`, `email`, `version`, `exp` y responde `200 text/plain`. |
+
+### 7.2 `GET /api/v1/products` con token (prueba 6)
+
+| Paso | Componente | Qué hace |
+|---|---|---|
+| 1 | `JWTAuthorizationFilter.doFilterInternal` | Detecta `Authorization: Bearer …` (o `?authtoken=` de al menos 10 caracteres). |
+| 2 | `JWTAuthorizationFilter.getAuthentication` | Verifica la firma HS512 y la expiración; arma las autoridades desde el claim `roles`. |
+| 3 | `SecurityContextHolder` | Guarda el `Authentication`; si el token es inválido guarda `null` y la cadena sigue. |
+| 4 | `SecurityConfiguration` (`anyRequest().authenticated()`) | Sin contexto autenticado responde 401. |
+| 5 | `controllers/ProductRestController.java` → `list` | Llama a la capa de negocio. |
+| 6 | `business/ProductBusiness.java` → `list` → `ProductRepository.findAll` | `SELECT` en `products`; devuelve la lista como JSON. |
+
+### 7.3 `POST /api/v1/products`: alta y duplicado (pruebas 11 y 12)
+
+| Paso | Componente | Qué hace |
+|---|---|---|
+| 1 | `ProductRestController.add` | Recibe el JSON como `Product` (`@RequestBody`). |
+| 2 | `ProductBusiness.add` | Llama a `load(id)` y `load(nombre)`; si alguno encuentra, lanza `FoundException`. |
+| 3a | `ProductRepository.save` | Sin duplicado: `INSERT`; el controller responde 201 con `location`. |
+| 3b | `ProductRestController.add` (`catch FoundException`) | `StandartResponseBusiness.build(FOUND, …)` y responde 302 con JSON. |
+
+### 7.4 Error sin controller: JSON malformado (prueba 14)
+
+| Paso | Componente | Qué hace |
+|---|---|---|
+| 1 | `DispatcherServlet` (resolución de `@RequestBody`) | No puede leer el cuerpo: `HttpMessageNotReadableException`. |
+| 2 | `DefaultHandlerExceptionResolver` | La resuelve como 400 y la registra en el log. |
+| 3 | Contenedor de servlets | Reenvía internamente a `/error`. |
+| 4 | `SecurityConfiguration` (`anyRequest().authenticated()`) | `/error` no tiene contexto (STATELESS): responde 401 sin cuerpo. Ver H-1. |
