@@ -292,6 +292,9 @@ Son las piezas que las fases siguientes reutilizan o imitan.
 
 ### 8.2 Decisiones pendientes
 
+> **Actualización (14/10/2026):** las decisiones 6, 10, 11, 12 y 13 ya están resueltas; ver `docs/plan-de-trabajo.md`.
+> Esta tabla conserva el estado al cierre de la Fase 0.
+
 | # | Tema | Recomendación | Cuándo |
 |---|---|---|---|
 | 6 | Alinear `pom.xml` (Boot 4.1.1, `java-jwt` 4.6.1; retirar `actuator` y `h2`) | Opcional: con el `pom.xml` actual compila y arranca | Antes de la Fase 1 |
