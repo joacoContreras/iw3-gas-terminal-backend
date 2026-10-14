@@ -232,3 +232,67 @@ Sin cambios: H-5 (secretos, `/demo/**`, CORS abierto) y H-9 (desalineación del 
 | Recorrido de los datos | Cumplido (secciones 4 y E) |
 | Guía de estudio A–J con preguntas y respuestas | Cumplido |
 | Limitaciones registradas | Cumplido (sección 8) |
+
+---
+
+# Parte 2 — Guía de estudio de la Fase 1
+
+## A. Objetivo de la fase
+
+El Punto 1 es la **puerta de entrada** del circuito: sin una orden creada no hay tara, ni carga,
+ni cierre, ni conciliación. SAP envía los datos base y el backend debe:
+
+1. Aceptar solo datos válidos y rechazar un número de orden repetido.
+2. Sincronizar camión, chofer, cliente y producto usando el **código externo** como clave de
+   integración (la consigna lo pide como `string` para no depender de ids internos).
+3. Crear la orden en estado 1 y dejar registrado quién y cuándo la recibió.
+
+Además prepara lo que usan todas las fases siguientes: el modelo, el log de estados y la
+documentación Swagger y Postman.
+
+## B. Conceptos teóricos involucrados
+
+| Concepto | Clase | Dónde está en el TP |
+|---|---|---|
+| Entidad JPA, `@ManyToOne`, `@OneToMany` | 2 y 6 | `SRC/model/Order.java`, `SRC/model/Truck.java` |
+| Interfaz + implementación + `@Autowired` | 2 | `IOrderBusiness` y `OrderBusiness` |
+| Excepciones de dominio traducidas a HTTP (404, 302, 500) | 3 | `OrderSapRestController.add` |
+| Código externo único como clave de integración (`codCli1`) | 6 | `externalCode` de `Truck`, `Driver`, `Customer`, `Product` |
+| Paquete de integración por sistema externo | 6 | `SRC/integration/sap/controllers` |
+| Recepción de JSON de un sistema externo | 7 | `@RequestBody Order` (la cátedra usó un deserializador propio) |
+| Usuario autenticado en el controller | 8 y 9 | `BaseRestController.getUserLogged` |
+
+**Explicación complementaria (no vista en clase):**
+
+- *`@Transactional` y `rollbackFor`:* una transacción agrupa varias escrituras. Spring revierte
+  por defecto solo ante excepciones *unchecked*; las de negocio son *checked*, por eso se indica
+  `rollbackFor = Exception.class`.
+- *`AttributeConverter`:* traduce un tipo Java (el enum) a un valor de columna (el entero).
+- *OpenAPI / springdoc:* genera la especificación a partir de los controllers y anotaciones.
+- *`LocalDateTime` y zona horaria:* no lleva zona; el driver la aplica al hablar con MySQL.
+
+## C. Arquitectura y organización del código
+
+```
+SAP ── HTTP + JWT ──▶ OrderSapRestController      integration/sap/controllers
+                          │  Order (JSON → entidad)
+                          ▼
+                      OrderBusiness (IOrderBusiness)         business
+                       ├─ OrderValidator            reglas de entrada
+                       ├─ sync* (Truck, Driver, Customer, Product)
+                       └─ logStatus
+                          ▼
+                      Repositorios Spring Data               model/persistence
+                          ▼
+                      MySQL: orders, order_status_logs, trucks, truck_tanks,
+                             drivers, customers, gas_products
+```
+
+| Pieza | Responsabilidad | Por qué está ahí |
+|---|---|---|
+| `OrderSapRestController` | HTTP ↔ negocio: código de estado y `location` | Es la única capa que conoce HTTP |
+| `OrderValidator` | Reglas de la entrada | Separa "es válida" de "se guarda"; se prueba sin base |
+| `OrderBusiness` | Sincroniza, crea y audita en una transacción | Las reglas del proceso van en negocio, no en el controller |
+| `*Repository` | Acceso a datos por código externo | Spring Data genera las consultas |
+| `OrderStatus` + converter | Estados 1 a 4 | Un solo lugar define qué estados existen |
+| `OrderStatusLog` | Auditoría | La consigna pide registrar cada cambio de estado |
