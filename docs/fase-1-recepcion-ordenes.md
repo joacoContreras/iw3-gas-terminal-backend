@@ -205,8 +205,8 @@ Con la propiedad, la base guarda la hora de Argentina en los seis escenarios.
 | ID | Hallazgo | Estado |
 |---|---|---|
 | N-1 | `OrderValidator.validate` no invocaba la validación de chofer, cliente y producto: al partir el commit se perdieron las tres llamadas. Lo detectó la prueba del 400 | Corregido (`fix(business)`) |
-| N-2 | Dos `POST` simultáneos con el mismo número de orden: uno viola la restricción única y responde 500 en lugar de 302 | Pendiente: se acepta para el parcial |
-| N-3 | `GET /api/v1/orders` devuelve todas las órdenes, sin paginación | Pendiente: a revisar con el frontend |
+| N-2 | Dos `POST` simultáneos con el mismo número de orden: uno viola la restricción única y responde 500 en lugar de 302 | Aceptado: se deja el 500 (19/10/2026) |
+| N-3 | `GET /api/v1/orders` devuelve todas las órdenes, sin paginación | Resuelto (19/10/2026): paginación con `page` y `size` (por defecto 20, máximo 100) |
 | N-4 | Las tablas del demo (`products`, `categories`, `cli1_products`, `cli2_*`) siguen en las bases ya creadas; `ddl-auto=update` no borra | Inofensivo: el TP usa `gas_products` |
 | N-5 | Las respuestas de error pesan unos 15 KB porque `dev.info.enabled=true` incluye la traza (H-5) | Pendiente para la etapa de seguridad |
 | N-6 | La ejecución con newman usó `npx newman@6` (descarga a la caché de npm; no se agrega al proyecto) | Informativo |
@@ -219,8 +219,8 @@ Sin cambios: H-5 (secretos, `/demo/**`, CORS abierto) y H-9 (desalineación del 
 |---|---|
 | Código HTTP para "estado incorrecto" (propuesta: 409 o 400) | Fase 2 |
 | Roles por endpoint (SAP, TMS, sistema de carga) | Examen final |
-| Revisión del equipo de la Fase 1 (la rama ya se integró a `main`: PR #2, `a330219`, 14/10/2026, sin revisiones registradas) | Pendiente |
-| Desplegar en la VM: imagen nueva desde `main` y variables `SPRING_DATASOURCE_*` | Por definir |
+| Revisión del equipo de la Fase 1 (PR #2, `a330219`, 14/10/2026) | Hecha, sin observaciones (19/10/2026) |
+| Desplegar en la VM | Hecho (19/10/2026) |
 
 | Criterio | Estado |
 |---|---|
