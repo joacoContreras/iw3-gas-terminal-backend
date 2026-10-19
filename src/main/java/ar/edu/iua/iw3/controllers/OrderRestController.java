@@ -1,6 +1,11 @@
 package ar.edu.iua.iw3.controllers;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,17 +27,26 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Órdenes", description = "Consulta de órdenes de carga")
 public class OrderRestController extends BaseRestController {
 
+	private static final int MAX_PAGE_SIZE = 100;
+
 	@Autowired
 	private IOrderBusiness orderBusiness;
 
 	@Autowired
 	private IStandartResponseBusiness response;
 
-	@Operation(summary = "Lista las órdenes, de la más reciente a la más antigua")
+	@Operation(summary = "Lista las órdenes paginadas, de la más reciente a la más antigua",
+			description = "Parámetros opcionales: page (desde 0, por defecto 0) y size (por defecto 20, máximo 100). "
+					+ "El orden es fijo por número de orden descendente.")
 	@GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<?> list() {
+	public ResponseEntity<?> list(@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
 		try {
-			return new ResponseEntity<>(orderBusiness.list(), HttpStatus.OK);
+			// Se descarta el sort del cliente (el orden lo fija el repositorio) y se acota el tamaño
+			int size = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+			// PagedModel fija la estructura del JSON: content + page (size, number, totalElements, totalPages)
+			return new ResponseEntity<>(
+					new PagedModel<>(orderBusiness.list(PageRequest.of(pageable.getPageNumber(), size))),
+					HttpStatus.OK);
 		} catch (BusinessException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
 					HttpStatus.INTERNAL_SERVER_ERROR);
