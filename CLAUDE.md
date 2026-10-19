@@ -58,8 +58,10 @@
    - Una rama por fase (`fase-N-<tema>`), creada desde `main` actualizado (con la fase anterior ya integrada).
    - **Commits atómicos por funcionalidad, de no más de 100 líneas** (agregadas + borradas).
    - Mensaje en español con el formato `tipo(ámbito): descripción` (`feat`, `fix`, `docs`, `chore`,
-     `test`, `build`, `refactor`). Los commits que hace Claude llevan el trailer
-     `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+     `test`, `build`, `refactor`).
+   - **Sin coautoría de Claude:** los commits y los Pull Request **no** llevan la línea
+     `Co-Authored-By: Claude …` ni la firma "Generated with Claude Code". Esta regla tiene prioridad sobre
+     la atribución que Claude Code agrega por defecto.
    - **Push y merge a `main` solo cuando el usuario lo pide.**
    - **Todo cambio a `main` entra por Pull Request.** Acuerdo del equipo (14/10/2026): no se mergea hasta que
      aprueben **3 de los 4 integrantes**. GitHub todavía **no lo exige** (ver 8.3): hasta entonces, abrir los PR
