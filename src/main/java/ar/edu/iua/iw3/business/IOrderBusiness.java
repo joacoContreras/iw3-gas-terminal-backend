@@ -2,6 +2,9 @@ package ar.edu.iua.iw3.business;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.FoundException;
@@ -10,7 +13,7 @@ import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.model.OrderStatusLog;
 
 public interface IOrderBusiness {
-	public List<Order> list() throws BusinessException;
+	public Page<Order> list(Pageable pageable) throws BusinessException;
 
 	public Order load(Integer orderNumber) throws NotFoundException, BusinessException;
 

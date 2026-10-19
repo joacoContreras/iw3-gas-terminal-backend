@@ -19,7 +19,7 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 14/10/2026, después de integrar la Fase 1 a `main`.
+**Última actualización:** 19/10/2026, después de revisar la Fase 1 y desplegarla en la VM.
 
 | | |
 |---|---|
@@ -27,7 +27,8 @@
 | **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la autorización del usuario |
 | Dato pendiente para la Fase 2 | Código HTTP de "estado incorrecto" (recomendado: 409 Conflict) |
 | `main` | Contiene las Fases 0 y 1 completas (`a330219`); es la base de la Fase 2 |
-| Revisión de la Fase 1 | El PR #2 se mergeó 3 minutos después de abrirse y **sin revisiones ni comentarios** registrados en GitHub; la revisión del equipo sigue pendiente (ver 8.3) |
+| Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
+| Despliegue | La Fase 1 **ya está desplegada en la VM** (informado por el usuario, 19/10/2026) |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
@@ -208,7 +209,7 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 |---|---|---|
 | `POST /api/v1/login` | Formulario `username`/`password`; devuelve el JWT en texto | 200, 401 (con JSON) |
 | `POST /api/v1/integration/sap/orders` | **Punto 1**: recibe la orden | 201 + `location`, 302, 400, 401, 500 |
-| `GET /api/v1/orders` | Lista las órdenes (más reciente primero) | 200 |
+| `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200 |
 | `GET /api/v1/orders/{orderNumber}` | Una orden | 200, 404 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, **público**, cerrar antes de desplegar) | 200 |
@@ -282,12 +283,12 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 
 ### 8.3 Pendientes transversales
 
-- Revisión de la Fase 1 por el equipo: ya está en `main`; dejar comentarios en el PR #2 o abrir un PR con correcciones.
+- ~~Revisión de la Fase 1 por el equipo~~ — hecha, sin observaciones (19/10/2026).
 - **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
   del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
   llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
 - Confirmar el código HTTP de "estado incorrecto".
-- Desplegar el backend del TP en la VM (lo pidió el profesor; ver sección 13).
+- ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Hay que redesplegar al cerrar cada fase.
 
 ### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
 
@@ -337,8 +338,8 @@ JSON
 |---|---|---|
 | H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties`, `/demo/**` público, CORS abierto, `dev.info.enabled=true` (trazas en las respuestas de error) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
-| N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Abierto; aceptado para el parcial |
-| N-3 | `GET /orders` sin paginación | Abierto |
+| N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
+| N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
 | Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | Pendiente (final) |
 | Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` no están incorporados. Al copiarlos hay que cambiar `business.execption` por `business.exception` (el TP corrigió el nombre del paquete) | Pendiente (final) |
@@ -419,7 +420,7 @@ SET FOREIGN_KEY_CHECKS=1;
   `344cc78`, donde `AuthRestController` ya existía pero `SecurityConfiguration` todavía no definía el bean
   `AuthenticationManager`. Fallaba al arrancar y la política `unless-stopped` lo reinició 334 veces: CPU al
   100 %. Se cortó con `docker update --restart=no iw3-app` y `docker stop iw3-app`.
-- **Pendiente:** el profesor pidió levantar el backend del TP en la VM. Todavía no se hizo.
+- **Hecho:** el backend del TP (Fase 1) ya está desplegado en la VM (informado por el usuario, 19/10/2026).
 - **Cómo desplegar:**
   - Construir una imagen nueva desde la rama aprobada.
   - Variables `SPRING_PROFILES_ACTIVE=mysqlprod` y `SPRING_DATASOURCE_URL`, `_USERNAME`, `_PASSWORD`;
