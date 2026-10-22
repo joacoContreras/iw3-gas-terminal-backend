@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
+import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Customer;
@@ -113,6 +114,12 @@ public class OrderBusiness implements IOrderBusiness {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
 		}
+	}
+
+	@Override
+	public Order registerTare(Integer orderNumber, double weight, String actor)
+			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
+		throw new UnsupportedOperationException("Pendiente: Etapa 2");
 	}
 
 	/** Registra un cambio de estado en el log de auditoria de la orden. */
