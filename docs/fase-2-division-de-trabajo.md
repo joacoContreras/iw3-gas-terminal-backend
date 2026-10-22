@@ -396,6 +396,35 @@ Casos que tenés que comprobar en la base y en `GET /orders/{n}/status-log`:
 
 `Order.java`, `ConflictException`, `Constants` (A); el controller (C); Postman y docs (D).
 
+## Estado de la Etapa B (22/10/2026)
+
+| Paso | Commit | Estado |
+|---|---|---|
+| Etapa 1: firma de `registerTare` + implementación mínima | `3eac5c8` `feat(business): agrega la firma de registerTare para la tara` | Pusheado |
+| Etapa 2: la regla real | `22b17a8` `feat(business): implementa el registro de la tara y el pase a estado 2` | Pusheado |
+
+**Qué quedó implementado** (solo `IOrderBusiness.java` y `OrderBusiness.java`):
+
+- `IOrderBusiness.registerTare(Integer orderNumber, double weight, String actor)` con la firma del contrato (sección 3, #4).
+- `OrderBusiness.registerTare` con `@Transactional(rollbackFor = Exception.class)`:
+  - **Fuera del `try`**, en el orden del contrato: `load(orderNumber)` (404) → `!(weight > 0)` (400, rechaza también NaN) → estado distinto de `PENDING_INITIAL_WEIGHING` (409, el mensaje informa el estado actual).
+  - **Dentro del `try`**: guarda `tare`, `initialWeighingDateTime = now()`, `activationPassword = ActivationPasswordGenerator.generate()`, pasa a `INITIAL_WEIGHING_REGISTERED`, `orderDAO.save` y `logStatus(order, 1, 2, actor, "Tara registrada: <peso> kg")`.
+  - Cualquier otra falla: `log.error` y `BusinessException` (500); la transacción revierte todo.
+  - Devuelve la `Order` guardada (el controller de C toma de ahí la contraseña).
+
+**Verificado:** compila (`./mvnw -B -DskipTests compile`).
+
+**Pendiente para cerrar la etapa:**
+
+- Probar por HTTP los 5 casos de "Cómo probar" cuando C publique el endpoint (necesita la base levantada).
+- Comprobar en la base que la contraseña tenga 5 dígitos.
+- Revisión cruzada de A.
+
+**Para tener en cuenta (C y D):**
+
+- Como `weight` es `double`, la observación del historial queda `"Tara registrada: 14500.0 kg"`.
+- Dos taras simultáneas sobre la misma orden podrían pasar las dos la comprobación de estado (mismo caso que N-2 de la Fase 1). Queda fuera del alcance; D lo registra como limitación.
+
 ## Prompt para Claude Code (Etapa B)
 
 ```text
