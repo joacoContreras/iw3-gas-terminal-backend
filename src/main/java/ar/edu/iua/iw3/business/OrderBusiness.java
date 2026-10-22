@@ -117,9 +117,31 @@ public class OrderBusiness implements IOrderBusiness {
 	}
 
 	@Override
+	@Transactional(rollbackFor = Exception.class)
 	public Order registerTare(Integer orderNumber, double weight, String actor)
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
-		throw new UnsupportedOperationException("Pendiente: Etapa 2");
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500
+		Order order = load(orderNumber);
+		if (!(weight > 0)) { // tambien rechaza NaN
+			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
+		}
+		if (order.getStatus() != OrderStatus.PENDING_INITIAL_WEIGHING) {
+			throw ConflictException.builder().message("La orden " + orderNumber
+					+ " no está pendiente de pesaje inicial (estado " + order.getStatus().getCode() + ")").build();
+		}
+		try {
+			OrderStatus from = order.getStatus();
+			order.setTare(weight);
+			order.setInitialWeighingDateTime(LocalDateTime.now());
+			order.setActivationPassword(ActivationPasswordGenerator.generate());
+			order.setStatus(OrderStatus.INITIAL_WEIGHING_REGISTERED);
+			order = orderDAO.save(order);
+			logStatus(order, from, order.getStatus(), actor, "Tara registrada: " + weight + " kg");
+			return order;
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
 	}
 
 	/** Registra un cambio de estado en el log de auditoria de la orden. */
