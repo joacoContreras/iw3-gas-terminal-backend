@@ -19,22 +19,21 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 19/10/2026, después de revisar la Fase 1 y desplegarla en la VM.
+**Última actualización:** 23/10/2026, tras completar y verificar la Fase 2 en la rama `fase-2-pesaje-inicial`.
 
 | | |
 |---|---|
-| **Última fase completada** | **Fase 1 — Recepción y creación de órdenes (Punto 1): implementada, probada e integrada en `main`** (PR #2, merge `a330219`, 14/10/2026) |
-| **Qué sigue** | **Fase 2 — Pesaje inicial y activación (Punto 2): NO iniciada.** Espera la autorización del usuario |
-| Dato pendiente para la Fase 2 | Código HTTP de "estado incorrecto" (recomendado: 409 Conflict) |
-| `main` | Contiene las Fases 0 y 1 completas (`a330219`); es la base de la Fase 2 |
+| **Última fase completada** | **Fase 2 — Pesaje inicial y activación (Punto 2): implementada y probada en `fase-2-pesaje-inicial`** (23/10/2026) |
+| **Qué sigue** | **Fase 3 — Carga y datos en tiempo real (Punto 3): pendiente.** Requiere mergear Fase 2 y autorización del usuario |
+| `main` | Contiene las Fases 0 y 1 completas (`a330219`); recibirá la Fase 2 por PR con 3 aprobaciones |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
-| Despliegue | La Fase 1 **ya está desplegada en la VM** (informado por el usuario, 19/10/2026) |
+| Despliegue | La Fase 1 **ya está desplegada en la VM**; se redesplegará al integrar la Fase 2 |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
 | 0 | Auditoría y línea base | `fase-0-auditoria` | Completada e integrada en `main` |
 | 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada e integrada en `main` (PR #2) |
-| 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Pendiente |
+| 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Completada y probada (espera PR a `main`) |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Pendiente |
 | 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Pendiente |
 | 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Pendiente |
@@ -161,6 +160,17 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Un bug propio** se detectó probando y se corrigió (el validador no revisaba chofer, cliente ni producto).
 - **Integración:** PR #2 mergeado a `main` el 14/10/2026 (`a330219`) por otro integrante, sin revisiones registradas.
 
+### Fase 2 — Pesaje inicial y activación (Punto 2, completada en rama `fase-2-pesaje-inicial`)
+
+- **División del trabajo entre 4 personas:** Etapa A (Martín González: modelo, 409 y generador de claves), Etapa B (Tomás Calvo: regla transaccional `registerTare`), Etapa C (Benjamín Alasino: endpoint TMS) y Etapa D (Joaquín Contreras: Postman, pruebas y documentación).
+- **Modelo:** `Order` incorpora `tare` (`Double`), `initialWeighingDateTime` (`LocalDateTime`) y `activationPassword` (`Integer`, con `@JsonIgnore`). Columnas nulables para coexistir con órdenes previas.
+- **Excepción nueva:** `ConflictException` (checked) → HTTP 409 Conflict ante orden en estado distinto de 1.
+- **Generador seguro:** `ActivationPasswordGenerator` genera enteros de 5 dígitos (10000–99999) con `SecureRandom`.
+- **Punto 2:** `OrderBusiness.registerTare` valida existencia (404), peso positivo (400) y estado pendiente de pesaje inicial (409) fuera del `try/catch`. Dentro de `@Transactional(rollbackFor = Exception.class)`, guarda tara, estampa y clave, transiciona al estado 2 y registra auditoría en `order_status_logs`.
+- **Endpoint TMS:** `POST /api/v1/integration/tms/orders/{orderNumber}/tare` con DTOs `TareRequest` y `TareResponse`.
+- **Postman y pruebas:** Carpeta `02 - Fase 2: pesaje inicial (TMS)` (11 pedidos, 27 aserciones). Corridas con newman 6: 21 pedidos, 46 aserciones ejecutadas con 0 fallas (las 19 de Fase 1 permanecen intactas).
+- **Informe y guía:** `docs/fase-2-pesaje-inicial.md` completo con informe técnico y guía de estudio A–J (12 preguntas de defensa con respuestas).
+
 ## 6. Arquitectura y convenciones del código
 
 ```
@@ -209,8 +219,9 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 |---|---|---|
 | `POST /api/v1/login` | Formulario `username`/`password`; devuelve el JWT en texto | 200, 401 (con JSON) |
 | `POST /api/v1/integration/sap/orders` | **Punto 1**: recibe la orden | 201 + `location`, 302, 400, 401, 500 |
+| `POST /api/v1/integration/tms/orders/{orderNumber}/tare` | **Punto 2**: registra la tara y devuelve la contraseña de activación | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200 |
-| `GET /api/v1/orders/{orderNumber}` | Una orden | 200, 404 |
+| `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, **público**, cerrar antes de desplegar) | 200 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación OpenAPI | públicos |
@@ -226,9 +237,11 @@ Cuerpo de `POST /integration/sap/orders` (resumido; ejemplo completo en la colec
   "product": { "externalCode": "PRD-GLP", "name": "GLP" } }
 ```
 
+Cuerpo de `POST /integration/tms/orders/{orderNumber}/tare`: `{ "weight": 14500.0 }`. Respuesta 200: `{ "activationPassword": 48213 }`.
+
 | Entidad (clase → tabla) | Notas |
 |---|---|
-| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime` |
+| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime`, `tare`, `initialWeighingDateTime`, `activationPassword` (con `@JsonIgnore`) |
 | `OrderStatusLog` → `order_status_logs` | Estado anterior (`null` al crear) y nuevo, fecha y hora, `actor`, observaciones |
 | `Truck`, `TruckTank` → `trucks`, `truck_tanks` | Camión con su cisternado (una fila por cisterna) |
 | `Driver`, `Customer`, `Product` → `drivers`, `customers`, `gas_products` | `externalCode` único |
@@ -239,15 +252,7 @@ Cuerpo de `POST /integration/sap/orders` (resumido; ejemplo completo en la colec
 ### 8.1 Fases del parcial (en orden)
 
 **Fase 2 — Pesaje inicial y activación (Punto 2)** · rama `fase-2-pesaje-inicial`
-
-- Endpoint propuesto: `POST /api/v1/integration/tms/orders/{orderNumber}/tare` con `{ "weight": <kg> }`.
-- Reglas: la orden existe (404) y está en estado 1; `weight > 0` (400); guarda la tara y la fecha y hora
-  del pesaje inicial; **genera una contraseña entera de 5 dígitos** (10000 a 99999, `SecureRandom`); pasa a
-  estado 2 y registra el cambio de estado. Responde la contraseña.
-- Estado incorrecto: **409 Conflict** propuesto (confirmar con el equipo; la cátedra no tiene precedente).
-- Cambios probables: campos nuevos en `Order` (`tare`, `initialWeighingDateTime`, `activationPassword`),
-  `IOrderBusiness`, controller en `integration/tms/controllers`, `Constants.URL_INTEGRATION_TMS`, requests
-  de Postman y documentación.
+- **Estado: COMPLETADA** en su rama (23/10/2026). Pendiente: revisión cruzada del equipo y PR a `main` con 3 aprobaciones.
 
 **Fase 3 — Carga y datos en tiempo real (Punto 3)** · rama `fase-3-carga-tiempo-real`
 
@@ -331,6 +336,9 @@ JSON
 | 12 | `getUserLogged()` en `BaseRestController` | Aplicada |
 | 13 | Integrar la Fase 0 a `main` | Aplicada |
 | 14 | Todo cambio a `main` por Pull Request con la aprobación de 3 de los 4 integrantes | Acordada; la protección de rama la debe configurar el dueño del repo (8.3) |
+| 15 | Código HTTP 409 Conflict (`ConflictException`) para orden en estado incorrecto | Aplicada (Fase 2) |
+| 16 | Contraseña de activación de 5 dígitos generada con `SecureRandom` y oculta con `@JsonIgnore` | Aplicada (Fase 2) |
+| 17 | Orden de comprobaciones de tara: 404 (orden) → 400 (peso > 0) → 409 (estado), todas fuera del `try/catch` | Aplicada (Fase 2) |
 
 ## 10. Hallazgos y deuda abierta
 
@@ -338,6 +346,7 @@ JSON
 |---|---|---|
 | H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties`, `/demo/**` público, CORS abierto, `dev.info.enabled=true` (trazas en las respuestas de error) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
+| H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Aceptado para el parcial (análogo a N-2 de Fase 1) |
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
