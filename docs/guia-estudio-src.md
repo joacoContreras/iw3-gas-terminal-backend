@@ -2,11 +2,11 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 19/10/2026, al cierre de la Fase 1 (las Fases 2 a 5 todavía no tienen código).
+**Última actualización:** 23/10/2026, al cierre de la Fase 2 (pesaje inicial y activación).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1.
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2.
 
 ---
 
@@ -35,7 +35,7 @@ Los estados de la orden son secuenciales, nunca vuelven atrás:
 |---|---|---|
 | 0 | Auditoría y línea base (no se tocó código) | Hecha |
 | 1 | **Punto 1:** SAP envía la orden y se crea en estado 1 | Hecha |
-| 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Pendiente |
+| 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Hecha |
 | 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Pendiente |
 | 4 | **Punto 4:** cerrar la orden (estado 3) | Pendiente |
 | 5 | **Punto 5:** pesaje final, estado 4 y conciliación | Pendiente |
@@ -69,7 +69,7 @@ Cada ficha es una clase que se convierte en una tabla de la base de datos.
 
 | Archivo | Tabla | Qué es y para qué sirve | Origen |
 |---|---|---|---|
-| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado y fecha de recepción. Se llama `orders` porque `ORDER` es palabra reservada de SQL | F1 |
+| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Se llama `orders` porque `ORDER` es palabra reservada de SQL | F1 + F2 |
 | `OrderStatus.java` | — | Los 4 estados. En el JSON se publica el número (1 a 4) | F1 |
 | `OrderStatusConverter.java` | — | Traduce estado ↔ número para guardar 1 a 4 en la base, y no 0 a 3 | F1 |
 | `OrderStatusLog.java` | `order_status_logs` | Historial: estado anterior (`null` al crear), estado nuevo, fecha, quién lo hizo y observaciones | F1 |
@@ -100,9 +100,10 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 | Archivo | Qué es | Origen |
 |---|---|---|
-| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). No tiene reglas | F1 |
-| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina") | F1 |
+| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare` | F1 + F2 |
+| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add` y `registerTare` | F1 + F2 |
 | `OrderValidator.java` | Revisa que la orden recibida esté completa y con valores lógicos | F1 |
+| `ActivationPasswordGenerator.java` | Genera contraseñas aleatorias de 5 dígitos (10000–99999) con `SecureRandom` | F2 |
 
 ### `IOrderBusiness` frente a `OrderBusiness`
 
@@ -113,7 +114,21 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. Así los controllers no dependen de cómo está escrita la regla.
 
-**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`.
+**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`, `registerTare(orderNumber, weight, actor)`.
+
+### Qué hace `OrderBusiness.registerTare` (paso a paso)
+
+1. Carga la orden con `load(orderNumber)` (si no existe, 404 `NotFoundException`).
+2. Valida que el peso sea mayor que 0 con `!(weight > 0)` (si es 0, negativo o `NaN`, 400 `BadRequestException`).
+3. Valida que la orden esté en estado 1 (`PENDING_INITIAL_WEIGHING`). Si no, 409 `ConflictException`.
+4. Las comprobaciones 1 a 3 van **fuera del try/catch** para no convertirse en 500.
+5. Dentro de `@Transactional(rollbackFor = Exception.class)`:
+   - Asigna `tare` y `initialWeighingDateTime = LocalDateTime.now()`.
+   - Genera la contraseña de 5 dígitos con `ActivationPasswordGenerator.generate()`.
+   - Pasa la orden a estado 2 (`INITIAL_WEIGHING_REGISTERED`).
+   - Persiste la orden con `orderDAO.save(order)`.
+   - Asienta el cambio en el historial con `logStatus(order, 1, 2, actor, "Tara registrada: <peso> kg")`.
+   - Ante cualquier falla no prevista, lanza `BusinessException` y la transacción se revierte.
 
 ### Qué hace `OrderBusiness.add` (paso a paso)
 
@@ -139,6 +154,7 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 |---|---|---|
 | `NotFoundException.java` | 404 (no se encontró) | Cátedra |
 | `FoundException.java` | **302** (ya existe; convención de la cátedra para duplicados) | Cátedra |
+| `ConflictException.java` | **409** (conflicto con el estado actual de la orden) | **F2** |
 | `BusinessException.java` | 500 (falla interna) | Cátedra |
 | `BadRequestException.java` | 400 (datos inválidos) | **F1** |
 
@@ -152,15 +168,18 @@ No tienen reglas: reciben el pedido, llaman al negocio y devuelven el código.
 |---|---|---|
 | `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados | F1 |
 | `BaseRestController.java` | Clase madre de los controllers. Tiene `getUserLogged()`: el usuario del token, de donde sale el "quién" del historial | Cátedra + F1 |
-| `Constants.java` | Todas las URLs en un solo lugar | Cátedra + F1 |
+| `Constants.java` | Todas las URLs en un solo lugar. Incluye `URL_INTEGRATION_TMS` | Cátedra + F1 + F2 |
 
 ## 7. `integration/`: un subpaquete por sistema externo
 
-Hoy solo SAP. Después irán `tms/` (balanza) y `loader/` (sistema de carga).
+Hoy SAP y TMS (balanza). Después irá `loader/` (sistema de carga).
 
 | Archivo | Qué hace | Origen |
 |---|---|---|
 | `sap/controllers/OrderSapRestController.java` | La puerta de SAP. Recibe la orden, la pasa al negocio y responde 201 (con header `location`), 302, 400 o 500 | F1 |
+| `tms/model/TareRequest.java` | DTO del pesaje inicial con `double weight` (kg) | F2 |
+| `tms/model/TareResponse.java` | DTO de respuesta de la balanza con `Integer activationPassword` (5 dígitos) | F2 |
+| `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500) | F2 |
 
 ## 8. `security/` y `auth/`
 
@@ -197,7 +216,8 @@ Hoy solo SAP. Después irán `tms/` (balanza) y `loader/` (sistema de carga).
 | `Iw3Application.java` | Arranque de la app. Fija la zona horaria y loguea el perfil activo. Se le sacaron componentes del demo | Cátedra + F1 |
 | `src/main/resources/application.properties` | Conexión a la base y configuración general. Incluye la zona horaria de Argentina para la base (`hibernate.jdbc.time_zone`) | Cátedra + F1 |
 | `src/main/resources/application-mysqldev.properties` y `-mysqlprod.properties` | Perfiles de desarrollo y producción | Cátedra |
-| `src/test/java/.../Iw3ApplicationTests.java` | Un solo test: que la aplicación arranque (`contextLoads`). Necesita MySQL | Cátedra |
+| `src/test/java/.../Iw3ApplicationTests.java` | Un test: que la aplicación arranque (`contextLoads`). Necesita MySQL | Cátedra |
+| `src/test/java/.../ActivationPasswordGeneratorTest.java` | Prueba unitaria del generador de contraseñas (rango 10000–99999 y entropía). Sin base de datos | F2 |
 
 ---
 
@@ -207,13 +227,14 @@ Hoy solo SAP. Después irán `tms/` (balanza) y `loader/` (sistema de carga).
 |---|---|---|
 | `POST /api/v1/login` | Usuario y contraseña (formulario); devuelve el token en texto | 200, 401 |
 | `POST /api/v1/integration/sap/orders` | **Punto 1:** SAP envía la orden | 201 + `location`, 302, 400, 401, 500 |
+| `POST /api/v1/integration/tms/orders/{n}/tare` | **Punto 2:** la balanza envía la tara; devuelve la contraseña de activación de 5 dígitos | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
-| `GET /api/v1/orders/{n}` | Una orden | 200, 404 |
+| `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación | públicos |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, público; cerrar antes de desplegar) | 200 |
 
-Códigos: **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos · **401** sin token o inválido · **404** no existe · **500** falla interna.
+Códigos: **200** éxito · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos o peso ≤ 0 · **401** sin token o inválido · **404** no existe · **409** orden no pendiente de pesaje inicial (estado incorrecto) · **500** falla interna.
 
 ## 12. Fuera de `src`
 
@@ -223,8 +244,9 @@ Códigos: **201** creada · **302** ya existe (convención de la cátedra) · **
 | `docker-compose.yml` | La base MySQL (contenedor `iw3-gas-mysql`, puerto 3306, base `iw3_db`) |
 | `CLAUDE.md` | Estado del proyecto y reglas del equipo |
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
-| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
-| `docs/postman/` | Colección Postman (10 pedidos, 19 verificaciones) |
+| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
+| `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
+| `docs/postman/` | Colección Postman (21 pedidos, 46 verificaciones) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 
@@ -238,11 +260,17 @@ Códigos: **201** creada · **302** ya existe (convención de la cátedra) · **
 
 | Decisión | Por qué |
 |---|---|
-| El `@RequestBody` es la entidad y el negocio copia solo los campos permitidos | Siguiendo a la cátedra, pero evitando que el cliente fije el estado o el `id` |
+| El `@RequestBody` es la entidad y el negocio copia solo los campos permitidos (SAP) | Siguiendo a la cátedra, pero evitando que el cliente fije el estado o el `id` |
+| DTOs dedicados `TareRequest` y `TareResponse` (TMS) | La balanza solo manda el peso y recibe una clave; desacopla el contrato externo de la entidad |
 | Transacción con `rollbackFor = Exception.class` | Las excepciones de negocio son *checked* y Spring no revierte por ellas |
 | Duplicado = 302 | Convención de la cátedra. 409 sería más preciso |
+| Estado incorrecto = 409 Conflict | La orden existe y el JSON es correcto, pero el estado actual choca con la operación |
 | Datos inválidos = 400 | Extensión nuestra: no es culpa del servidor |
+| Contraseña oculta con `@JsonIgnore` | Secreto compartido solo entre balanza y sistema de carga: no se expone en consultas |
+| `SecureRandom` para la contraseña de 5 dígitos | Evita previsibilidad de contraseñas de carga de combustible |
+| Comprobaciones 404/400/409 fuera del `try/catch` | Evita que el `catch (Exception)` las transforme en HTTP 500 genérico |
 | Estado guardado como 1 a 4 | La consigna habla de estados 1 a 4 |
+| Columnas de tara nulables (`Double`, `Integer`) | Permite coexistir con órdenes previas en `ddl-auto=update` sin romper la base |
 | Tablas `orders` y `gas_products` | `ORDER` es reservada; `products` ya existe en bases viejas |
 | Validación manual en el negocio | La cátedra no usa Bean Validation |
 | `hibernate.jdbc.time_zone` | Sin eso la base guardaba la hora 3 h adelantada |
@@ -254,6 +282,15 @@ Códigos: **201** creada · **302** ya existe (convención de la cátedra) · **
 | Ver qué datos lleva la orden | `model/Order.java` |
 | Cambiar qué se le exige a SAP | `business/OrderValidator.java` |
 | Cambiar lo que pasa al recibir la orden | `business/OrderBusiness.java` (`add`) |
+| Cambiar la regla de pesaje inicial / tara | `business/OrderBusiness.java` (`registerTare`) |
+| Cambiar la generación de contraseñas | `business/ActivationPasswordGenerator.java` |
+| Cambiar un código HTTP | El controller del endpoint (`integration/sap/...`, `integration/tms/...` o `controllers/...`) |
+| Agregar una URL | `controllers/Constants.java` y el controller |
+| Abrir o cerrar una ruta sin token | `security/SecurityConfiguration.java` |
+| Ver cómo se arma el token | `auth/controller/AuthRestController.java` |
+| Cambiar el formato de error | `util/StandartResponseBusiness.java` |
+| Ver los estados de la orden | `model/OrderStatus.java` |
+| Cambiar la conexión a la base | `src/main/resources/application.properties` |
 | Cambiar un código HTTP | El controller del endpoint (`integration/sap/...` o `controllers/...`) |
 | Agregar una URL | `controllers/Constants.java` y el controller |
 | Abrir o cerrar una ruta sin token | `security/SecurityConfiguration.java` |
