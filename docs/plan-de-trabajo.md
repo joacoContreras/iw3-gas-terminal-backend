@@ -49,6 +49,9 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 12 | Incorporar `getUserLogged()` en `BaseRestController` (H-10) | **Aplicada en la Fase 1.** | Fase 1 |
 | 13 | Integrar `fase-0-auditoria` a `main` antes de abrir la rama de la Fase 1 | **Aplicada:** `main` en `c3b62de`, publicada en GitHub. | Antes de la Fase 1 |
 | 14 | Todo cambio a `main` por Pull Request con la aprobación de 3 de los 4 integrantes | **Acordada (14/10/2026).** La protección de rama la configura el dueño del repo | Todas |
+| 15 | Código HTTP 409 Conflict (`ConflictException`) para orden en estado incorrecto | **Aplicada en la Fase 2.** Distingue estado incompatible de error sintáctico (400). | Fase 2 |
+| 16 | Contraseña de activación de 5 dígitos generada con `SecureRandom` y oculta con `@JsonIgnore` | **Aplicada en la Fase 2.** Solo viaja en la respuesta de la balanza (`TareResponse`). | Fase 2 |
+| 17 | Orden de comprobaciones de tara: 404 (orden) → 400 (peso > 0) → 409 (estado), todas fuera del `try/catch` | **Aplicada en la Fase 2.** Evita que `catch (Exception)` las transforme en 500. | Fase 2 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -85,15 +88,15 @@ Rutas bajo `/api/v1` (`Constants.URL_BASE`). Son una propuesta; se confirman en 
 | 5 | `GET /orders/{orderNumber}/reconciliation` | — | Conciliación (solo estado 4) |
 
 Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el formato
-`StandartResponse` de la cátedra. El código para "estado incorrecto" se define en la Fase 2.
+`StandartResponse` de la cátedra. El código para "estado incorrecto" quedó definido como 409 Conflict en la Fase 2.
 
 ## 6. Fases
 
 | Fase | Rama | Entrega | Criterio de aceptación |
 |---|---|---|---|
-| 0 | `fase-0-auditoria` | Línea base ejecutada, hallazgos y guía de estudio de la base. Sin cambios de código. | Se sabe qué existe, qué falta y si se puede implementar. |
-| 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. |
-| 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto, tara inválida). |
+| 0 | `fase-0-auditoria` | Línea base ejecutada, hallazgos y guía de estudio de la base. Sin cambios de código. | Se sabe qué existe, qué falta y si se puede implementar. **(Completada e integrada en main)** |
+| 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. **(Completada e integrada en main)** |
+| 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada y probada en rama)** |
 | 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. |
 | 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. | Detalle posterior rechazado; transiciones inválidas rechazadas. |
 | 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |

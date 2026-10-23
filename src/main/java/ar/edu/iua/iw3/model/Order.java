@@ -2,6 +2,8 @@ package ar.edu.iua.iw3.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -71,4 +73,25 @@ public class Order {
 	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
 	@Column(nullable = false)
 	private LocalDateTime receptionDateTime;
+
+	/**
+	 * Peso del camion vacio (kg), enviado por la balanza (punto 2). Es nulo hasta el
+	 * pesaje inicial; por eso es Double y no double (la tabla ya tiene ordenes).
+	 */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double tare;
+
+	/** Momento del pesaje inicial. Nulo hasta que la balanza envia la tara. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private LocalDateTime initialWeighingDateTime;
+
+	/**
+	 * Contrasena de activacion de 5 digitos. Es un secreto entre la balanza y el
+	 * sistema de carga: no se publica en el JSON ni se acepta desde el cliente.
+	 */
+	@JsonIgnore
+	@Column
+	private Integer activationPassword;
 }

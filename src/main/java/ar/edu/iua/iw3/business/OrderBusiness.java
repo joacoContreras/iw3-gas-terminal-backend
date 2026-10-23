@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
+import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Customer;
@@ -109,6 +110,34 @@ public class OrderBusiness implements IOrderBusiness {
 			o = orderDAO.save(o);
 			logStatus(o, null, o.getStatus(), actor, "Orden recibida desde el sistema externo");
 			return o;
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Order registerTare(Integer orderNumber, double weight, String actor)
+			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500
+		Order order = load(orderNumber);
+		if (!(weight > 0)) { // tambien rechaza NaN
+			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
+		}
+		if (order.getStatus() != OrderStatus.PENDING_INITIAL_WEIGHING) {
+			throw ConflictException.builder().message("La orden " + orderNumber
+					+ " no está pendiente de pesaje inicial (estado " + order.getStatus().getCode() + ")").build();
+		}
+		try {
+			OrderStatus from = order.getStatus();
+			order.setTare(weight);
+			order.setInitialWeighingDateTime(LocalDateTime.now());
+			order.setActivationPassword(ActivationPasswordGenerator.generate());
+			order.setStatus(OrderStatus.INITIAL_WEIGHING_REGISTERED);
+			order = orderDAO.save(order);
+			logStatus(order, from, order.getStatus(), actor, "Tara registrada: " + weight + " kg");
+			return order;
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
