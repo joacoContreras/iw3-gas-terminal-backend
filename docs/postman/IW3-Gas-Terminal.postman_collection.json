@@ -34,6 +34,14 @@
     {
       "key": "orderNumber",
       "value": ""
+    },
+    {
+      "key": "orderNumberTms",
+      "value": ""
+    },
+    {
+      "key": "activationPassword",
+      "value": ""
     }
   ],
   "item": [
@@ -505,6 +513,565 @@
                 "999999999"
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Fase 2: pesaje inicial (TMS)",
+      "item": [
+        {
+          "name": "Crear orden para la prueba de TMS",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberTms', String((Date.now() + 10) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden para TMS: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden de TMS', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberTms');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberTms}},\n  \"plannedLoadDateTime\": \"2026-10-22T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-TMS-01\", \"plate\": \"TMS123CD\", \"description\": \"Cisterna TMS\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-TMS-01\", \"name\": \"Carlos\", \"lastName\": \"Balanza\", \"document\": \"35999888\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-TMS-01\", \"companyName\": \"Gas TMS SA\", \"contact\": \"tms@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea una orden en estado 1 (pendiente de pesaje inicial) para ejecutar sobre ella la suite de pruebas de la balanza (TMS)."
+          }
+        },
+        {
+          "name": "Tara válida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara válida responde 200', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('la respuesta incluye activationPassword', () => {",
+                  "  pm.expect(res.activationPassword).to.be.a('number');",
+                  "});",
+                  "const p = res.activationPassword;",
+                  "pm.test('la contraseña tiene 5 dígitos (entre 10000 y 99999)', () => {",
+                  "  pm.expect(p).to.be.within(10000, 99999);",
+                  "});",
+                  "pm.collectionVariables.set('activationPassword', String(p));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Envía la tara (kg) del camión vacío. Guarda la tara y fecha de pesaje, genera la contraseña de activación de 5 dígitos y pasa la orden al estado 2."
+          }
+        },
+        {
+          "name": "Consultar orden tras pesaje inicial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('consulta responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('el estado es 2 (con pesaje inicial)', () => pm.expect(o.status).to.eql(2));",
+                  "pm.test('tara guardada correctamente', () => pm.expect(o.tare).to.eql(14500.0));",
+                  "pm.test('initialWeighingDateTime presente', () => pm.expect(o.initialWeighingDateTime).to.be.a('string'));",
+                  "pm.test('no publica la contraseña de activación (@JsonIgnore)', () => {",
+                  "  pm.expect(o.activationPassword).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberTms}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberTms}}"
+              ]
+            },
+            "description": "Verifica que la orden esté en estado 2, que tenga registrados tare e initialWeighingDateTime y que la contraseña no se filtre al exterior."
+          }
+        },
+        {
+          "name": "Historial de estados tras pesaje inicial",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('historial responde 200', () => pm.response.to.have.status(200));",
+                  "const logs = pm.response.json();",
+                  "pm.test('tiene 2 registros de cambio de estado', () => pm.expect(logs).to.have.lengthOf(2));",
+                  "pm.test('primer registro: null -> 1 (recepción)', () => {",
+                  "  pm.expect(logs[0].fromStatus).to.be.null;",
+                  "  pm.expect(logs[0].toStatus).to.eql(1);",
+                  "});",
+                  "pm.test('segundo registro: 1 -> 2 con actor y observación', () => {",
+                  "  pm.expect(logs[1].fromStatus).to.eql(1);",
+                  "  pm.expect(logs[1].toStatus).to.eql(2);",
+                  "  pm.expect(logs[1].actor).to.eql('admin');",
+                  "  pm.expect(logs[1].observations).to.include('Tara registrada: 14500');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberTms}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberTms}}",
+                "status-log"
+              ]
+            },
+            "description": "Comprueba la auditoría de estados: de null a 1 en el alta y de 1 a 2 con el usuario logueado en la tara."
+          }
+        },
+        {
+          "name": "Repetir la tara (estado incorrecto)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('repetir tara responde 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const j = pm.response.json();",
+                  "pm.test('cuerpo es StandartResponse con code 409', () => pm.expect(j.code).to.eql(409));",
+                  "pm.test('mensaje informa que no está pendiente de pesaje inicial', () => {",
+                  "  pm.expect(j.message).to.include('no está pendiente de pesaje inicial');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Intenta volver a registrar la tara sobre una orden que ya está en estado 2. Debe responder 409 Conflict."
+          }
+        },
+        {
+          "name": "Tara con peso 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso 0 responde 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje indica weight > 0', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('weight debe ser mayor que 0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 0.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un peso de 0 kg debe ser rechazado con 400 Bad Request."
+          }
+        },
+        {
+          "name": "Tara con peso negativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso negativo responde 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje indica weight > 0', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('weight debe ser mayor que 0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": -500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un peso negativo debe ser rechazado con 400 Bad Request."
+          }
+        },
+        {
+          "name": "Tara sin campo weight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin weight responde 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje indica weight > 0', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('weight debe ser mayor que 0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un cuerpo sin el campo weight deserializa en 0.0 y se rechaza con 400 Bad Request."
+          }
+        },
+        {
+          "name": "Tara con JSON malformado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JSON malformado responde 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": \n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un JSON sintácticamente inválido responde 400 Bad Request."
+          }
+        },
+        {
+          "name": "Tara de orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('orden inexistente responde 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje indica orden no encontrada', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('No se encuentra la Orden');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/999999999/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "999999999",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Registrar tara de una orden que no existe en el sistema responde 404 Not Found."
+          }
+        },
+        {
+          "name": "Tara sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberTms}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberTms}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Petición sin cabecera Authorization responde 401 Unauthorized."
           }
         }
       ]
