@@ -465,8 +465,6 @@ Clasificación: **IV** = implementado y verificado · **INV** = implementado y n
 | Avisar a Martín González del arreglo de H-14 en su archivo (`OrderBusiness.activate`) y de la aprobación de la decisión 11 (la división preveía que la aprobara él) | Tomás Calvo |
 | ~~Comparar los nombres del JSON y las reglas con la consigna original en PDF~~ | Hecho en la auditoría: el PDF está en `docs/pdf/consigna-trabajo-integrador-2026.pdf` |
 | ~~PR a `main`~~ | Hecho: PR #7 mergeado. Los hallazgos de la auditoría (F-01, F-02, F-13) se corrigen en un PR posterior |
-| Configuración del repo: el ruleset de `main` pide 1 aprobación (no 3) y no borra las ramas al mergear | El dueño del repo (`joacoContreras`) |
-| Redesplegar la VM (sigue con la imagen de la Fase 1) | El equipo, después del merge |
 | Fase 4: cerrar la orden (2 → 3) | Rama `fase-4-cierre-orden`, con autorización |
 
 ---
