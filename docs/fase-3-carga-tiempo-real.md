@@ -18,7 +18,7 @@ Convención de rutas: `SRC` = `src/main/java/ar/edu/iua/iw3`. La división del t
 La fase implementa el **Punto 3 de la consigna**. El **sistema de carga** (la isla donde se carga el camión) hace dos cosas:
 
 1. **Se activa:** envía el número de orden y la contraseña de 5 dígitos que la balanza generó en la Fase 2. Si la orden existe, está en estado 2 y la contraseña es correcta, el backend responde el **preset** (kg a cargar) y registra `activationDateTime`. La orden **sigue en estado 2**.
-2. **Envía lecturas** del caudalímetro (≈ 1 por segundo): masa acumulada, densidad, temperatura, caudal y estampa de tiempo. El backend **descarta** las inválidas sin escribir nada y **guarda** las válidas en el histórico (`order_details`), actualizando en la **cabecera** de la orden los últimos valores válidos y las fechas de inicio y fin de carga.
+2. **Envía lecturas** del caudalímetro (≈ 1 por segundo): masa acumulada, densidad, temperatura, caudal y estampa de tiempo (que asigna el servidor al recibir la lectura). El backend **descarta** las inválidas sin escribir nada y **guarda** las válidas en el histórico (`order_details`), actualizando en la **cabecera** de la orden los últimos valores válidos y las fechas de inicio y fin de carga.
 
 **Resultado:** los 19 criterios de aceptación están cumplidos y verificados con pruebas ejecutadas (sección 7 y matriz de la sección 10). La auditoría encontró **un defecto menor** fuera de los criterios (H-14: una falla de base al confirmar la activación no respondía con `StandartResponse`), que se **corrigió y verificó** en un commit `fix` aparte, y varias limitaciones registradas. Además se implementó la **decisión 11** (`GET /api/v1/orders/{orderNumber}/details`, consulta paginada del histórico), aprobada el 27/10/2026. La consigna original en PDF **no estuvo disponible**: la comparación se hizo contra su resumen (`CLAUDE.md` §4, el plan y la tabla §2.1 de la división) y queda **no verificada contra el original**.
 
@@ -55,7 +55,7 @@ Confirmadas por el equipo el 27/10/2026 (división, sección 3). En el plan qued
 | D3 (20) | Lectura descartada | **200** con `{ "saved": false, "reason": "..." }`; guardada: `{ "saved": true, "reason": null }` | 400 o 422: descartar no es un error del cliente; el caudalímetro sigue enviando y la consigna dice "descartar" |
 | D4 (21) | Densidad fuera de (0, 1) | Se **descarta**; los **campos ausentes** dan **400** | Densidad inválida como 400: rompería la regla de "descartar" para un valor físico fuera de rango |
 | D5 (22) | Masa igual a la anterior | **Válida**; "la anterior" es la **última masa válida** (cabecera) | Comparar con la última recibida: una lectura descartada contaminaría la comparación siguiente |
-| D6 (23) | `timestamp` de la lectura | **Opcional**; si falta, hora del servidor | Obligatorio: un caudalímetro sin reloj no podría enviar datos |
+| D6 (23) | `timestamp` de la lectura | **Corregida tras la auditoría (F-13):** el servidor **siempre** usa su hora de recepción y el `timestamp` que mande el cliente se ignora | Antes era opcional con hora del cliente; la consigna dice «momento de recepción» y las estampas del cliente podían quedar desordenadas (H-20) |
 | D7 (24) | Orden de comprobaciones | Activación: **400 → 404 → 409 → 403**. Lecturas: **404 → 400 → 409 → descarte** | Otro orden: se revelaría el estado de una orden ante un pedido mal formado (activación) o se validaría el cuerpo de una orden que no existe (lecturas) |
 | D8 (25) | Fin de carga | `loadingEndDateTime` es también la estampa de los últimos valores | Un campo `lastReadingDateTime` duplicado, siempre igual al fin de carga |
 | D9 (26) | Historial de estados | La activación **no** agrega registros | Registrar la activación: no es un cambio de estado y la consigna pide registrar los cambios de estado |
@@ -134,7 +134,7 @@ Sistema de carga ──POST /api/v1/integration/loader/activation {"orderNumber"
 
 ```
 Caudalímetro ──POST .../loader/orders/120503639/details {"accumulatedMass":250.0,"density":0.52,
-               "temperature":19.5,"flowRate":3600.0,"timestamp":"2026-10-28T10:00:06"}──▶
+               "temperature":19.5,"flowRate":3600.0}──▶
    │
    ├─ 1. JWTAuthorizationFilter (sin token → 401) · Jackson → DetailRequest (malformado / "abc" → 400)
    ├─ 2. OrderLoaderRestController.addDetail → orderDetailBusiness.add(orderNumber, masa, densidad, temp, caudal, ts)
@@ -146,7 +146,7 @@ Caudalímetro ──POST .../loader/orders/120503639/details {"accumulatedMass":
    │      d. OrderDetailValidator.discardReasons(masa, densidad, caudal, order.lastAccumulatedMass)
    │         si hay motivos → return DetailResult.discarded("motivo1; motivo2")   (no escribe nada)
    │      DENTRO del try:
-   │      e. estampa = timestamp != null ? timestamp : LocalDateTime.now()
+   │      e. estampa = LocalDateTime.now() (hora de recepción del servidor)
    │      f. orderDetailDAO.save(new OrderDetail(...))                    → INSERT order_details
    │      g. cabecera: last* = valores; loadingStartDateTime si es nulo; loadingEndDateTime = estampa
    │      h. orderDAO.saveAndFlush(order)                                 → UPDATE orders (dentro del try)
@@ -188,7 +188,7 @@ Cada lectura se publica sin la orden (`@JsonIgnore` en `OrderDetail.order`).
 - **Dependencias:** `OrderRepository` (`orderDAO`).
 
 ### `OrderDetailBusiness.add` — `SRC/business/OrderDetailBusiness.java`
-- **Firma:** `DetailResult add(Integer orderNumber, Double accumulatedMass, Double density, Double temperature, Double flowRate, LocalDateTime timestamp) throws NotFoundException, BadRequestException, ConflictException, BusinessException`.
+- **Firma:** `DetailResult add(Integer orderNumber, Double accumulatedMass, Double density, Double temperature, Double flowRate) throws NotFoundException, BadRequestException, ConflictException, BusinessException`.
 - **Dependencias:** `IOrderBusiness` (para `load`, sin duplicar la búsqueda), `OrderRepository`, `OrderDetailRepository` y `OrderDetailValidator`.
 - **Validaciones (fuera del `try`):** 404 → 400 `"accumulatedMass, density, temperature y flowRate son obligatorios"` → 409 `"La orden <n> no acepta lecturas: debe estar en estado 2 y activada (estado <e>, activada=<true/false>)"` → descarte.
 - **Efecto (lectura válida):** inserta `OrderDetail`, actualiza los cuatro últimos valores, `loadingStartDateTime` (solo si es nulo) y `loadingEndDateTime` (siempre), y hace `saveAndFlush` de la orden.
@@ -295,10 +295,10 @@ Las carpetas 00 a 02 mantienen sus **46 aserciones** sin cambios (los dos `git d
 | Lecturas válidas | Consultar la cabecera tras dos lecturas | últimos valores de la 2; inicio `2026-10-28T10:00:01`; fin `2026-10-28T10:00:06` | Aprobado |
 | Descartes | Masa menor (200) · caudal 0 · caudal −5 · masa 0 · densidad 0 · 1 · 1.5 | `saved: false` con el fragmento del motivo | Aprobado (7) |
 | Descartes | Consultar la cabecera tras los descartes | sin cambios | Aprobado |
-| Límite | Masa igual a la anterior (250) · sin `timestamp` (400 kg) | `saved: true` | Aprobado |
+| Límite | Masa igual a la anterior (250) · cuarta lectura (400 kg) con un `timestamp` de 2020 enviado a propósito | `saved: true`; el `timestamp` del cliente se ignora | Aprobado |
 | Límite | Consultar la cabecera tras los casos límite | últimos valores = 400 kg; inicio sin cambios; fin = hora del servidor | Aprobado |
 | Histórico (decisión 11) | Lecturas guardadas: primera página (`page=0&size=2&sort=id,desc`) | 200; `totalElements` 4, `totalPages` 2; lecturas 1 y 2 por `id` ascendente (se ignora el `sort`); cada lectura sin la orden | Aprobado |
-| Histórico | Segunda página (`page=1&size=2`) | masa igual (250, `10:00:21`) y sin `timestamp` (400); los descartes no aparecen | Aprobado |
+| Histórico | Segunda página (`page=1&size=2`) | masa igual (250) y cuarta lectura (400); ninguna estampa es de 2020; los descartes no aparecen | Aprobado |
 | Histórico | `size=500` · orden sin activar | `size` acotado a 100 con las 4 lecturas · página vacía | Aprobado |
 | Histórico | Orden inexistente · sin token | 404 `No se encuentra la Orden` · 401 | Aprobado |
 | Errores | Sin un campo · JSON malformado · valor no numérico | 400 | Aprobado |
@@ -331,7 +331,7 @@ Script temporal de auditoría (en el *scratchpad* de la sesión, fuera del repo)
 | Temperatura negativa | −8,5 °C con el resto válido | `saved: true` |
 | `timestamp` con formato inválido | `"28/10/2026 11:00"` | 400 |
 | Swagger (criterio 15) | `GET /v3/api-docs` | activación con 200/400/403/404/409; lecturas con 200/400/404/409; esquema `Order` con los 7 campos y sin `activationPassword`; esquemas de los 4 DTO |
-| Eficiencia (criterio 18) | 100 lecturas seguidas, masa creciente, sin `timestamp` | 100/100 guardadas; **7,96 s** en total; **79,6 ms** promedio; primeras 10: 84,6 ms; últimas 10: 80,4 ms (sin degradación) |
+| Eficiencia (criterio 18) | 100 lecturas seguidas, masa creciente | 100/100 guardadas; **7,96 s** en total; **79,6 ms** promedio; primeras 10: 84,6 ms; últimas 10: 80,4 ms (sin degradación) |
 | Contraseña en logs | búsqueda de las contraseñas de la corrida en el log de la app (≈ 8650 líneas al momento) | 0 apariciones; el SQL se loguea con `?` |
 
 La Parte 2 había medido **36,1 ms** por lectura en su máquina; la diferencia es del equipo, y en ningún caso hay degradación entre las primeras y las últimas lecturas.
@@ -400,12 +400,12 @@ La numeración continúa la de la Fase 2 (H-12 y H-13).
 | ID | Tipo | Detalle | Evidencia | Qué se hace |
 |---|---|---|---|---|
 | H-14 | **Defecto menor — corregido** | Una falla de base al **confirmar** la activación respondía 500 con el formato por defecto de Spring, no con `StandartResponse`. `OrderBusiness.activate` usaba `orderDAO.save(order)`: el `UPDATE` se enviaba al confirmar la transacción, después del `try/catch`. La Parte 2 había resuelto lo mismo en las lecturas con `saveAndFlush` | Sección 7.7: `POST /api/v1/integration/loader/activation` con la contraseña correcta y un *trigger* que rechaza el `UPDATE` → `500 {timestamp, status, error, trace, message, path}`; la orden no quedaba activada y no se filtraba la contraseña | Archivo de la **Parte 1 (Martín González)**: `SRC/business/OrderBusiness.java`, método `activate`. **Corregido** en `4ed54c8` (`fix(business)`): `orderDAO.saveAndFlush(order)`, autorizado por Tomás Calvo el 27/10/2026. Verificado: la misma prueba ahora responde 500 con `StandartResponse`. `registerTare` (Fase 2) tiene el mismo patrón; queda fuera del alcance de esta fase |
-| H-15 | Limitación | Dos lecturas simultáneas de la misma orden pueden leer la misma masa anterior y pisarse al actualizar la cabecera | Análisis de código (trampa 13) | Aceptado para el parcial, como H-12 y N-2 |
+| H-15 | **Resuelto tras la auditoría (F-01)** | Dos lecturas simultáneas de la misma orden hacían que MySQL abortara una con *Deadlock found when trying to get lock* (500), y podían leer la misma masa anterior. Ahora la orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`) y las lecturas de una orden se procesan de a una | Auditoría del PR #7; verificado con 150 lecturas simultáneas: 0 respuestas 500 y 0 deadlocks | Corregido; las activaciones simultáneas siguen siendo H-16 |
 | H-16 | Limitación | Dos activaciones simultáneas de una orden sin activar podrían escribir `activationDateTime` dos veces (gana la última) | Análisis de código (Parte 1) | Aceptado para el parcial |
 | H-17 | Limitación de seguridad | Contraseña de 5 dígitos (90.000 combinaciones) sin límite de intentos | Diseño de la Fase 2 | Etapa de seguridad del final |
 | H-18 | Limitación | El token vence en 1 h: una carga más larga exige volver a loguearse | `AuthConstants` | Etapa de seguridad del final |
-| H-19 | Limitación | Un `timestamp` con `Z` se **acepta** y la zona se descarta sin aviso (`"2026-10-28T11:00:05Z"` → `2026-10-28T11:00:05`); con desplazamiento (`-03:00`) responde 400 | Sección 7.5 (script de auditoría) | Las pruebas usan valores sin zona; documentado en el contrato |
-| H-20 | Limitación | Si se mezclan lecturas con y sin `timestamp`, el fin de carga puede quedar **antes** que el inicio: en la corrida de Postman, inicio `2026-10-28 10:00:01` (estampa del cliente) y fin `2026-10-27 13:58:11` (hora del servidor). No hay regla de estampas crecientes | `SELECT` sobre la orden 120288201 | A considerar en la Fase 5 y en el final (tiempo transcurrido, ETA) |
+| H-19 | **Resuelto tras la auditoría (F-13)** | Antes un `timestamp` con `Z` se aceptaba y la zona se descartaba sin aviso. Ahora el servidor ignora cualquier `timestamp` del cliente (un valor con formato inválido ya no produce 400 por ese campo) | Sección 7.5 (script de auditoría) | Corregido al quitar el campo de `DetailRequest` |
+| H-20 | **Resuelto tras la auditoría (F-13)** | Mezclar estampas del cliente y del servidor dejaba el fin de carga antes que el inicio. Con la hora de recepción siempre del servidor, las estampas son crecientes | `SELECT` sobre la orden 120288201 | Corregido |
 | H-21 | Observación | Jackson acepta números enviados como texto: la contraseña correcta como texto (`"password": "<5 dígitos>"`) activa y `"accumulatedMass": "50"` se guarda. Un texto no numérico (`"abc"`) sí da 400 | Sección 7.5 | Comportamiento por defecto de Jackson; no se cambia |
 | H-22 | Observación | El 500 de `BusinessException` sale con `"message": null` (se construye solo con la causa); el detalle queda en `devInfo` | Sección 7.7 | Patrón heredado de las Fases 1 y 2; no se cambia en esta fase |
 
@@ -429,7 +429,7 @@ Clasificación: **IV** = implementado y verificado · **INV** = implementado y n
 | Cabecera con el último valor válido (consigna 4.2) | `OrderDetailBusiness.add` | "Consultar la cabecera..." (3 veces) | últimos valores correctos | IV |
 | Detalle con el histórico (consigna 4.2) | `OrderDetail`, `OrderDetailRepository` | `SELECT COUNT(*)` = 4 | solo las válidas | IV |
 | Inicio de carga = primer registro válido (consigna 4.2) | `OrderDetailBusiness.add` | Cabecera tras lecturas y tras casos límite | no cambia | IV |
-| Fin de carga = último registro válido (consigna 4.2, D8) | ídem | Cabecera tras dos lecturas y tras "sin timestamp" | actualizado | IV |
+| Fin de carga = último registro válido (consigna 4.2, D8) | ídem | Cabecera tras dos lecturas y tras la cuarta lectura | actualizado | IV |
 | Guardar todas las lecturas válidas (consigna 4.2, opcional) | ídem | 100 lecturas → 100 filas | sí | IV |
 | Datos de detalle solo en estado 2 (consigna, plan §2) | `OrderDetailBusiness.add` (409) | Postman estado 1; estado 3 simulado | 409 | IV |
 | Lecturas solo con la orden activada (plan, `CLAUDE.md` 8.1) | ídem | "Lectura de orden no activada" | 409 `activada=false` | IV |
@@ -439,7 +439,7 @@ Clasificación: **IV** = implementado y verificado · **INV** = implementado y n
 | D3 respuesta `{saved, reason}` siempre 200 | `DetailResult`, `DetailResponse` | todas las lecturas | 200 | IV |
 | D4 campo ausente → 400 | `DetailRequest` con `Double`; `add` | "Lectura sin un campo" | 400 | IV |
 | D5 masa igual válida, anterior = cabecera | `OrderDetailValidator` (`<`), `add` | "masa igual a la anterior"; test unitario | `saved: true` | IV |
-| D6 `timestamp` opcional | `add` (`LocalDateTime.now()`) | "Lectura válida sin timestamp" + cabecera | hora del servidor | IV |
+| D6 estampa = hora de recepción | `add` (`LocalDateTime.now()`) | Lectura con `timestamp` de 2020 + cabecera | se ignora el del cliente | IV |
 | D7 orden de comprobaciones | `activate`, `add` | Auditoría 7.5 (casos combinados) | según lo decidido | IV |
 | D8 sin campo duplicado | `Order` | Revisión del modelo | solo `loadingEndDateTime` | IV |
 | D9 sin historial en la activación | `activate` | "Historial de estados tras activar" | 2 registros | IV |
@@ -463,8 +463,8 @@ Clasificación: **IV** = implementado y verificado · **INV** = implementado y n
 | Pendiente | Quién y cuándo |
 |---|---|
 | Avisar a Martín González del arreglo de H-14 en su archivo (`OrderBusiness.activate`) y de la aprobación de la decisión 11 (la división preveía que la aprobara él) | Tomás Calvo |
-| Comparar los nombres del JSON y las reglas con la consigna original en PDF | Quien tenga el PDF |
-| PR a `main` como borrador, sin `.postman/` ni `postman/`; aprobaciones de Gonzalez, Contreras y Alasino | Tomás Calvo, cuando lo decida |
+| ~~Comparar los nombres del JSON y las reglas con la consigna original en PDF~~ | Hecho en la auditoría: el PDF está en `docs/pdf/consigna-trabajo-integrador-2026.pdf` |
+| ~~PR a `main`~~ | Hecho: PR #7 mergeado. Los hallazgos de la auditoría (F-01, F-02, F-13) se corrigen en un PR posterior |
 | Configuración del repo: el ruleset de `main` pide 1 aprobación (no 3) y no borra las ramas al mergear | El dueño del repo (`joacoContreras`) |
 | Redesplegar la VM (sigue con la imagen de la Fase 1) | El equipo, después del merge |
 | Fase 4: cerrar la orden (2 → 3) | Rama `fase-4-cierre-orden`, con autorización |
@@ -590,7 +590,7 @@ if (!reasons.isEmpty()) {
     return DetailResult.discarded(String.join("; ", reasons));
 }
 try {
-    LocalDateTime estampa = (timestamp != null) ? timestamp : LocalDateTime.now();
+    LocalDateTime estampa = LocalDateTime.now(); // hora de recepción, no la del cliente
     OrderDetail detail = new OrderDetail(null, order, accumulatedMass, density, temperature, flowRate, estampa);
     orderDetailDAO.save(detail);
     order.setLastAccumulatedMass(accumulatedMass);
@@ -617,7 +617,7 @@ try {
 public ResponseEntity<?> addDetail(@PathVariable Integer orderNumber, @RequestBody DetailRequest body) {
     try {
         DetailResult result = orderDetailBusiness.add(orderNumber, body.getAccumulatedMass(),
-                body.getDensity(), body.getTemperature(), body.getFlowRate(), body.getTimestamp());
+                body.getDensity(), body.getTemperature(), body.getFlowRate());
         return new ResponseEntity<>(new DetailResponse(result.isSaved(), result.getReason()), HttpStatus.OK);
     } catch (BadRequestException e) { ... 400 ... }
     catch (NotFoundException e) { ... 404 ... }
@@ -635,7 +635,7 @@ Orden de la corrida de Postman `120288201` (`id = 6`):
 3. **Lectura 1** (100 kg, `2026-10-28T10:00:01`) → `INSERT order_details (100, 0.5, 20, 3000, '2026-10-28 10:00:01')` y `UPDATE orders` con `last_* = 100 / 0.5 / 20 / 3000`, `loading_start_date_time = loading_end_date_time = '2026-10-28 10:00:01'`.
 4. **Lectura 2** (250 kg, `10:00:06`) → otra fila; la cabecera pasa a `250 / 0.52 / 19.5 / 3600` y el fin a `10:00:06`. El inicio no cambia.
 5. **7 descartes** → ningún `INSERT` ni `UPDATE`.
-6. **Masa igual (250, `10:00:21`)** y **sin `timestamp` (400)** → 2 filas más; la cabecera termina en `400 / 0.54 / 18.5 / 3400` y el fin con la hora del servidor (`2026-10-27 13:58:11.927593`, ver H-20).
+6. **Masa igual (250)** y cuarta lectura **(400)** → 2 filas más; la cabecera termina en `400 / 0.54 / 18.5 / 3400` y el fin con la hora del servidor (`2026-10-27 13:58:11.927593`).
 7. **Resultado:** `SELECT COUNT(*) FROM order_details WHERE id_order = 6` → **4**.
 
 ## F. Ejemplo práctico de punta a punta
@@ -652,7 +652,7 @@ curl -i -X POST http://localhost:8080/api/v1/integration/loader/activation \
 # 2. Lectura válida
 curl -s -X POST http://localhost:8080/api/v1/integration/loader/orders/120503639/details \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"accumulatedMass": 250.0, "density": 0.52, "temperature": 19.5, "flowRate": 3600.0, "timestamp": "2026-10-28T10:00:06"}'
+  -d '{"accumulatedMass": 250.0, "density": 0.52, "temperature": 19.5, "flowRate": 3600.0}'
 # { "saved" : true, "reason" : null }
 
 # 3. Lectura descartada (masa menor que la anterior)
@@ -682,7 +682,7 @@ Los pasos 1 a 3 son equivalentes a pedidos de la carpeta 03 (segunda corrida de 
 }
 ```
 
-*(No aparece `activationPassword` ni ninguna lista de detalles. Que el fin quede antes que el inicio es H-20: la última lectura no traía `timestamp`.)*
+*(No aparece `activationPassword` ni ninguna lista de detalles. El fin quedó antes que el inicio por H-20, ya corregido: hoy la estampa siempre es la hora del servidor.)*
 
 Contraseña incorrecta:
 
@@ -725,7 +725,7 @@ HTTP/1.1 403 Forbidden
 11. **Sin lista de detalles.** Con una lectura por segundo, una carga de una hora son 3600 filas: `GET /orders/{n}` las traería todas. El detalle apunta a la orden (`@ManyToOne LAZY`) y no al revés.
 12. **Activación sin historial.** El historial registra cambios de estado y la activación no cambia el estado (la orden sigue en 2). Para saber si está activada está `activationDateTime` (decisión 7, D9).
 13. **Fase 4.** Nada de la Fase 3: la comprobación es "estado 2 **y** activada". En estado 3 la lectura responde 409. Se verificó cambiando el estado a 3 en la base local.
-14. **Limitaciones.** Concurrencia en lecturas y activaciones simultáneas (H-15, H-16), contraseña de 5 dígitos sin límite de intentos (H-17), token de 1 h (H-18), zona horaria descartada con `Z` (H-19), fin antes que inicio si se mezclan estampas (H-20), y números aceptados como texto (H-21). El único defecto (H-14) ya está corregido.
+14. **Limitaciones.** Activaciones simultáneas (H-16; las lecturas simultáneas, H-15, se corrigieron), contraseña de 5 dígitos sin límite de intentos (H-17), token de 1 h (H-18), y números aceptados como texto (H-21). El único defecto (H-14) ya está corregido.
 15. **Contraseña en Postman.** En el pedido del 403, la aserción revisa que el cuerpo completo no contenga ni la contraseña enviada (`wrongPasswordLoad`) ni la correcta (`activationPasswordLoad`). En "Consultar la orden activada" se revisa que `activationPassword` no exista en el JSON.
 16. **Consulta del histórico.** `OrderRestController.details` recibe `page` y `size` (20 por defecto), acota `size` a 100 y arma un `PageRequest` **sin** el `sort` del cliente; `OrderDetailBusiness.list` busca la orden (404 si no existe, fuera del `try`) y el repositorio trae la página con `order by d.id asc` fijo en la consulta. Se responde `PagedModel` (`content` + `page`), igual que `GET /orders`. El orden fijo hace que la página sea predecible (de la lectura más antigua a la más reciente) y el tope de 100 evita que un cliente pida miles de filas de una sola vez (decisión 11).
 
@@ -741,7 +741,7 @@ HTTP/1.1 403 Forbidden
 8. **Repetir la contraseña en el mensaje de error o loguearla.**
 9. **Comparar `Integer` con `==`:** compara referencias; se usa `equals`.
 10. **Usar `orderNumber` o `activationPassword` en la carpeta 03 de Postman:** pisa las variables de las Fases 1 y 2.
-11. **Mandar `timestamp` con zona (`Z`):** se acepta y la zona se pierde (H-19).
+11. **Mandar un `timestamp` (con o sin zona):** se ignora; la estampa es la hora de recepción del servidor (antes H-19).
 
 ## J. Lista de comprobación para rendir
 

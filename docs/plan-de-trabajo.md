@@ -57,7 +57,7 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 20 | Respuesta de una lectura (D3) | **Aplicada en la Fase 3.** Siempre 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason": "..." }`. | Fase 3 |
 | 21 | Densidad fuera de (0, 1) y campos ausentes (D4) | **Aplicada en la Fase 3.** La densidad inválida se descarta; un campo ausente da 400. | Fase 3 |
 | 22 | Masa igual a la anterior (D5) | **Aplicada en la Fase 3.** Es válida; "la anterior" es la última masa válida de la cabecera. | Fase 3 |
-| 23 | `timestamp` de la lectura (D6) | **Aplicada en la Fase 3.** Opcional; si falta se usa la hora del servidor. | Fase 3 |
+| 23 | `timestamp` de la lectura (D6) | **Aplicada en la Fase 3 y corregida tras la auditoría (F-13).** El servidor siempre usa su hora de recepción; el `timestamp` del cliente se ignora (la consigna dice «momento de recepción»). | Fase 3 |
 | 24 | Orden de comprobaciones (D7) | **Aplicada en la Fase 3.** Activación: 400 → 404 → 409 → 403. Lecturas: 404 → 400 → 409 → descarte. Todas fuera del `try`. | Fase 3 |
 | 25 | Fin de carga (D8) | **Aplicada en la Fase 3.** `loadingEndDateTime` es también la estampa de los últimos valores de la cabecera. | Fase 3 |
 | 26 | Historial de estados en la activación (D9) | **Aplicada en la Fase 3.** La activación no agrega registros: no es un cambio de estado. | Fase 3 |
