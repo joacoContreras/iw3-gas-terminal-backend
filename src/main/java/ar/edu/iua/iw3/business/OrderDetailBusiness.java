@@ -78,7 +78,7 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 				order.setLoadingStartDateTime(estampa);
 			}
 			order.setLoadingEndDateTime(estampa);
-			orderDAO.save(order);
+			orderDAO.saveAndFlush(order);
 
 			return DetailResult.saved();
 		} catch (Exception e) {
