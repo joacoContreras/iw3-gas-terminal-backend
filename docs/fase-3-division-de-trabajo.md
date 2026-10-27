@@ -1,5 +1,8 @@
 # Fase 3 — División del trabajo entre 3 desarrolladores (trabajo secuencial)
 
+> **Nota posterior (auditoría del PR #7):** este documento describe cómo se hizo la Fase 3 y no se reescribe. Tras la auditoría se cambió lo siguiente, y manda `docs/fase-3-carga-tiempo-real.md`: la estampa de la lectura es **siempre la hora de recepción del servidor** (D6 ya no es «opcional»; `DetailRequest` no tiene `timestamp`), las lecturas de una misma orden se **serializan** con bloqueo pesimista (H-15 resuelto) y los valores **infinitos** se descartan.
+
+
 Guía de trabajo para construir el **Punto 3 (activación de la carga y lecturas del caudalímetro)** entre tres personas, **una después de la otra**, en la misma rama. Dice dónde está parado cada uno respecto de la Fase 2, qué tiene que hacer, cómo hacerlo, cómo probarlo y trae el prompt para usar con Claude Code.
 
 - **Fecha:** 27/10/2026 · **Rama:** `fase-3-carga-tiempo-real` (sale de `main` actualizado, que ya incluye las Fases 1 y 2)
@@ -788,8 +791,8 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 
 | Parte | Responsable | Estado | Último commit | Fecha |
 |---|---|---|---|---|
-| 1 | Martín González | Completa y verificada (local, sin push) | `b090dfa` (último commit de código) | 27/10/2026 |
-| 2 | Joaquín Contreras | Completa y verificada (local, sin push) | `5971075` (último commit de código) | 27/10/2026 |
+| 1 | Martín González | Completa, verificada y mergeada (PR #7) | `b090dfa` (último commit de código) | 27/10/2026 |
+| 2 | Joaquín Contreras | Completa, verificada y mergeada (PR #7) | `5971075` (último commit de código) | 27/10/2026 |
 | 3 | Tomás Calvo | Completa y verificada (incluye el arreglo de H-14 y la decisión 11) | `041308a` (último commit de código y Postman) | 27/10/2026 |
 
 ## Modelo del bloque "Estado de la Parte N"
@@ -942,7 +945,7 @@ Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON 
 | B y C — Pruebas y auditoría | Resultados en `docs/fase-3-carga-tiempo-real.md` (secciones 7 a 10) | Hecho |
 | D — Informe y guía | `docs/fase-3-carga-tiempo-real.md` | Hecho |
 | E — Correcciones de documentación | `CLAUDE.md`, `docs/plan-de-trabajo.md`, `docs/guia-estudio-src.md`, `docs/fase-2-pesaje-inicial.md`, este bloque, `docs/pdf/` | Hecho |
-| F — Pull Request | — | Pendiente (cuando lo pida Calvo) |
+| F — Pull Request | PR #7 | Hecho: mergeado en `main` |
 
 **Qué quedó hecho:**
 
