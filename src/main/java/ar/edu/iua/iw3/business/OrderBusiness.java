@@ -166,7 +166,8 @@ public class OrderBusiness implements IOrderBusiness {
 		if (order.getActivationDateTime() == null) {
 			try {
 				order.setActivationDateTime(LocalDateTime.now());
-				order = orderDAO.save(order);
+				// saveAndFlush: un error de base sale aca, dentro del try, y no al confirmar (H-14)
+				order = orderDAO.saveAndFlush(order);
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 				throw BusinessException.builder().ex(e).build();
