@@ -1,0 +1,70 @@
+name: CD - Deploy to Production VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VM via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          password: ${{ secrets.VM_PASSWORD }}
+          port: ${{ secrets.VM_PORT || 22 }}
+          timeout: 60s
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            echo "=================================================="
+            echo "🚀 1. Ejecutando deploy en la máquina virtual..."
+            echo "=================================================="
+            cd ~/infra && ./deploy.sh
+            echo ""
+            echo "=================================================="
+            echo "📋 2. Estado actual de los contenedores:"
+            echo "=================================================="
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+
+      - name: Verify Backend Health (HTTPS Endpoint)
+        run: |
+          echo "=================================================="
+          echo "🔍 3. Verificando disponibilidad del backend..."
+          echo "=================================================="
+          DOMAIN="${{ secrets.DOMAIN }}"
+          DOMAIN="${DOMAIN:-jc755.duckdns.org}"
+          MAX_RETRIES=24
+          RETRY_INTERVAL=5
+          HEALTHCHECK_URL="https://${DOMAIN}/api/v1/products"
+          SUCCESS=false
+
+          echo "Sondeando endpoint: $HEALTHCHECK_URL"
+          for ((i=1; i<=MAX_RETRIES; i++)); do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTHCHECK_URL" || true)
+            echo "Intento $i/$MAX_RETRIES - Código HTTP: $HTTP_CODE"
+
+            if [[ "$HTTP_CODE" =~ ^(200|401|403)$ ]]; then
+              echo "✅ Backend respondiendo correctamente (HTTP $HTTP_CODE)."
+              SUCCESS=true
+              break
+            fi
+
+            sleep $RETRY_INTERVAL
+          done
+
+          if [ "$SUCCESS" = false ]; then
+            echo "❌ Error: El backend no respondió satisfactoriamente luego de $((MAX_RETRIES * RETRY_INTERVAL)) segundos."
+            exit 1
+          fi
+
+          echo "=================================================="
+          echo "🎉 ¡Despliegue y verificación completados con éxito!"
+          echo "=================================================="
