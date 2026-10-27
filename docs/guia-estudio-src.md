@@ -6,7 +6,7 @@ Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido 
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2.
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 (en curso: cada parte agrega sus archivos).
 
 ---
 
@@ -69,7 +69,7 @@ Cada ficha es una clase que se convierte en una tabla de la base de datos.
 
 | Archivo | Tabla | Qué es y para qué sirve | Origen |
 |---|---|---|---|
-| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Se llama `orders` porque `ORDER` es palabra reservada de SQL | F1 + F2 |
+| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Desde la Fase 3 también guarda, todos opcionales: fecha de activación, inicio y fin de carga y los últimos valores válidos de masa, densidad, temperatura y caudal. No tiene lista de detalles. Se llama `orders` porque `ORDER` es palabra reservada de SQL | F1 + F2 + F3 |
 | `OrderStatus.java` | — | Los 4 estados. En el JSON se publica el número (1 a 4) | F1 |
 | `OrderStatusConverter.java` | — | Traduce estado ↔ número para guardar 1 a 4 en la base, y no 0 a 3 | F1 |
 | `OrderStatusLog.java` | `order_status_logs` | Historial: estado anterior (`null` al crear), estado nuevo, fecha, quién lo hizo y observaciones | F1 |
@@ -78,6 +78,7 @@ Cada ficha es una clase que se convierte en una tabla de la base de datos.
 | `Driver.java` | `drivers` | Chofer: código externo, nombre, apellido y documento (opcional) | F1 |
 | `Customer.java` | `customers` | Cliente: código externo, razón social y contacto (opcional) | F1 |
 | `Product.java` | `gas_products` | Producto de gas: código externo, nombre y descripción (opcional). Usa `gas_products` porque `products` ya existe en bases viejas con otro esquema | F1 (reemplazó al del demo) |
+| `OrderDetail.java` | `order_details` | Una lectura válida del caudalímetro (el histórico de la carga): masa acumulada, densidad, temperatura, caudal y estampa de tiempo (columna `reading_timestamp`). Apunta a su orden con `@ManyToOne` `LAZY` y `@JsonIgnore` | F3 |
 
 **Idea clave:** camión, chofer, cliente y producto se identifican por su **código externo** (el que usa SAP), nunca por el `id` interno.
 
@@ -93,6 +94,7 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 | `DriverRepository.java` | Busca un chofer por código externo | F1 |
 | `CustomerRepository.java` | Busca un cliente por código externo | F1 |
 | `ProductRepository.java` | Busca un producto por código externo | F1 (reemplazó al del demo) |
+| `OrderDetailRepository.java` | Guarda y busca las lecturas del caudalímetro. Por ahora sin consultas propias | F3 |
 
 ---
 
@@ -100,8 +102,8 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 | Archivo | Qué es | Origen |
 |---|---|---|
-| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare` | F1 + F2 |
-| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add` y `registerTare` | F1 + F2 |
+| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare` y `activate` | F1 + F2 + F3 |
+| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare` y `activate` | F1 + F2 + F3 |
 | `OrderValidator.java` | Revisa que la orden recibida esté completa y con valores lógicos | F1 |
 | `ActivationPasswordGenerator.java` | Genera contraseñas aleatorias de 5 dígitos (10000–99999) con `SecureRandom` | F2 |
 
@@ -114,7 +116,7 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. Así los controllers no dependen de cómo está escrita la regla.
 
-**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`, `registerTare(orderNumber, weight, actor)`.
+**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`, `registerTare(orderNumber, weight, actor)`, `activate(orderNumber, password)`.
 
 ### Qué hace `OrderBusiness.registerTare` (paso a paso)
 
@@ -129,6 +131,16 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
    - Persiste la orden con `orderDAO.save(order)`.
    - Asienta el cambio en el historial con `logStatus(order, 1, 2, actor, "Tara registrada: <peso> kg")`.
    - Ante cualquier falla no prevista, lanza `BusinessException` y la transacción se revierte.
+
+### Qué hace `OrderBusiness.activate` (paso a paso) — F3
+
+1. Si falta `orderNumber` o `password`, 400 `BadRequestException`.
+2. Carga la orden con `load(orderNumber)` (si no existe, 404).
+3. Si la orden no está en estado 2, 409 `ConflictException` (informa el estado actual).
+4. Si la contraseña no coincide con `activationPassword`, 403 `ForbiddenException`. El mensaje **no repite ninguna contraseña**.
+5. Las comprobaciones 1 a 4 van **fuera del try/catch**, como en `registerTare`.
+6. Si `activationDateTime` es nulo, lo guarda con la hora actual. Si ya estaba, **no lo toca**: la activación es idempotente (activar de nuevo con la contraseña correcta devuelve el mismo preset).
+7. No cambia el estado (la orden sigue en 2) y **no escribe en el historial** de estados. Devuelve la orden; el controller responde el `preset`.
 
 ### Qué hace `OrderBusiness.add` (paso a paso)
 
@@ -155,6 +167,7 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 | `NotFoundException.java` | 404 (no se encontró) | Cátedra |
 | `FoundException.java` | **302** (ya existe; convención de la cátedra para duplicados) | Cátedra |
 | `ConflictException.java` | **409** (conflicto con el estado actual de la orden) | **F2** |
+| `ForbiddenException.java` | **403** (operación no permitida aunque haya token: contraseña de activación incorrecta) | **F3** |
 | `BusinessException.java` | 500 (falla interna) | Cátedra |
 | `BadRequestException.java` | 400 (datos inválidos) | **F1** |
 
@@ -168,11 +181,11 @@ No tienen reglas: reciben el pedido, llaman al negocio y devuelven el código.
 |---|---|---|
 | `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados | F1 |
 | `BaseRestController.java` | Clase madre de los controllers. Tiene `getUserLogged()`: el usuario del token, de donde sale el "quién" del historial | Cátedra + F1 |
-| `Constants.java` | Todas las URLs en un solo lugar. Incluye `URL_INTEGRATION_TMS` | Cátedra + F1 + F2 |
+| `Constants.java` | Todas las URLs en un solo lugar. Incluye `URL_INTEGRATION_TMS` y `URL_INTEGRATION_LOADER` | Cátedra + F1 + F2 + F3 |
 
 ## 7. `integration/`: un subpaquete por sistema externo
 
-Hoy SAP y TMS (balanza). Después irá `loader/` (sistema de carga).
+Hoy SAP, TMS (balanza) y loader (sistema de carga).
 
 | Archivo | Qué hace | Origen |
 |---|---|---|
@@ -180,6 +193,9 @@ Hoy SAP y TMS (balanza). Después irá `loader/` (sistema de carga).
 | `tms/model/TareRequest.java` | DTO del pesaje inicial con `double weight` (kg) | F2 |
 | `tms/model/TareResponse.java` | DTO de respuesta de la balanza con `Integer activationPassword` (5 dígitos) | F2 |
 | `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500) | F2 |
+| `loader/model/ActivationRequest.java` | DTO del pedido de activación: `Integer orderNumber` y `Integer password` (`Integer` para distinguir un campo ausente, 400, de uno informado) | F3 |
+| `loader/model/ActivationResponse.java` | DTO de respuesta de la activación con `Double preset` (kg a cargar) | F3 |
+| `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Hoy solo `POST /integration/loader/activation`: llama a `activate` y devuelve el preset (200, 400, 403, 404, 409 o 500). Las lecturas del caudalímetro se agregan en la Parte 2 | F3 |
 
 ## 8. `security/` y `auth/`
 
@@ -246,6 +262,7 @@ Códigos: **200** éxito · **201** creada · **302** ya existe (convención de 
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
 | `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
 | `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
+| `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
 | `docs/postman/` | Colección Postman (21 pedidos, 46 verificaciones) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
@@ -283,6 +300,7 @@ Códigos: **200** éxito · **201** creada · **302** ya existe (convención de 
 | Cambiar qué se le exige a SAP | `business/OrderValidator.java` |
 | Cambiar lo que pasa al recibir la orden | `business/OrderBusiness.java` (`add`) |
 | Cambiar la regla de pesaje inicial / tara | `business/OrderBusiness.java` (`registerTare`) |
+| Cambiar la regla de activación de la carga | `business/OrderBusiness.java` (`activate`) |
 | Cambiar la generación de contraseñas | `business/ActivationPasswordGenerator.java` |
 | Cambiar un código HTTP | El controller del endpoint (`integration/sap/...`, `integration/tms/...` o `controllers/...`) |
 | Agregar una URL | `controllers/Constants.java` y el controller |
