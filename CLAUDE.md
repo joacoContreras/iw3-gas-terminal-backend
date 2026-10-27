@@ -84,6 +84,9 @@
 
 ## 4. La consigna, resumida
 
+> **Fuente oficial:** `docs/pdf/consigna-trabajo-integrador-2026.pdf` (copia de la consigna de la cátedra). Este
+> resumen es una guía rápida: **ante cualquier duda manda el PDF**.
+
 ### 4.1 El proceso (cinco puntos)
 
 | Punto | Qué ocurre | Estado resultante |
@@ -256,7 +259,7 @@ Cuerpo de `POST /integration/tms/orders/{orderNumber}/tare`: `{ "weight": 14500.
 
 Cuerpo de `POST /integration/loader/activation`: `{ "orderNumber": 90001, "password": 48213 }`. Respuesta 200: `{ "preset": 15000.0 }`.
 Cuerpo de `POST /integration/loader/orders/{orderNumber}/details`: `{ "accumulatedMass": 1250.5, "density": 0.52,
-"temperature": 18.4, "flowRate": 3600.0, "timestamp": "2026-10-28T10:15:30" }` (`timestamp` opcional, sin zona).
+"temperature": 18.4, "flowRate": 3600.0 }` (la estampa la pone el servidor al recibir; un `timestamp` del cliente se ignora).
 Respuesta 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason": "..." }`.
 
 | Entidad (clase → tabla) | Notas |
@@ -370,7 +373,7 @@ JSON
 | 20 | (D3) Lectura: siempre 200 con `{ saved, reason }` (guardada o descartada) | Aplicada (Fase 3) |
 | 21 | (D4) Densidad fuera de (0, 1) se descarta; campo ausente → 400 | Aplicada (Fase 3) |
 | 22 | (D5) Masa igual a la anterior es válida; "anterior" = última masa válida de la cabecera | Aplicada (Fase 3) |
-| 23 | (D6) `timestamp` opcional; si falta, hora del servidor | Aplicada (Fase 3) |
+| 23 | (D6) La estampa de la lectura es siempre la hora de recepción del servidor; el `timestamp` del cliente se ignora | Aplicada (Fase 3) y corregida tras la auditoría (F-13) |
 | 24 | (D7) Orden de comprobaciones: activación 400 → 404 → 409 → 403; lecturas 404 → 400 → 409 → descarte | Aplicada (Fase 3) |
 | 25 | (D8) `loadingEndDateTime` es también la estampa de los últimos valores (sin campo duplicado) | Aplicada (Fase 3) |
 | 26 | (D9) La activación no agrega registros al historial de estados | Aplicada (Fase 3) |
@@ -385,9 +388,9 @@ JSON
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
 | H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Aceptado para el parcial (análogo a N-2 de Fase 1) |
 | H-14 | Una falla de base al confirmar la activación respondía 500 con el formato de Spring, no `StandartResponse` (`activate` usaba `save`) | Resuelto (27/10/2026): `saveAndFlush` en `OrderBusiness.activate` (`4ed54c8`), verificado |
-| H-15, H-16 | Concurrencia: lecturas simultáneas (masa anterior) y activaciones simultáneas de la misma orden | Aceptado para el parcial |
+| H-15, H-16 | H-15 (lecturas simultáneas: deadlock y masa anterior vieja) **resuelto** con bloqueo pesimista de la orden (F-01); H-16 (activaciones simultáneas de la misma orden) sigue aceptado para el parcial | H-15 corregido; H-16 aceptado |
 | H-17, H-18 | Contraseña de 5 dígitos sin límite de intentos; token de 1 h en cargas largas | Pendiente (seguridad del final) |
-| H-19, H-20 | `timestamp` con `Z` se acepta y pierde la zona; mezclar lecturas con y sin `timestamp` puede dejar el fin de carga antes del inicio | Registrado (Fase 3); revisar en la Fase 5 y el final |
+| H-19, H-20 | `timestamp` con `Z` / estampas mezcladas: **resueltos** al usar siempre la hora de recepción del servidor (F-13) | Corregidos |
 | H-21, H-22 | Jackson acepta números como texto; el 500 de `BusinessException` sale con `message: null` | Observación; no se cambia |
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
@@ -495,6 +498,7 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
+| `docs/pdf/consigna-trabajo-integrador-2026.pdf` | **Consigna oficial del trabajo integrador** (referencia; no se regenera) |
 | `docs/postman/` | Colección Postman (carpetas 00 a 03) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
 | `README.md` | Descripción general y base de datos |
