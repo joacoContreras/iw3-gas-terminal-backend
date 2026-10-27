@@ -63,6 +63,10 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 26 | Historial de estados en la activación (D9) | **Aplicada en la Fase 3.** La activación no agrega registros: no es un cambio de estado. | Fase 3 |
 | 27 | Capa de negocio de las lecturas (D10) | **Aplicada en la Fase 3.** `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness`. | Fase 3 |
 | 28 | Consulta del histórico (decisión 11 de la división) | **Aplicada en la Fase 3** (aprobada el 27/10/2026). `GET /orders/{orderNumber}/details` paginado: `size` 20 por defecto y máximo 100, orden fijo por `id` ascendente, `PagedModel`; 404 si la orden no existe. | Fase 3 |
+| 29 | Estados desde los que se puede cerrar | **Propuesta (Fase 4).** Solo desde el estado 2. Cualquier otro estado (1, 3 o 4) responde 409; cerrar dos veces **no** es idempotente (la segunda da 409), a diferencia de la activación. | Fase 4 |
+| 30 | El cierre no exige activación ni lecturas previas | **Propuesta (Fase 4), a confirmar por el equipo.** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
+| 31 | Concurrencia del cierre | **Propuesta (Fase 4).** La orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`, el mismo bloqueo de las lecturas) para que un cierre y una lectura en curso se serialicen y el cierre no pise la cabecera con valores viejos. | Fase 4 |
+| 32 | Qué guarda y qué responde el cierre | **Propuesta (Fase 4).** Una fila en `order_status_logs` (2→3, usuario del token, observación) y respuesta 200 con la orden. No se agregan campos al modelo y `loadingEndDateTime` no se toca (es la estampa del último registro válido). | Fase 4 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -94,7 +98,7 @@ Rutas bajo `/api/v1` (`Constants.URL_BASE`). Son una propuesta; se confirman en 
 | 2 | `POST /integration/tms/orders/{orderNumber}/tare` | Tara (kg) | Contraseña de activación (5 dígitos) |
 | 3 | `POST /integration/loader/activation` | `orderNumber`, `password` | Preset (kg) |
 | 3 | `POST /integration/loader/orders/{orderNumber}/details` | Masa, densidad, temperatura, caudal | 200; tratamiento del registro inválido a definir en Fase 3 |
-| 4 | `POST /integration/loader/orders/{orderNumber}/close` | — | 200; orden en estado 3 |
+| 4 | `POST /integration/loader/orders/{orderNumber}/close` | — (sin cuerpo) | 200 con la orden en estado 3; 404 si no existe; 409 si no está en estado 2 |
 | 5 | `POST /integration/tms/orders/{orderNumber}/final-weight` | Pesaje final (kg) | Conciliación; orden en estado 4 |
 | 5 | `GET /orders/{orderNumber}/reconciliation` | — | Conciliación (solo estado 4) |
 
@@ -107,10 +111,45 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 |---|---|---|---|
 | 0 | `fase-0-auditoria` | Línea base ejecutada, hallazgos y guía de estudio de la base. Sin cambios de código. | Se sabe qué existe, qué falta y si se puede implementar. **(Completada e integrada en main)** |
 | 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. **(Completada e integrada en main)** |
-| 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada y probada en rama)** |
-| 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada y verificada en rama, 27/10/2026)** |
-| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. | Detalle posterior rechazado; transiciones inválidas rechazadas. |
+| 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada e integrada en main, PR #6)** |
+| 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada e integrada en main, PR #7; correcciones de la auditoría en el PR #9, 27/10/2026)** |
+| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Planificada; autorizada el 27/10/2026, sin implementar)** |
 | 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |
+
+### 6.1 Fase 4 en detalle — Cierre de la orden (Punto 4)
+
+**Responsable: Benjamín Alasino (única persona; no se divide).** Autorizada el 27/10/2026. Guía y prompt: `docs/fase-4-guia-de-inicio.md`.
+
+**Objetivo.** Un endpoint cierra la orden (estado 2 → 3), deja registrado el cambio y, desde ese momento, el sistema rechaza nuevos datos de detalle (consigna, Punto 4).
+
+**Situación de partida (verificada en el código de `main`).** `OrderStatus` ya tiene `CLOSED_FOR_LOADING` (3). `OrderDetailBusiness.add` ya responde 409 si la orden no está en estado 2 o no está activada, así que **el bloqueo de lecturas ya existe**: la Fase 4 lo activa al crear la transición. Existen `OrderBusiness.logStatus` (privado), `OrderRepository.findByOrderNumberForUpdate` (bloqueo de fila), `getUserLogged()` y el molde de transición `registerTare`.
+
+**Tareas, en orden de dependencia.**
+
+| # | Tarea | Depende de |
+|---|---|---|
+| T0 | Preparar el entorno y medir la línea base (`./mvnw -B test`: 12 tests; newman: 66 pedidos y 163 aserciones sin fallas) | — |
+| T1 | `IOrderBusiness.close(orderNumber, actor)` y `OrderBusiness.close`: 404 → 409 fuera del `try`; con bloqueo; estado 3; `saveAndFlush`; fila en `order_status_logs`; `@Transactional(rollbackFor = Exception.class)` | T0 |
+| T2 | `OrderLoaderRestController.close`: `POST /orders/{orderNumber}/close` sin cuerpo; usuario del token; 200, 404, 409, 500; anotaciones Swagger | T1 |
+| T3 | Comprobar (sin cambiar código si no hace falta) que una lectura posterior al cierre da 409 y no se guarda | T2 |
+| T4 | Pruebas: tests unitarios de las reglas del cierre; carpeta Postman `04 - Fase 4: cierre (sistema de carga)`; corrida completa con newman; prueba de concurrencia lecturas + cierre | T2, T3 |
+| T5 | Documentación: `docs/fase-4-cierre-orden.md` (informe y guía A–J), `guia-estudio-src.md`, `CLAUDE.md`, este plan, PDF | T4 |
+| T6 | Revisión del diff, commits atómicos y push de la rama `fase-4-cierre-orden` | T5 |
+
+**Reglas de negocio.** Orden de comprobaciones: 404 (la orden no existe) → 409 (estado distinto de 2). Todas fuera del `try`. El cierre no modifica `loadingStartDateTime`, `loadingEndDateTime` ni los últimos valores. El log lleva estado anterior 2, nuevo 3, fecha y hora, usuario autenticado y observación.
+
+**Fuera de alcance (no hacer).** Pesaje final y conciliación (Fase 5), estado 4, reabrir una orden, campos nuevos en el modelo (por ejemplo una fecha de cierre), frecuencia de almacenamiento, promedios, roles, alarmas por e-mail y frontend (examen final), cambios en las Fases 1 a 3 salvo un arreglo mínimo y justificado.
+
+**Criterios de aceptación.**
+
+1. Cerrar una orden en estado 2 responde 200 y la orden queda en estado 3 (también en `GET /orders/{n}`).
+2. El historial de estados suma una fila 2→3 con el usuario del token y la fecha y hora.
+3. Una lectura enviada después del cierre responde 409 y no se guarda (el histórico no cambia).
+4. Cerrar otra vez, o cerrar una orden en estado 1, responde 409; una orden inexistente, 404; sin token, 401.
+5. El cierre no cambia `loadingStartDateTime`, `loadingEndDateTime` ni los últimos valores de la cabecera.
+6. Con lecturas y un cierre simultáneos no hay respuestas 500 y la cabecera coincide con el máximo de lo guardado.
+7. `./mvnw -B test` y la colección Postman completa pasan sin fallas (las fases anteriores intactas).
+8. Swagger documenta el endpoint con sus respuestas; existen el informe, la guía (≥ 10 preguntas) y los PDF.
 
 ## 7. Forma de trabajo
 
