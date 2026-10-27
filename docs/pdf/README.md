@@ -13,6 +13,12 @@ La fuente de verdad son los Markdown de `docs/`: **si cambian, hay que regenerar
 | [fase-3-division-de-trabajo.pdf](fase-3-division-de-trabajo.pdf) | [docs/fase-3-division-de-trabajo.md](../fase-3-division-de-trabajo.md) (guía y prompts de las 3 partes, trabajo secuencial) |
 | [guia-estudio-src.pdf](guia-estudio-src.pdf) | [docs/guia-estudio-src.md](../guia-estudio-src.md) (se actualiza en cada fase) |
 
+## Documento de referencia (no se regenera)
+
+| PDF | Qué es |
+|---|---|
+| [consigna-trabajo-integrador-2026.pdf](consigna-trabajo-integrador-2026.pdf) | **Consigna oficial** del trabajo integrador (9 páginas), tal como la entregó la cátedra. Es la fuente que manda ante cualquier duda de requisitos |
+
 ## Cómo regenerarlos
 
 Requiere Node.js 18+ y Google Chrome (o Edge; indicar la ruta en `CHROME_PATH`).
