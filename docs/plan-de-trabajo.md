@@ -52,6 +52,17 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 15 | Código HTTP 409 Conflict (`ConflictException`) para orden en estado incorrecto | **Aplicada en la Fase 2.** Distingue estado incompatible de error sintáctico (400). | Fase 2 |
 | 16 | Contraseña de activación de 5 dígitos generada con `SecureRandom` y oculta con `@JsonIgnore` | **Aplicada en la Fase 2.** Solo viaja en la respuesta de la balanza (`TareResponse`). | Fase 2 |
 | 17 | Orden de comprobaciones de tara: 404 (orden) → 400 (peso > 0) → 409 (estado), todas fuera del `try/catch` | **Aplicada en la Fase 2.** Evita que `catch (Exception)` las transforme en 500. | Fase 2 |
+| 18 | Contraseña de activación incorrecta (D1) | **Aplicada en la Fase 3.** 403 Forbidden con `ForbiddenException`; el mensaje no repite ninguna contraseña. | Fase 3 |
+| 19 | Activación repetida (D2) | **Aplicada en la Fase 3.** Idempotente: 200 con el mismo preset y `activationDateTime` sin cambios. | Fase 3 |
+| 20 | Respuesta de una lectura (D3) | **Aplicada en la Fase 3.** Siempre 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason": "..." }`. | Fase 3 |
+| 21 | Densidad fuera de (0, 1) y campos ausentes (D4) | **Aplicada en la Fase 3.** La densidad inválida se descarta; un campo ausente da 400. | Fase 3 |
+| 22 | Masa igual a la anterior (D5) | **Aplicada en la Fase 3.** Es válida; "la anterior" es la última masa válida de la cabecera. | Fase 3 |
+| 23 | `timestamp` de la lectura (D6) | **Aplicada en la Fase 3.** Opcional; si falta se usa la hora del servidor. | Fase 3 |
+| 24 | Orden de comprobaciones (D7) | **Aplicada en la Fase 3.** Activación: 400 → 404 → 409 → 403. Lecturas: 404 → 400 → 409 → descarte. Todas fuera del `try`. | Fase 3 |
+| 25 | Fin de carga (D8) | **Aplicada en la Fase 3.** `loadingEndDateTime` es también la estampa de los últimos valores de la cabecera. | Fase 3 |
+| 26 | Historial de estados en la activación (D9) | **Aplicada en la Fase 3.** La activación no agrega registros: no es un cambio de estado. | Fase 3 |
+| 27 | Capa de negocio de las lecturas (D10) | **Aplicada en la Fase 3.** `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness`. | Fase 3 |
+| 28 | Consulta del histórico (decisión 11 de la división) | **Aplicada en la Fase 3** (aprobada el 27/10/2026). `GET /orders/{orderNumber}/details` paginado: `size` 20 por defecto y máximo 100, orden fijo por `id` ascendente, `PagedModel`; 404 si la orden no existe. | Fase 3 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -97,7 +108,7 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 | 0 | `fase-0-auditoria` | Línea base ejecutada, hallazgos y guía de estudio de la base. Sin cambios de código. | Se sabe qué existe, qué falta y si se puede implementar. **(Completada e integrada en main)** |
 | 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. **(Completada e integrada en main)** |
 | 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada y probada en rama)** |
-| 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. |
+| 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada y verificada en rama, 27/10/2026)** |
 | 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. | Detalle posterior rechazado; transiciones inválidas rechazadas. |
 | 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |
 

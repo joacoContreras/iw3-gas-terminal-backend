@@ -94,4 +94,42 @@ public class Order {
 	@JsonIgnore
 	@Column
 	private Integer activationPassword;
+
+	/** Momento en que el sistema de carga se activo con la contrasena correcta (punto 3). Nulo hasta entonces. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private LocalDateTime activationDateTime;
+
+	/** Inicio de la carga: estampa del primer registro valido del caudalimetro. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private LocalDateTime loadingStartDateTime;
+
+	/**
+	 * Fin de la carga: estampa del ultimo registro valido. Es tambien la estampa de los
+	 * ultimos valores de la cabecera (lastAccumulatedMass, lastDensity, ...).
+	 */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private LocalDateTime loadingEndDateTime;
+
+	/** Ultima masa acumulada valida (kg). Es el "producto cargado" de la conciliacion. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double lastAccumulatedMass;
+
+	/** Ultima densidad valida. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double lastDensity;
+
+	/** Ultima temperatura valida (grados C). */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double lastTemperature;
+
+	/** Ultimo caudal valido (kg/h). */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double lastFlowRate;
 }
