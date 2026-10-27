@@ -1976,7 +1976,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0,\n  \"timestamp\": \"2026-10-28T10:00:01\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2029,7 +2029,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 250.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:06\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 250.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2056,10 +2056,13 @@
                   "  pm.expect(o.lastTemperature).to.eql(19.5);",
                   "  pm.expect(o.lastFlowRate).to.eql(3600);",
                   "});",
-                  "pm.test('inicio = estampa de la lectura 1 y fin = estampa de la lectura 2', () => {",
-                  "  pm.expect(o.loadingStartDateTime).to.eql('2026-10-28T10:00:01');",
-                  "  pm.expect(o.loadingEndDateTime).to.eql('2026-10-28T10:00:06');",
-                  "});"
+                  "pm.test('inicio y fin son la hora de recepción del servidor (inicio <= fin)', () => {",
+                  "  pm.expect(o.loadingStartDateTime).to.be.a('string');",
+                  "  pm.expect(o.loadingEndDateTime).to.be.a('string');",
+                  "  pm.expect(new Date(o.loadingStartDateTime).getTime()).to.be.at.most(new Date(o.loadingEndDateTime).getTime());",
+                  "});",
+                  "pm.collectionVariables.set('loadingStartLoad', o.loadingStartDateTime);",
+                  "pm.collectionVariables.set('loadingEndTwoLoad', o.loadingEndDateTime);"
                 ]
               }
             }
@@ -2123,7 +2126,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 200.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:11\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 200.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2174,7 +2177,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 0.0,\n  \"timestamp\": \"2026-10-28T10:00:12\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 0.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2225,7 +2228,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": -5.0,\n  \"timestamp\": \"2026-10-28T10:00:13\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": -5.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2276,7 +2279,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 0.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:14\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 0.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2327,7 +2330,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.0,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:15\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.0,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2378,7 +2381,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 1.0,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:16\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 1.0,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2429,7 +2432,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 1.5,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0,\n  \"timestamp\": \"2026-10-28T10:00:17\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 1.5,\n  \"temperature\": 19.5,\n  \"flowRate\": 3600.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2437,6 +2440,57 @@
               }
             },
             "description": "Densidad mayor que 1 → se descarta (D4)."
+          }
+        },
+        {
+          "name": "Descarte: valor infinito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('valor infinito responde 200 (no 500)', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('la lectura se descartó (saved: false)', () => pm.expect(r.saved).to.eql(false));",
+                  "pm.test('el motivo incluye \"infinitos\"', () => pm.expect(r.reason).to.include('infinitos'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberLoad}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberLoad}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 300.0,\n  \"density\": 0.52,\n  \"temperature\": 19.5,\n  \"flowRate\": 1e999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un valor infinito (1e999) se descarta con 200 y motivo; antes terminaba en 500 al guardar (F-02)."
           }
         },
         {
@@ -2456,9 +2510,9 @@
                   "  pm.expect(o.lastTemperature).to.eql(19.5);",
                   "  pm.expect(o.lastFlowRate).to.eql(3600);",
                   "});",
-                  "pm.test('inicio = estampa de la lectura 1 y fin = estampa de la lectura 2', () => {",
-                  "  pm.expect(o.loadingStartDateTime).to.eql('2026-10-28T10:00:01');",
-                  "  pm.expect(o.loadingEndDateTime).to.eql('2026-10-28T10:00:06');",
+                  "pm.test('inicio y fin no cambiaron: los descartes no tocan la cabecera', () => {",
+                  "  pm.expect(o.loadingStartDateTime).to.eql(pm.collectionVariables.get('loadingStartLoad'));",
+                  "  pm.expect(o.loadingEndDateTime).to.eql(pm.collectionVariables.get('loadingEndTwoLoad'));",
                   "});"
                 ]
               }
@@ -2525,25 +2579,25 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 250.0,\n  \"density\": 0.53,\n  \"temperature\": 19.0,\n  \"flowRate\": 3500.0,\n  \"timestamp\": \"2026-10-28T10:00:21\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 250.0,\n  \"density\": 0.53,\n  \"temperature\": 19.0,\n  \"flowRate\": 3500.0,\n  \"timestamp\": \"2020-01-01T00:00:00\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Masa igual a la última válida (250) → es válida (D5)."
+            "description": "Masa igual a la última válida (250) → es válida (D5). Lleva un timestamp de 2020: el servidor lo ignora y usa su hora de recepción (F-13)."
           }
         },
         {
-          "name": "Lectura válida sin timestamp",
+          "name": "Lectura válida (hora del servidor)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('sin timestamp responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('la lectura responde 200', () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
                   "pm.test('la lectura se guardó (saved: true, reason: null)', () => {",
                   "  pm.expect(r.saved).to.eql(true);",
@@ -2585,7 +2639,7 @@
                 }
               }
             },
-            "description": "Sin timestamp se usa la hora del servidor (D6)."
+            "description": "La estampa siempre es la hora de recepción del servidor (F-13)."
           }
         },
         {
@@ -2598,16 +2652,17 @@
                 "exec": [
                   "pm.test('consulta responde 200', () => pm.response.to.have.status(200));",
                   "const o = pm.response.json();",
-                  "pm.test('últimos valores = lectura sin timestamp', () => {",
+                  "pm.test('últimos valores = cuarta lectura', () => {",
                   "  pm.expect(o.lastAccumulatedMass).to.eql(400);",
                   "  pm.expect(o.lastDensity).to.eql(0.54);",
                   "  pm.expect(o.lastTemperature).to.eql(18.5);",
                   "  pm.expect(o.lastFlowRate).to.eql(3400);",
                   "});",
-                  "pm.test('el inicio de carga no cambia', () => pm.expect(o.loadingStartDateTime).to.eql('2026-10-28T10:00:01'));",
-                  "pm.test('el fin de carga es la hora del servidor (no la última estampa fija)', () => {",
+                  "pm.test('el inicio de carga no cambia', () => pm.expect(o.loadingStartDateTime).to.eql(pm.collectionVariables.get('loadingStartLoad')));",
+                  "pm.test('el fin de carga avanza y es hora del servidor (no el 2020 enviado por el cliente)', () => {",
                   "  pm.expect(o.loadingEndDateTime).to.be.a('string');",
-                  "  pm.expect(o.loadingEndDateTime).to.not.eql('2026-10-28T10:00:21');",
+                  "  pm.expect(o.loadingEndDateTime).to.not.include('2020-');",
+                  "  pm.expect(new Date(o.loadingEndDateTime).getTime()).to.be.at.least(new Date(pm.collectionVariables.get('loadingEndTwoLoad')).getTime());",
                   "});"
                 ]
               }
@@ -2651,9 +2706,9 @@
                   "  pm.expect(j.content).to.have.lengthOf(2);",
                   "  pm.expect(j.content[0].id).to.be.below(j.content[1].id);",
                   "  pm.expect(j.content[0].accumulatedMass).to.eql(100);",
-                  "  pm.expect(j.content[0].timestamp).to.eql('2026-10-28T10:00:01');",
+                  "  pm.expect(j.content[0].timestamp).to.eql(pm.collectionVariables.get('loadingStartLoad'));",
                   "  pm.expect(j.content[1].accumulatedMass).to.eql(250);",
-                  "  pm.expect(j.content[1].timestamp).to.eql('2026-10-28T10:00:06');",
+                  "  pm.expect(j.content[1].timestamp).to.eql(pm.collectionVariables.get('loadingEndTwoLoad'));",
                   "});",
                   "pm.test('cada lectura trae sus campos y no la orden (@JsonIgnore)', () => {",
                   "  pm.expect(j.content[0]).to.have.all.keys('id', 'accumulatedMass', 'density', 'temperature', 'flowRate', 'timestamp');",
@@ -2705,10 +2760,10 @@
                 "exec": [
                   "pm.test('responde 200', () => pm.response.to.have.status(200));",
                   "const j = pm.response.json();",
-                  "pm.test('lecturas 3 y 4: masa igual (250) y sin timestamp (400)', () => {",
+                  "pm.test('lecturas 3 y 4: masa igual (250) y cuarta lectura (400)', () => {",
                   "  pm.expect(j.content).to.have.lengthOf(2);",
                   "  pm.expect(j.content[0].accumulatedMass).to.eql(250);",
-                  "  pm.expect(j.content[0].timestamp).to.eql('2026-10-28T10:00:21');",
+                  "  pm.expect(j.content[0].timestamp).to.not.include('2020-'); // el timestamp del cliente se ignora",
                   "  pm.expect(j.content[1].accumulatedMass).to.eql(400);",
                   "});"
                 ]
@@ -3083,7 +3138,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0,\n  \"timestamp\": \"2026-10-28T10:00:01\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3135,7 +3190,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0,\n  \"timestamp\": \"2026-10-28T10:00:01\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3186,7 +3241,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0,\n  \"timestamp\": \"2026-10-28T10:00:01\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 100.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3234,7 +3289,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"accumulatedMass\": 500.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0,\n  \"timestamp\": \"2026-10-28T10:00:31\"\n}",
+              "raw": "{\n  \"accumulatedMass\": 500.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
               "options": {
                 "raw": {
                   "language": "json"

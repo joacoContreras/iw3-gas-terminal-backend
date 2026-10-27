@@ -66,6 +66,16 @@ class OrderDetailValidatorTest {
 	}
 
 	@Test
+	void discardReasons_infiniteValues_discardsWithoutError() {
+		String reason = "los valores no pueden ser infinitos";
+		assertEquals(List.of(reason), OrderDetailValidator.discardReasons(Double.POSITIVE_INFINITY, 0.5, 1000.0, null));
+		assertEquals(List.of(reason), OrderDetailValidator.discardReasons(100.0, 0.5, Double.POSITIVE_INFINITY, null));
+		assertEquals(List.of(reason), OrderDetailValidator.discardReasons(100.0, Double.NEGATIVE_INFINITY, 1000.0, null));
+		assertEquals(List.of(reason),
+				OrderDetailValidator.discardReasons(100.0, 0.5, Double.POSITIVE_INFINITY, 1000.0, null));
+	}
+
+	@Test
 	void discardReasons_multipleInvalidConditions_accumulatesAllReasons() {
 		List<String> reasons = OrderDetailValidator.discardReasons(-10.0, 1.5, -5.0, null);
 		assertEquals(3, reasons.size());

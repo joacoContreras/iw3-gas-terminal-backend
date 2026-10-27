@@ -24,7 +24,22 @@ final class OrderDetailValidator {
 	 * @return lista de motivos de descarte; vacia si la lectura es valida
 	 */
 	static List<String> discardReasons(double accumulatedMass, double density, double flowRate, Double previousMass) {
+		return discardReasons(accumulatedMass, density, 0.0, flowRate, previousMass);
+	}
+
+	/**
+	 * Igual que la anterior pero tambien valida que la temperatura sea un numero finito. Los valores infinitos
+	 * se descartan: MySQL los rechaza al guardar y la lectura terminaria en 500.
+	 */
+	static List<String> discardReasons(double accumulatedMass, double density, double temperature, double flowRate,
+			Double previousMass) {
 		List<String> reasons = new ArrayList<>();
+
+		if (Double.isInfinite(flowRate) || Double.isInfinite(accumulatedMass) || Double.isInfinite(density)
+				|| Double.isInfinite(temperature)) {
+			reasons.add("los valores no pueden ser infinitos");
+			return reasons;
+		}
 
 		if (!(flowRate > 0)) {
 			reasons.add("el caudal (flowRate) debe ser mayor que 0");
