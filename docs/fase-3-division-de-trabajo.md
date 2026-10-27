@@ -790,7 +790,7 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 |---|---|---|---|---|
 | 1 | Martín González | Completa y verificada (local, sin push) | `b090dfa` (último commit de código) | 27/10/2026 |
 | 2 | Joaquín Contreras | Completa y verificada (local, sin push) | `5971075` (último commit de código) | 27/10/2026 |
-| 3 | Tomás Calvo | Pendiente | — | — |
+| 3 | Tomás Calvo | Completa y verificada (incluye el arreglo de H-14 y la decisión 11) | `041308a` (último commit de código y Postman) | 27/10/2026 |
 
 ## Modelo del bloque "Estado de la Parte N"
 
@@ -932,6 +932,45 @@ Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON 
 - Las aserciones sobre `reason` deben buscar fragmentos con `include` (ej. `"menor que la anterior"`, `"debe ser mayor que 0"`).
 - Recordar que tanto para guardadas como descartadas el código HTTP es 200 (la diferencia está en el campo booleano `saved`).
 
-## Estado de la Parte 3
+## Estado de la Parte 3 (27/10/2026)
 
-_Pendiente._
+| Paso | Commit / archivos | Estado |
+|---|---|---|
+| A — Postman, carpeta 03 | `f07627a` `test(postman): agrega la carpeta de la Fase 3 (sistema de carga)` | Hecho |
+| C — Arreglo de H-14 (autorizado por Calvo) | `4ed54c8` `fix(business): usa saveAndFlush en la activación para capturar errores de base dentro del try` | Hecho |
+| G — Decisión 11 (aprobada por Calvo) | `9cc4a05` (repositorio), `935d11e` (negocio), `191e327` (controller), `041308a` (Postman) | Hecho |
+| B y C — Pruebas y auditoría | Resultados en `docs/fase-3-carga-tiempo-real.md` (secciones 7 a 10) | Hecho |
+| D — Informe y guía | `docs/fase-3-carga-tiempo-real.md` | Hecho |
+| E — Correcciones de documentación | `CLAUDE.md`, `docs/plan-de-trabajo.md`, `docs/guia-estudio-src.md`, `docs/fase-2-pesaje-inicial.md`, este bloque, `docs/pdf/` | Hecho |
+| F — Pull Request | — | Pendiente (cuando lo pida Calvo) |
+
+**Qué quedó hecho:**
+
+- **Carpeta Postman 03** con 44 pedidos y 114 aserciones, variables propias (`orderNumberLoad`, `orderNumberLoadPending`, `orderNumberLoadInactive`, `activationPasswordLoad`, `wrongPasswordLoad`, `activationDateTimeLoad`) y aserciones de mensajes con `include`. Los `git diff` de la colección solo agregan líneas: las carpetas 00 a 02 no cambiaron.
+- **H-14 corregido:** `OrderBusiness.activate` usa `saveAndFlush`. Es un archivo de la Parte 1: el cambio lo autorizó Calvo y hay que avisarle a Gonzalez.
+- **Decisión 11:** `GET /api/v1/orders/{orderNumber}/details` paginado (`size` 20, máximo 100, orden fijo por `id`, `PagedModel`, 404). La división la preveía con aprobación de Martín; la aprobó Calvo.
+- **Informe técnico, matriz de auditoría y guía A–J** (16 preguntas) en `docs/fase-3-carga-tiempo-real.md`.
+- **Correcciones del apartado E**; las filas duplicadas de la sección 15 de la guía de `src` se quitaron. PDF regenerados.
+
+**Verificado** (27/10/2026, MySQL real `iw3-gas-mysql`):
+
+| Verificación | Resultado |
+|---|---|
+| Arranque sobre una base con el esquema de la Fase 1 y una orden | Hibernate agregó 10 columnas nulables y creó `order_details`; la orden previa quedó intacta |
+| `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json` | 65 pedidos, **160 aserciones, 0 fallas** (las 46 de las carpetas 00 a 02 incluidas) |
+| `./mvnw -B test` | 11 tests, 0 fallas, `BUILD SUCCESS` |
+| `SELECT COUNT(*) FROM order_details WHERE id_order = <id>` | 4 (las lecturas guardadas); 0 en las órdenes en estado 1 y sin activar |
+| Orden de comprobaciones (D7) con dos errores a la vez | Según lo decidido (script de auditoría: 18 PASS, 0 FAIL) |
+| Estado 3 simulado en la base local | Lecturas y activación → 409, sin escribir nada |
+| Atomicidad (`CHECK` temporal) | 500 con `StandartResponse`; detalle y cabecera revertidos |
+| Falla al confirmar la activación (*trigger* temporal) | Antes: 500 con el formato de Spring (**H-14**). Después de `4ed54c8`: 500 con `StandartResponse` |
+| 100 lecturas seguidas | 79,6 ms promedio, sin degradación |
+| Contraseña en logs y respuestas | No aparece |
+
+**No verificado:** la consigna original en PDF (no está disponible). Swagger UI en el navegador (solo `/v3/api-docs`).
+
+**Para tener en cuenta:**
+
+- **Avisar a Martín González:** se tocó su `OrderBusiness.activate` (H-14, `4ed54c8`) y se implementó la decisión 11, que la división preveía que aprobara él.
+- **Pendientes del dueño del repo (`joacoContreras`):** el ruleset de `main` pide 1 aprobación en vez de 3 y no borra las ramas al mergear.
+- **Datos de prueba:** las pruebas de la base local se revirtieron (estado, `CHECK` y *trigger*). Las órdenes de prueba de newman y de la auditoría se borraron al final.
