@@ -154,7 +154,7 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 4. Evalúa descarte con `OrderDetailValidator.discardReasons(...)` pasando la última masa de la cabecera. Si hay motivos, devuelve `DetailResult.discarded(...)` sin persistir nada.
 5. Las comprobaciones 1 a 4 van **fuera del try/catch**.
 6. Dentro de `@Transactional(rollbackFor = Exception.class)`:
-   - Estampa = `timestamp` recibido o `LocalDateTime.now()` si es nulo.
+   - Estampa = `LocalDateTime.now()`: la hora de recepción del servidor (el cliente no la manda).
    - Guarda `OrderDetail` en `order_details`.
    - Actualiza la cabecera: `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `loadingStartDateTime` (solo la primera vez) y `loadingEndDateTime` (siempre).
    - Confirma con `orderDAO.saveAndFlush(order)` para capturar errores de base dentro del `try`.
@@ -214,7 +214,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500) | F2 |
 | `loader/model/ActivationRequest.java` | DTO del pedido de activación: `Integer orderNumber` y `Integer password` (`Integer` para distinguir un campo ausente, 400, de uno informado) | F3 |
 | `loader/model/ActivationResponse.java` | DTO de respuesta de la activación con `Double preset` (kg a cargar) | F3 |
-| `loader/model/DetailRequest.java` | DTO del pedido de lecturas: `Double` para los 4 campos numéricos y `timestamp` (`LocalDateTime`) opcional | F3 |
+| `loader/model/DetailRequest.java` | DTO del pedido de lecturas: `Double` para los 4 campos numéricos (sin `timestamp`: la estampa la pone el servidor) | F3 |
 | `loader/model/DetailResponse.java` | DTO de respuesta a la recepción de lecturas con `boolean saved` y `String reason` | F3 |
 | `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Expone `POST /activation` (Preset) y `POST /orders/{orderNumber}/details` (lecturas en tiempo real con descarte y actualización de cabecera) | F3 |
 
