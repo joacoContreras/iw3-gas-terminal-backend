@@ -2632,6 +2632,269 @@
           }
         },
         {
+          "name": "Lecturas guardadas: primera página",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('page: size 2, number 0, 4 lecturas en 2 páginas', () => {",
+                  "  pm.expect(j.page.size).to.eql(2);",
+                  "  pm.expect(j.page.number).to.eql(0);",
+                  "  pm.expect(j.page.totalElements).to.eql(4);",
+                  "  pm.expect(j.page.totalPages).to.eql(2);",
+                  "});",
+                  "pm.test('orden por id ascendente (se ignora el sort del cliente): lecturas 1 y 2', () => {",
+                  "  pm.expect(j.content).to.have.lengthOf(2);",
+                  "  pm.expect(j.content[0].id).to.be.below(j.content[1].id);",
+                  "  pm.expect(j.content[0].accumulatedMass).to.eql(100);",
+                  "  pm.expect(j.content[0].timestamp).to.eql('2026-10-28T10:00:01');",
+                  "  pm.expect(j.content[1].accumulatedMass).to.eql(250);",
+                  "  pm.expect(j.content[1].timestamp).to.eql('2026-10-28T10:00:06');",
+                  "});",
+                  "pm.test('cada lectura trae sus campos y no la orden (@JsonIgnore)', () => {",
+                  "  pm.expect(j.content[0]).to.have.all.keys('id', 'accumulatedMass', 'density', 'temperature', 'flowRate', 'timestamp');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberLoad}}/details?page=0&size=2&sort=id,desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberLoad}}",
+                "details"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "2"
+                },
+                {
+                  "key": "sort",
+                  "value": "id,desc"
+                }
+              ]
+            },
+            "description": "GET paginado del histórico (decisión 11). Se manda sort=id,desc para comprobar que se ignora: el orden es fijo por id ascendente."
+          }
+        },
+        {
+          "name": "Lecturas guardadas: segunda página",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('lecturas 3 y 4: masa igual (250) y sin timestamp (400)', () => {",
+                  "  pm.expect(j.content).to.have.lengthOf(2);",
+                  "  pm.expect(j.content[0].accumulatedMass).to.eql(250);",
+                  "  pm.expect(j.content[0].timestamp).to.eql('2026-10-28T10:00:21');",
+                  "  pm.expect(j.content[1].accumulatedMass).to.eql(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberLoad}}/details?page=1&size=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberLoad}}",
+                "details"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Segunda página: la masa igual a la anterior y la lectura sin timestamp. Los descartes no aparecen."
+          }
+        },
+        {
+          "name": "Lecturas guardadas con size mayor que el máximo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('size acotado a 100 y las 4 lecturas en una página', () => {",
+                  "  pm.expect(j.page.size).to.eql(100);",
+                  "  pm.expect(j.content).to.have.lengthOf(4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberLoad}}/details?size=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberLoad}}",
+                "details"
+              ],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "El tamaño de página se acota a 100."
+          }
+        },
+        {
+          "name": "Lecturas guardadas de la orden sin activar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('página vacía (0 lecturas)', () => {",
+                  "  pm.expect(j.content).to.have.lengthOf(0);",
+                  "  pm.expect(j.page.totalElements).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberLoadInactive}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberLoadInactive}}",
+                "details"
+              ]
+            },
+            "description": "La orden existe pero no tiene lecturas: página vacía."
+          }
+        },
+        {
+          "name": "Lecturas guardadas de orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('orden inexistente responde 404', () => pm.response.to.have.status(404));",
+                  "const j = pm.response.json();",
+                  "pm.test('cuerpo es StandartResponse con code 404', () => pm.expect(j.code).to.eql(404));",
+                  "pm.test('mensaje incluye \"No se encuentra la Orden\"', () => pm.expect(j.message).to.include('No se encuentra la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/999999999/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "999999999",
+                "details"
+              ]
+            },
+            "description": "La orden no existe → 404."
+          }
+        },
+        {
+          "name": "Lecturas guardadas sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberLoad}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberLoad}}",
+                "details"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Sin cabecera Authorization → 401."
+          }
+        },
+        {
           "name": "Lectura sin un campo",
           "event": [
             {
