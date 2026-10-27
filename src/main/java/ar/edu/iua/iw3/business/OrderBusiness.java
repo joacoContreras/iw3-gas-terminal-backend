@@ -16,6 +16,7 @@ import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.FoundException;
+import ar.edu.iua.iw3.business.exception.ForbiddenException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Customer;
 import ar.edu.iua.iw3.model.Driver;
@@ -142,6 +143,36 @@ public class OrderBusiness implements IOrderBusiness {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
 		}
+	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Order activate(Integer orderNumber, Integer password)
+			throws NotFoundException, BadRequestException, ConflictException, ForbiddenException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500
+		if (orderNumber == null || password == null) {
+			throw BadRequestException.builder().message("orderNumber y password son obligatorios").build();
+		}
+		Order order = load(orderNumber);
+		if (order.getStatus() != OrderStatus.INITIAL_WEIGHING_REGISTERED) {
+			throw ConflictException.builder().message("La orden " + orderNumber
+					+ " no está lista para activar (estado " + order.getStatus().getCode() + ")").build();
+		}
+		// El mensaje no repite la contrasena recibida ni la guardada
+		if (!password.equals(order.getActivationPassword())) {
+			throw ForbiddenException.builder().message("La contraseña de activación es incorrecta").build();
+		}
+		// Idempotente: si ya estaba activada se devuelve el preset sin tocar activationDateTime
+		if (order.getActivationDateTime() == null) {
+			try {
+				order.setActivationDateTime(LocalDateTime.now());
+				order = orderDAO.save(order);
+			} catch (Exception e) {
+				log.error(e.getMessage(), e);
+				throw BusinessException.builder().ex(e).build();
+			}
+		}
+		return order;
 	}
 
 	/** Registra un cambio de estado en el log de auditoria de la orden. */
