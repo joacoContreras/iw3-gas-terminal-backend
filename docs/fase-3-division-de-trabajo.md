@@ -788,7 +788,7 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 
 | Parte | Responsable | Estado | Último commit | Fecha |
 |---|---|---|---|---|
-| 1 | Martín González | Pendiente | — | — |
+| 1 | Martín González | Completa y verificada (local, sin push) | `b090dfa` (último commit de código) | 27/10/2026 |
 | 2 | Joaquín Contreras | Pendiente | — | — |
 | 3 | Tomás Calvo | Pendiente | — | — |
 
@@ -808,9 +808,61 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 **Para tener en cuenta** (lo que necesita saber el siguiente: limitaciones, decisiones, casos probados, mediciones).
 ```
 
-## Estado de la Parte 1
+## Estado de la Parte 1 (27/10/2026)
 
-_Pendiente._
+| Paso | Commit | Estado |
+|---|---|---|
+| Rama y documentación (división y PDF) | `1578e5c` `docs(fase-3): agrega la división del trabajo y los prompts de las 3 partes` | Local |
+| Índice de PDF | `ddc3361` `docs(pdf): agrega el PDF de la división de la Fase 3 al índice` | Local |
+| Campos de la orden | `edceb00` `feat(model): agrega a la orden los campos de activación y de carga` | Local |
+| `OrderDetail` y su repositorio | `0ff6542` `feat(model): agrega la entidad OrderDetail y su repositorio` | Local |
+| `ForbiddenException` | `f6b8576` `feat(business): agrega ForbiddenException para la contraseña incorrecta` | Local |
+| URL del sistema de carga | `a1c3eb2` `feat(controllers): agrega la URL de integración del sistema de carga` | Local |
+| Regla `activate` | `cca066e` `feat(business): agrega la activación de la orden` | Local |
+| Pedido y respuesta de la activación | `61f65d6` `feat(integration): agrega el pedido y la respuesta de la activación` | Local |
+| Endpoint de activación | `b090dfa` `feat(integration): agrega el endpoint de activación del sistema de carga` | Local |
+
+Los commits de este bloque y de las filas de la guía de `src` vienen después. **No hay push todavía:** la rama `fase-3-carga-tiempo-real` existe solo en la máquina de Gonzalez. El PDF de este documento no se regeneró (lo hace Calvo al cerrar, apartado E de la Parte 3).
+
+**Qué quedó implementado** (rutas bajo `src/main/java/ar/edu/iua/iw3/`):
+
+- `model/Order.java`: siete campos opcionales con `@Schema(READ_ONLY)`: `activationDateTime`, `loadingStartDateTime`, `loadingEndDateTime` (`LocalDateTime`) y `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate` (`Double`). No tiene lista de detalles.
+- `model/OrderDetail.java`: entidad de la tabla `order_details`. `order` es `@ManyToOne(optional = false, fetch = LAZY)` con `@JsonIgnore` y columna `id_order`; cuatro `double` obligatorios y `timestamp` en la columna `reading_timestamp`. Tiene `@AllArgsConstructor`: `new OrderDetail(Long id, Order order, double accumulatedMass, double density, double temperature, double flowRate, LocalDateTime timestamp)`.
+- `model/persistence/OrderDetailRepository.java`: `JpaRepository<OrderDetail, Long>` sin métodos propios.
+- `business/exception/ForbiddenException.java`: se traduce a 403 (mismo molde que `ConflictException`).
+- `controllers/Constants.java`: `URL_INTEGRATION_LOADER`.
+- `business/IOrderBusiness.java` y `OrderBusiness.java`: `activate(orderNumber, password)` con `@Transactional(rollbackFor = Exception.class)` y las comprobaciones fuera del `try`: cuerpo incompleto (400) → orden inexistente (404) → estado distinto de 2 (409) → contraseña incorrecta (403). Si `activationDateTime` es nulo lo guarda con la hora actual; si ya estaba, no lo toca (idempotente). No escribe en el historial de estados.
+- `integration/loader/model/ActivationRequest.java` (`Integer orderNumber`, `Integer password`) y `ActivationResponse.java` (`Double preset`).
+- `integration/loader/controllers/OrderLoaderRestController.java`: **solo** `POST /api/v1/integration/loader/activation`. Inyecta `IOrderBusiness` y `IStandartResponseBusiness`.
+
+**Verificado** (resultados reales del 27/10/2026, contra MySQL real y la base `iw3_db`):
+
+| Verificación | Resultado |
+|---|---|
+| `./mvnw -B -q -DskipTests compile` tras cada commit de código | OK |
+| `./mvnw -B test` | 3 tests (los 2 del generador y `contextLoads`), 0 fallas, `BUILD SUCCESS` |
+| Esquema | Hibernate creó `order_details` y agregó las 7 columnas, todas opcionales, sobre una base con 4 órdenes. Las 4 órdenes siguieron intactas, con los campos nuevos en `NULL` |
+| Arranque de la app | `Started Iw3Application in 10.4 s` y 0 `ERROR` en el log |
+| Activación (script temporal de 34 comprobaciones contra `http://localhost:8080`, ya eliminado) | 34 PASS, 0 FAIL (detalle abajo) |
+| Cruce con la base | La orden activada quedó en estado 2 con `activation_date_time` guardado; su historial tiene 2 registros (`null→1` y `1→2`); `order_details` tiene 0 filas |
+| Swagger (`/v3/api-docs`) | El path `POST /api/v1/integration/loader/activation` figura con las respuestas 200, 400, 403, 404 y 409, el tag "Integración sistema de carga" y los esquemas `ActivationRequest` y `ActivationResponse` con ejemplos. El esquema `Order` incluye los 7 campos nuevos y no incluye `activationPassword` |
+| Regresión: `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json` | 21 pedidos, **46 aserciones, 0 fallas** (2,6 s) |
+
+Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON malformado, `password` `"abc"` y `orderNumber` `"abc"` → **400**; orden inexistente → **404**; orden en estado 1 → **409** (`La orden <n> no está lista para activar (estado 1)`); contraseña incorrecta → **403** (la orden no queda activada y el cuerpo no incluye ninguna contraseña); sin token → **401**; contraseña correcta → **200** `{ "preset": 15000.0 }` con `activationDateTime` guardado y estado 2; repetir la activación → **200**, mismo preset y **misma** `activationDateTime`; orden ya activada con contraseña incorrecta → **403** sin alterar la fecha; `/status-log` sigue con 2 registros. `GET /orders/{n}` muestra los campos nuevos (en `null` hasta que haya lecturas), no muestra `activationPassword` y no trae lista de detalles.
+
+**No ejecutado o no verificado:** Swagger UI en el navegador (solo el JSON de `/v3/api-docs`); órdenes en estado 3 o 4 (ninguna operación las crea todavía); activaciones simultáneas, rendimiento y la falla de base al confirmar la transacción (trampa 12); la carpeta 03 de Postman (es de la Parte 3).
+
+**Limpieza:** los datos de prueba (órdenes 18 a 21, las de mi script y las de newman, y las entidades con códigos `P1` y `TMS-01`) se borraron y la base quedó con los mismos datos que antes (4 órdenes). Permanecen la tabla `order_details` (vacía) y las 7 columnas nuevas, que agrega Hibernate al arrancar.
+
+**Para tener en cuenta (Contreras):**
+
+- **Qué recibís:** `OrderDetail` con su constructor completo, `OrderDetailRepository` (vacío), los 7 campos de `Order` con sus getters y setters de Lombok (los últimos valores son `Double`, o sea, pueden ser nulos) y `OrderLoaderRestController` con la activación funcionando. En ese controller solo tenés que **agregar** la inyección de `IOrderDetailBusiness` y el método de lecturas, sin tocar `activate`. Ya están importados `BadRequestException`, `BusinessException`, `ConflictException`, `ForbiddenException`, `NotFoundException`, `Content`, `Schema` y `ApiResponse`.
+- **Para probar necesitás una orden activada:** crearla (`POST /integration/sap/orders`), registrar la tara (`POST /integration/tms/orders/{n}/tare`, que devuelve la contraseña) y llamar a `POST /integration/loader/activation`.
+- **Hora de Argentina:** `activationDateTime` se guarda con la zona configurada (`hibernate.jdbc.time_zone`). Vale lo mismo para las estampas que guardes.
+- **Observaciones de Jackson:** un pedido sin `Content-Type` responde **415**, y un número enviado como texto (`"password": "26566"`) **se acepta** porque Jackson lo convierte. Lo mismo va a pasar con `"accumulatedMass": "250"` en las lecturas; un texto no numérico (`"abc"`) sí da 400.
+- **Trampa 12:** `activate` usa `save` igual que `registerTare`, así que la actualización se envía a la base al confirmar la transacción, fuera del `try`. Tu verificación de la falla al confirmar aplica a las dos operaciones.
+- **Limitaciones de la activación** (para registrar en la Parte 3): dos activaciones simultáneas de la misma orden podrían guardar la fecha dos veces (gana la última) y no hay límite de intentos de contraseña.
+- **Si tu base ya tiene órdenes:** Hibernate agrega `order_details` y las columnas al arrancar, sin tocar los datos existentes.
 
 ## Estado de la Parte 2
 
