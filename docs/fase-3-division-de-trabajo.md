@@ -822,7 +822,7 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 | Pedido y respuesta de la activación | `61f65d6` `feat(integration): agrega el pedido y la respuesta de la activación` | Local |
 | Endpoint de activación | `b090dfa` `feat(integration): agrega el endpoint de activación del sistema de carga` | Local |
 
-Los commits de este bloque y de las filas de la guía de `src` vienen después. **No hay push todavía:** la rama `fase-3-carga-tiempo-real` existe solo en la máquina de Gonzalez. El PDF de este documento no se regeneró (lo hace Calvo al cerrar, apartado E de la Parte 3).
+Los commits de documentación de esta parte son `98357e5` (este bloque) y `4362b25` (filas de la guía de `src`). **No hay push todavía:** la rama `fase-3-carga-tiempo-real` existe solo en la máquina de Gonzalez. El PDF de este documento no se regeneró (lo hace Calvo al cerrar, apartado E de la Parte 3).
 
 **Qué quedó implementado** (rutas bajo `src/main/java/ar/edu/iua/iw3/`):
 
@@ -863,6 +863,12 @@ Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON 
 - **Trampa 12:** `activate` usa `save` igual que `registerTare`, así que la actualización se envía a la base al confirmar la transacción, fuera del `try`. Tu verificación de la falla al confirmar aplica a las dos operaciones.
 - **Limitaciones de la activación** (para registrar en la Parte 3): dos activaciones simultáneas de la misma orden podrían guardar la fecha dos veces (gana la última) y no hay límite de intentos de contraseña.
 - **Si tu base ya tiene órdenes:** Hibernate agrega `order_details` y las columnas al arrancar, sin tocar los datos existentes.
+
+**Para tener en cuenta (Calvo):**
+
+- **La guía de `src` ya tenía filas duplicadas** en la sección 15 ("Buscador rápido"): las filas desde "Cambiar un código HTTP" hasta "Cambiar la conexión a la base" aparecen dos veces (vienen de la Fase 2). No las toqué; corregilas al cerrar la fase (apartado E).
+- **En la guía solo agregué las filas de mis archivos** (marcadas F3) y el paso a paso de `activate`. La tabla de endpoints (sección 11), la tabla de fases (sección 2), la lista de códigos HTTP (falta el 403) y la fecha de actualización son tuyas.
+- **Ni el PDF de la guía ni el de este documento se regeneraron** en la Parte 1.
 
 ## Estado de la Parte 2
 
