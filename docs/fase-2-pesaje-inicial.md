@@ -130,12 +130,12 @@ Si ocurre cualquier excepción no prevista dentro del bloque `try`, la transacci
 
 ## 6. Pruebas y verificación
 
-Todas las pruebas fueron ejecutadas el 23/10/2026 contra el contenedor de base de datos MySQL real (`iw3-mysql`) con los datos base sembrados (`seed-dev-users.sql`).
+Todas las pruebas fueron ejecutadas el 23/10/2026 contra el contenedor de base de datos MySQL real (`iw3-gas-mysql`) con los datos base sembrados (`seed-dev-users.sql`).
 
 ### 6.1 Pruebas unitarias de JUnit
 Comando ejecutado: `./mvnw -B test`
-- `ActivationPasswordGeneratorTest.testRangeAndFormat`: 10.000 contraseñas generadas consecutivamente; todas dentro del intervalo `[10000, 99999]`.
-- `ActivationPasswordGeneratorTest.testEntropy`: comprobación de dispersión y variedad de claves en múltiples iteraciones.
+- `ActivationPasswordGeneratorTest.generatesFiveDigitPasswords`: 10.000 contraseñas generadas consecutivamente; todas dentro del intervalo `[10000, 99999]`.
+- `ActivationPasswordGeneratorTest.doesNotAlwaysReturnTheSameValue`: comprobación de dispersión y variedad de claves en múltiples iteraciones.
 - `Iw3ApplicationTests.contextLoads`: arranque correcto del contexto de Spring Boot e inicialización de beans JPA y Hibernate.
 - **Resultado:** 3 tests ejecutados, 0 fallas, 0 errores (`BUILD SUCCESS`).
 
