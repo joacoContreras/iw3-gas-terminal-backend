@@ -2,11 +2,11 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 23/10/2026, al cierre de la Fase 2 (pesaje inicial y activación).
+**Última actualización:** 27/10/2026, al cierre de la Fase 3 (activación de la carga y lecturas del caudalímetro).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 (en curso: cada parte agrega sus archivos).
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3.
 
 ---
 
@@ -36,7 +36,7 @@ Los estados de la orden son secuenciales, nunca vuelven atrás:
 | 0 | Auditoría y línea base (no se tocó código) | Hecha |
 | 1 | **Punto 1:** SAP envía la orden y se crea en estado 1 | Hecha |
 | 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Hecha |
-| 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Pendiente |
+| 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Hecha |
 | 4 | **Punto 4:** cerrar la orden (estado 3) | Pendiente |
 | 5 | **Punto 5:** pesaje final, estado 4 y conciliación | Pendiente |
 
@@ -94,7 +94,7 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 | `DriverRepository.java` | Busca un chofer por código externo | F1 |
 | `CustomerRepository.java` | Busca un cliente por código externo | F1 |
 | `ProductRepository.java` | Busca un producto por código externo | F1 (reemplazó al del demo) |
-| `OrderDetailRepository.java` | Guarda y busca las lecturas del caudalímetro. Por ahora sin consultas propias | F3 |
+| `OrderDetailRepository.java` | Guarda y busca las lecturas del caudalímetro. `findByOrder(order, pageable)`: una página de lecturas por `id` ascendente | F3 |
 
 ---
 
@@ -106,8 +106,8 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 | `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare` y `activate` | F1 + F2 + F3 |
 | `OrderDetailValidator.java` | Función pura que evalúa las condiciones de descarte del caudalímetro (caudal, masa, masa anterior y densidad) | F3 |
 | `DetailResult.java` | DTO interno del resultado de una lectura: booleano `saved` y motivo `reason` | F3 |
-| `IOrderDetailBusiness.java` | Interfaz de negocio para el procesamiento de lecturas del caudalímetro (`add`) | F3 |
-| `OrderDetailBusiness.java` | Reglas de recepción de lecturas, descarte, guardado en `order_details` y actualización atómica de cabecera | F3 |
+| `IOrderDetailBusiness.java` | Interfaz de negocio de las lecturas del caudalímetro (`add` y `list`) | F3 |
+| `OrderDetailBusiness.java` | Reglas de recepción de lecturas, descarte, guardado en `order_details` y actualización atómica de cabecera; `list` devuelve una página del histórico (404 si la orden no existe) | F3 |
 | `OrderValidator.java` | Revisa que la orden recibida esté completa y con valores lógicos | F1 |
 | `ActivationPasswordGenerator.java` | Genera contraseñas aleatorias de 5 dígitos (10000–99999) con `SecureRandom` | F2 |
 
@@ -143,7 +143,7 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 3. Si la orden no está en estado 2, 409 `ConflictException` (informa el estado actual).
 4. Si la contraseña no coincide con `activationPassword`, 403 `ForbiddenException`. El mensaje **no repite ninguna contraseña**.
 5. Las comprobaciones 1 a 4 van **fuera del try/catch**, como en `registerTare`.
-6. Si `activationDateTime` es nulo, lo guarda con la hora actual. Si ya estaba, **no lo toca**: la activación es idempotente (activar de nuevo con la contraseña correcta devuelve el mismo preset).
+6. Si `activationDateTime` es nulo, lo guarda con la hora actual (`saveAndFlush`, para que un error de base salga dentro del `try`). Si ya estaba, **no lo toca**: la activación es idempotente (activar de nuevo con la contraseña correcta devuelve el mismo preset).
 7. No cambia el estado (la orden sigue en 2) y **no escribe en el historial** de estados. Devuelve la orden; el controller responde el `preset`.
 
 ### Qué hace `OrderDetailBusiness.add` (paso a paso) — F3
@@ -198,7 +198,7 @@ No tienen reglas: reciben el pedido, llaman al negocio y devuelven el código.
 
 | Archivo | Qué hace | Origen |
 |---|---|---|
-| `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados | F1 |
+| `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados y lecturas guardadas paginadas (`/{n}/details`) | F1 + F3 |
 | `BaseRestController.java` | Clase madre de los controllers. Tiene `getUserLogged()`: el usuario del token, de donde sale el "quién" del historial | Cátedra + F1 |
 | `Constants.java` | Todas las URLs en un solo lugar. Incluye `URL_INTEGRATION_TMS` y `URL_INTEGRATION_LOADER` | Cátedra + F1 + F2 + F3 |
 
@@ -266,13 +266,16 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `POST /api/v1/login` | Usuario y contraseña (formulario); devuelve el token en texto | 200, 401 |
 | `POST /api/v1/integration/sap/orders` | **Punto 1:** SAP envía la orden | 201 + `location`, 302, 400, 401, 500 |
 | `POST /api/v1/integration/tms/orders/{n}/tare` | **Punto 2:** la balanza envía la tara; devuelve la contraseña de activación de 5 dígitos | 200, 400, 401, 404, 409, 500 |
+| `POST /api/v1/integration/loader/activation` | **Punto 3:** el sistema de carga se activa con `orderNumber` y `password`; devuelve el `preset`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
+| `POST /api/v1/integration/loader/orders/{n}/details` | **Punto 3:** una lectura del caudalímetro. Responde `{ saved, reason }`: guardada o descartada, siempre 200 | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
 | `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
+| `GET /api/v1/orders/{n}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100) | 200, 404 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación | públicos |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, público; cerrar antes de desplegar) | 200 |
 
-Códigos: **200** éxito · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos o peso ≤ 0 · **401** sin token o inválido · **404** no existe · **409** orden no pendiente de pesaje inicial (estado incorrecto) · **500** falla interna.
+Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente o peso ≤ 0 · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas) · **500** falla interna.
 
 ## 12. Fuera de `src`
 
@@ -282,10 +285,10 @@ Códigos: **200** éxito · **201** creada · **302** ya existe (convención de 
 | `docker-compose.yml` | La base MySQL (contenedor `iw3-gas-mysql`, puerto 3306, base `iw3_db`) |
 | `CLAUDE.md` | Estado del proyecto y reglas del equipo |
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
-| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
+| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
 | `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
 | `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
-| `docs/postman/` | Colección Postman (21 pedidos, 46 verificaciones) |
+| `docs/postman/` | Colección Postman (65 pedidos, 160 verificaciones: carpetas 00 a 03) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 
@@ -313,6 +316,12 @@ Códigos: **200** éxito · **201** creada · **302** ya existe (convención de 
 | Tablas `orders` y `gas_products` | `ORDER` es reservada; `products` ya existe en bases viejas |
 | Validación manual en el negocio | La cátedra no usa Bean Validation |
 | `hibernate.jdbc.time_zone` | Sin eso la base guardaba la hora 3 h adelantada |
+| Contraseña incorrecta = 403 (F3) | Hay token válido pero la operación no está permitida; un 401 se confundiría con un problema del token |
+| Activación idempotente (F3) | Activar de nuevo devuelve el mismo preset y no cambia `activationDateTime` |
+| Lectura descartada = 200 con `saved: false` (F3) | Descartar no es un error: el caudalímetro sigue mandando datos |
+| Pedidos con `Double` e `Integer` (F3) | Un campo ausente llega como `null` y da 400; con primitivos llegaría como 0 y se descartaría |
+| Masa anterior = la de la cabecera (F3) | No se recorre el histórico en cada lectura; una masa igual a la anterior es válida |
+| `saveAndFlush` en las lecturas y la activación (F3) | Un error de base sale dentro del `try` y responde con `StandartResponse` |
 
 ## 15. Buscador rápido: "si quiero..., voy a..."
 
@@ -324,14 +333,9 @@ Códigos: **200** éxito · **201** creada · **302** ya existe (convención de 
 | Cambiar la regla de pesaje inicial / tara | `business/OrderBusiness.java` (`registerTare`) |
 | Cambiar la regla de activación de la carga | `business/OrderBusiness.java` (`activate`) |
 | Cambiar la generación de contraseñas | `business/ActivationPasswordGenerator.java` |
-| Cambiar un código HTTP | El controller del endpoint (`integration/sap/...`, `integration/tms/...` o `controllers/...`) |
-| Agregar una URL | `controllers/Constants.java` y el controller |
-| Abrir o cerrar una ruta sin token | `security/SecurityConfiguration.java` |
-| Ver cómo se arma el token | `auth/controller/AuthRestController.java` |
-| Cambiar el formato de error | `util/StandartResponseBusiness.java` |
-| Ver los estados de la orden | `model/OrderStatus.java` |
-| Cambiar la conexión a la base | `src/main/resources/application.properties` |
-| Cambiar un código HTTP | El controller del endpoint (`integration/sap/...` o `controllers/...`) |
+| Cambiar las reglas de descarte de las lecturas | `business/OrderDetailValidator.java` |
+| Cambiar lo que pasa al recibir una lectura | `business/OrderDetailBusiness.java` (`add`) |
+| Cambiar un código HTTP | El controller del endpoint (`integration/sap/...`, `integration/tms/...`, `integration/loader/...` o `controllers/...`) |
 | Agregar una URL | `controllers/Constants.java` y el controller |
 | Abrir o cerrar una ruta sin token | `security/SecurityConfiguration.java` |
 | Ver cómo se arma el token | `auth/controller/AuthRestController.java` |
