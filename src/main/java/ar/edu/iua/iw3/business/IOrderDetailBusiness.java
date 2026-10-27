@@ -1,7 +1,5 @@
 package ar.edu.iua.iw3.business;
 
-import java.time.LocalDateTime;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,9 +15,10 @@ public interface IOrderDetailBusiness {
 	/**
 	 * Procesa una lectura: si es valida la guarda y actualiza la cabecera;
 	 * si es invalida la descarta devolviendo el motivo del descarte.
+	 * La estampa de tiempo es la hora de recepcion en el servidor.
 	 */
 	DetailResult add(Integer orderNumber, Double accumulatedMass, Double density, Double temperature,
-			Double flowRate, LocalDateTime timestamp)
+			Double flowRate)
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException;
 
 	/** Una pagina de las lecturas guardadas de una orden, por id ascendente (decision 11). */

@@ -2,6 +2,7 @@ package ar.edu.iua.iw3.business;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -40,10 +41,10 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public DetailResult add(Integer orderNumber, Double accumulatedMass, Double density, Double temperature,
-			Double flowRate, LocalDateTime timestamp)
+			Double flowRate)
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
-		// (a) Buscar la orden: si no existe lanza NotFoundException (404)
-		Order order = orderBusiness.load(orderNumber);
+		// (a) Buscar la orden con bloqueo de fila (lecturas simultaneas se serializan); si no existe -> 404
+		Order order = loadForUpdate(orderNumber);
 
 		// (b) Algun campo obligatorio ausente -> 400
 		if (accumulatedMass == null || density == null || temperature == null || flowRate == null) {
@@ -60,7 +61,7 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 		}
 
 		// (d) Validar motivos de descarte contra la masa anterior de la cabecera
-		List<String> reasons = OrderDetailValidator.discardReasons(accumulatedMass, density, flowRate,
+		List<String> reasons = OrderDetailValidator.discardReasons(accumulatedMass, density, temperature, flowRate,
 				order.getLastAccumulatedMass());
 		if (!reasons.isEmpty()) {
 			return DetailResult.discarded(String.join("; ", reasons));
@@ -68,7 +69,8 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 
 		// Lectura valida: persistir detalle y actualizar cabecera
 		try {
-			LocalDateTime estampa = (timestamp != null) ? timestamp : LocalDateTime.now();
+			// La estampa es el momento de recepcion en el servidor (consigna), no la que informe el cliente
+			LocalDateTime estampa = LocalDateTime.now();
 			OrderDetail detail = new OrderDetail(null, order, accumulatedMass, density, temperature, flowRate, estampa);
 			orderDetailDAO.save(detail);
 
@@ -87,6 +89,21 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
 		}
+	}
+
+	private Order loadForUpdate(Integer orderNumber) throws NotFoundException, BusinessException {
+		Optional<Order> r;
+		try {
+			r = orderDAO.findByOrderNumberForUpdate(orderNumber);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+		// El 404 va fuera del try: si no, saldria como 500
+		if (r.isEmpty()) {
+			throw NotFoundException.builder().message("No se encuentra la Orden numero=" + orderNumber).build();
+		}
+		return r.get();
 	}
 
 	@Override
