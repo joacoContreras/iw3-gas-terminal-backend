@@ -789,7 +789,7 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 | Parte | Responsable | Estado | Último commit | Fecha |
 |---|---|---|---|---|
 | 1 | Martín González | Completa y verificada (local, sin push) | `b090dfa` (último commit de código) | 27/10/2026 |
-| 2 | Joaquín Contreras | Pendiente | — | — |
+| 2 | Joaquín Contreras | Completa y verificada (local, sin push) | `5971075` (último commit de código) | 27/10/2026 |
 | 3 | Tomás Calvo | Pendiente | — | — |
 
 ## Modelo del bloque "Estado de la Parte N"
@@ -870,9 +870,67 @@ Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON 
 - **En la guía solo agregué las filas de mis archivos** (marcadas F3) y el paso a paso de `activate`. La tabla de endpoints (sección 11), la tabla de fases (sección 2), la lista de códigos HTTP (falta el 403) y la fecha de actualización son tuyas.
 - **Ni el PDF de la guía ni el de este documento se regeneraron** en la Parte 1.
 
-## Estado de la Parte 2
+## Estado de la Parte 2 (27/10/2026)
 
-_Pendiente._
+| Paso | Commit | Estado |
+|---|---|---|
+| Reglas de descarte | `0e84cb8` `feat(business): agrega las reglas de descarte de las lecturas` | Local |
+| Pruebas unitarias de descarte | `d5ed889` `test(business): prueba las reglas de descarte` | Local |
+| DTO de resultado | `6eb915c` `feat(business): agrega DetailResult` | Local |
+| Interfaz de negocio de lecturas | `f324515` `feat(business): agrega la interfaz del negocio de lecturas` | Local |
+| Lógica de recepción y cabecera | `85fc7cf` `feat(business): implementa la recepción de lecturas y la actualización de la cabecera` | Local |
+| DTOs de pedido y respuesta | `7540a79` `feat(integration): agrega el pedido y la respuesta de las lecturas` | Local |
+| Endpoint de lecturas | `3861b3e` `feat(integration): agrega el endpoint de lecturas del caudalímetro` | Local |
+| Ajuste transaccional (trampa 12) | `5971075` `fix(business): usa saveAndFlush para capturar errores de base dentro del try` | Local |
+
+**Qué quedó implementado:**
+
+- `business/OrderDetailValidator.java`: clase final de paquete con la función pura estática `discardReasons(accumulatedMass, density, flowRate, previousMass)`. Evalúa todas las condiciones sin cortar y devuelve la lista de motivos (vacía si es válida). Usa la forma `!(x > 0)` para descartar `NaN`. La temperatura no tiene regla. Una masa igual a la anterior es válida.
+- `src/test/java/ar/edu/iua/iw3/business/OrderDetailValidatorTest.java`: 8 pruebas unitarias con JUnit 5 puro (sin `@SpringBootTest`) cubriendo lectura válida, masa igual, caudal 0 y negativo, masa 0 y negativa, masa menor que la anterior, densidades inválidas (0, 1, 1.5, -0.2), `NaN` en los tres campos y acumulación de múltiples motivos.
+- `business/DetailResult.java`: resultado de negocio con `saved` (boolean), `reason` (String), getters y constructores estáticos `saved()` y `discarded(reason)`.
+- `business/IOrderDetailBusiness.java`: interfaz con el método `DetailResult add(...)`.
+- `business/OrderDetailBusiness.java` (`@Service`): inyecta `IOrderBusiness`, `OrderRepository` y `OrderDetailRepository`. `@Transactional(rollbackFor = Exception.class)` con comprobaciones fuera del `try`: orden inexistente (404) → campos nulos (400) → estado distinto de 2 o no activada (409) → descarte (devuelve `DetailResult.discarded(...)` con motivos unidos por `"; "` sin escribir nada). Si es válida, dentro del `try`: guarda `OrderDetail`, actualiza cabecera de `Order` (`lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `loadingStartDateTime` si es null y `loadingEndDateTime` siempre) usando `saveAndFlush(order)` y devuelve `DetailResult.saved()`.
+- `integration/loader/model/DetailRequest.java`: DTO con `Double` para los 4 valores numéricos y `LocalDateTime timestamp` opcional, con anotaciones `@Schema` y ejemplos.
+- `integration/loader/model/DetailResponse.java`: DTO con `boolean saved` y `String reason`, documentado con `@Schema`.
+- `integration/loader/controllers/OrderLoaderRestController.java`: agrega la inyección de `IOrderDetailBusiness` y el endpoint `POST /orders/{orderNumber}/details`. Responde siempre 200 con `DetailResponse` (guardada o descartada), y traduce excepciones con `IStandartResponseBusiness`: 400, 404, 409 y 500. El método de activación no fue modificado.
+
+**Verificado (resultados reales del 27/10/2026 contra MySQL real `iw3_db`):**
+
+| Verificación | Resultado |
+|---|---|
+| `./mvnw -B -Dtest=OrderDetailValidatorTest test` | 8 tests ejecutados, 0 fallas (0.108 s), `BUILD SUCCESS` |
+| `./mvnw -B test` | 11 tests ejecutados (8 validator + 2 generator + 1 contextLoads), 0 fallas (11.2 s), `BUILD SUCCESS` |
+| Swagger (`/v3/api-docs`) | `POST /orders/{orderNumber}/details` documentado con tag "Integración sistema de carga", esquemas `DetailRequest` y `DetailResponse`, y respuestas 200, 400, 404 y 409 |
+| Pruebas de secuencia sobre orden creada y activada | Todas PASS (14/14 casos): lectura 1 (100 kg), lectura 2 (250 kg), 9 descartes, masa igual (250 kg), temp negativa (-8.5 °C), sin timestamp, 5 errores sintácticos (400), inexistente (404), estado 1 (409), estado 2 sin activar (409), sin token (401) |
+| Cruce con la base tras descartes | Cabecera intacta tras descartes (masa en 250 kg y fin en estampa de la 2); `SELECT COUNT(*) FROM order_details` arrojó exactamente 5 registros guardados |
+| Medición de eficiencia (100 lecturas seguidas) | 100 peticiones HTTP con masa creciente completadas en **3.61 s** (**36.1 ms por lectura** promedio en local). El total en base pasó de 5 a 105 |
+| Falla al confirmar la cabecera (trampa 12) | Se achicó temporalmente la columna `last_flow_rate` a `VARCHAR(2)`: con `save(order)` Spring respondía el JSON de error 500 por defecto (`{timestamp, status, error, trace, path}`). Con `saveAndFlush(order)` el flush ocurre dentro del `try`, la excepción es capturada y el controller responde con `StandartResponse` 500 (`{message, code: 500, devInfo}`). Se restauró la columna a `DOUBLE` y se adoptó `saveAndFlush` |
+| Regresión Postman (`npx newman@6 run ...`) | 21 pedidos, **46 aserciones, 0 fallas** (1.4 s) |
+
+**Casos comprobados que Calvo debe pasar a Postman (carpeta 03):**
+
+1. `Lectura válida 1 (inicio de carga)`: 200 `{ "saved": true, "reason": null }`; cabecera con inicio y fin iguales al timestamp provisto.
+2. `Lectura válida 2 (avance de carga)`: 200 `{ "saved": true, "reason": null }`; cabecera con inicio = ts1, fin = ts2 y últimos valores actualizados.
+3. `Descarte: masa menor que la anterior (200 < 250)`: 200 `{ "saved": false, "reason": "la masa acumulada es menor que la anterior (250.0)" }`.
+4. `Descarte: caudal 0 y negativo`: 200 `{ "saved": false, "reason": "el caudal (flowRate) debe ser mayor que 0" }`.
+5. `Descarte: masa 0 y negativa`: 200 `{ "saved": false, "reason": "la masa acumulada (accumulatedMass) debe ser mayor que 0..." }`.
+6. `Descarte: densidad fuera de (0, 1)` (0, 1, 1.5, -0.2): 200 `{ "saved": false, "reason": "la densidad (density) debe estar entre 0 y 1, sin incluirlos" }`.
+7. `Lectura válida: masa igual a la anterior (250.0)`: 200 `{ "saved": true, "reason": null }`.
+8. `Lectura válida: temperatura negativa (-8.5 °C)`: 200 `{ "saved": true, "reason": null }`.
+9. `Lectura válida sin timestamp`: 200 `{ "saved": true, "reason": null }`; inicio intacto y fin con hora del servidor.
+10. `Errores sintácticos (400)`: campo numérico ausente, `{}` vacío, JSON malformado, texto `"abc"` en número, `timestamp` con formato inválido.
+11. `Orden inexistente`: 404 (`No se encuentra la Orden numero=<n>`).
+12. `Orden en estado 1`: 409 (`La orden <n> no acepta lecturas: debe estar en estado 2 y activada (estado 1, activada=false)`).
+13. `Orden en estado 2 sin activar`: 409 (`La orden <n> no acepta lecturas: debe estar en estado 2 y activada (estado 2, activada=false)`).
+14. `Sin token`: 401.
+
+**Limpieza:** se eliminaron la orden 92001 de pruebas y sus detalles; la tabla `order_details` quedó en 0 filas y la base con los datos limpios.
+
+**Para tener en cuenta (Calvo):**
+
+- Usar variables de entorno propias para la carpeta 03 en Postman (`orderNumberLoad`, `activationPasswordLoad`, etc.) para no interferir con las variables de las carpetas 01 y 02.
+- Las aserciones sobre `reason` deben buscar fragmentos con `include` (ej. `"menor que la anterior"`, `"debe ser mayor que 0"`).
+- Recordar que tanto para guardadas como descartadas el código HTTP es 200 (la diferencia está en el campo booleano `saved`).
 
 ## Estado de la Parte 3
 
