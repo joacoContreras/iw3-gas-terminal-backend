@@ -80,7 +80,7 @@ public class OrderLoaderRestController extends BaseRestController {
 
 	@Operation(summary = "Registra una lectura del caudalímetro",
 			description = "Recibe los datos en tiempo real del caudalímetro mientras la orden está en estado 2 y activada. "
-					+ "Si la lectura es válida, la guarda en el histórico y actualiza la cabecera (últimos valores, inicio y fin de carga). "
+					+ "Si la lectura es válida, la guarda en el histórico y actualiza la cabecera (últimos valores, inicio y fin de carga) con la hora de recepción del servidor. "
 					+ "Si es inválida, la descarta sin guardarla y devuelve el motivo.")
 	@ApiResponse(responseCode = "200", description = "Lectura procesada (guardada o descartada)",
 			content = @Content(schema = @Schema(implementation = DetailResponse.class)))
@@ -92,7 +92,7 @@ public class OrderLoaderRestController extends BaseRestController {
 	public ResponseEntity<?> addDetail(@PathVariable Integer orderNumber, @RequestBody DetailRequest body) {
 		try {
 			DetailResult result = orderDetailBusiness.add(orderNumber, body.getAccumulatedMass(),
-					body.getDensity(), body.getTemperature(), body.getFlowRate(), body.getTimestamp());
+					body.getDensity(), body.getTemperature(), body.getFlowRate());
 			return new ResponseEntity<>(new DetailResponse(result.isSaved(), result.getReason()), HttpStatus.OK);
 		} catch (BadRequestException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.BAD_REQUEST, e, e.getMessage()),
