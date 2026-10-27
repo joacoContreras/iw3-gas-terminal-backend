@@ -27,7 +27,7 @@
 | **Qué sigue** | **Fase 4 — Cierre de la orden (Punto 4): pendiente.** Requiere mergear la Fase 3 y autorización del usuario |
 | `main` | Contiene las Fases 0, 1 y 2 (la Fase 2 entró por el PR #6, `bd2d009`); recibirá la Fase 3 por PR |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
-| Despliegue | La VM **sigue con la Fase 1**; hay que redesplegar después de mergear la Fase 3 |
+| Despliegue | La VM se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`); funciona con la Fase 3 |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
@@ -320,9 +320,8 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 - **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
   del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
   llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
-  **Pendiente del dueño:** el ruleset de `main` exige hoy **1** aprobación (no 3) y no borra las ramas al mergear.
-- ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Hay que redesplegar al cerrar cada fase:
-  la VM **sigue con la Fase 1** (falta redesplegar con las Fases 2 y 3 después del merge).
+- ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Se redespliega solo al mergear a `main`:
+  hoy el workflow de GitHub Actions lo hace en cada push a `main`.
 
 ### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
 

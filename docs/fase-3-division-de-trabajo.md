@@ -746,8 +746,7 @@ Reglas: documentación en español, identificadores en inglés. Commits atómico
 | ☐ | Revisión cruzada (Gonzalez → Contreras → Calvo → Gonzalez) | Los tres |
 | ☐ | PR abierto como borrador, sin `.postman/` ni `postman/` | Calvo |
 | ☐ | Aprobaciones de Gonzalez, Contreras y Benjamín antes de mergear | Equipo |
-| ☐ | Después del merge: reconstruir la imagen y redesplegar la VM | Equipo |
-| ☐ | Pendiente del dueño del repo: el ruleset a 3 aprobaciones y borrado de ramas al mergear | `joacoContreras` |
+| ☑ | Después del merge: reconstruir la imagen y redesplegar la VM (hoy automático con el workflow de deploy) | Equipo |
 
 ## Problemas frecuentes
 
@@ -975,5 +974,4 @@ Casos de activación comprobados: `{}`, sin `password`, sin `orderNumber`, JSON 
 **Para tener en cuenta:**
 
 - **Avisar a Martín González:** se tocó su `OrderBusiness.activate` (H-14, `4ed54c8`) y se implementó la decisión 11, que la división preveía que aprobara él.
-- **Pendientes del dueño del repo (`joacoContreras`):** el ruleset de `main` pide 1 aprobación en vez de 3 y no borra las ramas al mergear.
 - **Datos de prueba:** las pruebas de la base local se revirtieron (estado, `CHECK` y *trigger*). Las órdenes de prueba de newman y de la auditoría se borraron al final.
