@@ -104,6 +104,10 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 |---|---|---|
 | `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare` y `activate` | F1 + F2 + F3 |
 | `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare` y `activate` | F1 + F2 + F3 |
+| `OrderDetailValidator.java` | Función pura que evalúa las condiciones de descarte del caudalímetro (caudal, masa, masa anterior y densidad) | F3 |
+| `DetailResult.java` | DTO interno del resultado de una lectura: booleano `saved` y motivo `reason` | F3 |
+| `IOrderDetailBusiness.java` | Interfaz de negocio para el procesamiento de lecturas del caudalímetro (`add`) | F3 |
+| `OrderDetailBusiness.java` | Reglas de recepción de lecturas, descarte, guardado en `order_details` y actualización atómica de cabecera | F3 |
 | `OrderValidator.java` | Revisa que la orden recibida esté completa y con valores lógicos | F1 |
 | `ActivationPasswordGenerator.java` | Genera contraseñas aleatorias de 5 dígitos (10000–99999) con `SecureRandom` | F2 |
 
@@ -141,6 +145,21 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 5. Las comprobaciones 1 a 4 van **fuera del try/catch**, como en `registerTare`.
 6. Si `activationDateTime` es nulo, lo guarda con la hora actual. Si ya estaba, **no lo toca**: la activación es idempotente (activar de nuevo con la contraseña correcta devuelve el mismo preset).
 7. No cambia el estado (la orden sigue en 2) y **no escribe en el historial** de estados. Devuelve la orden; el controller responde el `preset`.
+
+### Qué hace `OrderDetailBusiness.add` (paso a paso) — F3
+
+1. Carga la orden con `orderBusiness.load(orderNumber)` (404 si no existe).
+2. Valida presencia obligatoria de los cuatro valores numéricos (`accumulatedMass`, `density`, `temperature`, `flowRate`). Si alguno es nulo, 400 `BadRequestException`.
+3. Valida que la orden esté en estado 2 (`INITIAL_WEIGHING_REGISTERED`) y activada (`activationDateTime != null`). Si no, 409 `ConflictException`.
+4. Evalúa descarte con `OrderDetailValidator.discardReasons(...)` pasando la última masa de la cabecera. Si hay motivos, devuelve `DetailResult.discarded(...)` sin persistir nada.
+5. Las comprobaciones 1 a 4 van **fuera del try/catch**.
+6. Dentro de `@Transactional(rollbackFor = Exception.class)`:
+   - Estampa = `timestamp` recibido o `LocalDateTime.now()` si es nulo.
+   - Guarda `OrderDetail` en `order_details`.
+   - Actualiza la cabecera: `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `loadingStartDateTime` (solo la primera vez) y `loadingEndDateTime` (siempre).
+   - Confirma con `orderDAO.saveAndFlush(order)` para capturar errores de base dentro del `try`.
+   - Devuelve `DetailResult.saved()`.
+7. Si ocurre una excepción técnica dentro del try, la captura, loguea y lanza `BusinessException` (500 con `StandartResponse`).
 
 ### Qué hace `OrderBusiness.add` (paso a paso)
 
@@ -195,7 +214,9 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500) | F2 |
 | `loader/model/ActivationRequest.java` | DTO del pedido de activación: `Integer orderNumber` y `Integer password` (`Integer` para distinguir un campo ausente, 400, de uno informado) | F3 |
 | `loader/model/ActivationResponse.java` | DTO de respuesta de la activación con `Double preset` (kg a cargar) | F3 |
-| `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Hoy solo `POST /integration/loader/activation`: llama a `activate` y devuelve el preset (200, 400, 403, 404, 409 o 500). Las lecturas del caudalímetro se agregan en la Parte 2 | F3 |
+| `loader/model/DetailRequest.java` | DTO del pedido de lecturas: `Double` para los 4 campos numéricos y `timestamp` (`LocalDateTime`) opcional | F3 |
+| `loader/model/DetailResponse.java` | DTO de respuesta a la recepción de lecturas con `boolean saved` y `String reason` | F3 |
+| `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Expone `POST /activation` (Preset) y `POST /orders/{orderNumber}/details` (lecturas en tiempo real con descarte y actualización de cabecera) | F3 |
 
 ## 8. `security/` y `auth/`
 
@@ -234,6 +255,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `src/main/resources/application-mysqldev.properties` y `-mysqlprod.properties` | Perfiles de desarrollo y producción | Cátedra |
 | `src/test/java/.../Iw3ApplicationTests.java` | Un test: que la aplicación arranque (`contextLoads`). Necesita MySQL | Cátedra |
 | `src/test/java/.../ActivationPasswordGeneratorTest.java` | Prueba unitaria del generador de contraseñas (rango 10000–99999 y entropía). Sin base de datos | F2 |
+| `src/test/java/.../OrderDetailValidatorTest.java` | Pruebas unitarias de las reglas de descarte del caudalímetro (válidas, masa igual, caudal, masa, densidad, NaN, motivos acumulados). Sin Spring Boot | F3 |
 
 ---
 
