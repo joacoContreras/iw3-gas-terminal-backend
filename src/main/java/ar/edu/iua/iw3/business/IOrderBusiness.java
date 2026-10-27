@@ -9,6 +9,7 @@ import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.FoundException;
+import ar.edu.iua.iw3.business.exception.ForbiddenException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.model.OrderStatusLog;
@@ -33,4 +34,13 @@ public interface IOrderBusiness {
 	 */
 	public Order registerTare(Integer orderNumber, double weight, String actor)
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException;
+
+	/**
+	 * Activa la carga con la contrasena de la orden (punto 3): comprueba que la orden exista,
+	 * este en estado 2 y que la contrasena sea correcta, y guarda activationDateTime (solo la
+	 * primera vez: es idempotente). Devuelve la orden para que el controller informe el preset.
+	 * No cambia el estado ni escribe en el historial de estados.
+	 */
+	public Order activate(Integer orderNumber, Integer password)
+			throws NotFoundException, BadRequestException, ConflictException, ForbiddenException, BusinessException;
 }
