@@ -3385,6 +3385,101 @@
             },
             "description": "Crea la orden que se va a cerrar. Queda en estado 1."
           }
+        },
+        {
+          "name": "Tara de la orden de cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('activationPasswordClose', String(pm.response.json().activationPassword));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberClose}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberClose}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Registra la tara (estado 1 → 2) y guarda la contraseña en activationPasswordClose."
+          }
+        },
+        {
+          "name": "Activar la orden de cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('activa: 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"password\": {{activationPasswordClose}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Activa la carga con la contraseña de la tara (la orden sigue en estado 2)."
+          }
         }
       ]
     }
