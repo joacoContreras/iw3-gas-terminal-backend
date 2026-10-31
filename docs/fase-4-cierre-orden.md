@@ -352,3 +352,45 @@ Sin `@RequestBody` ni `consumes`: el cierre no necesita datos, solo el número d
 ### 3. El bloqueo de lecturas (código de la Fase 3, sin cambios)
 
 `OrderDetailBusiness.add` ya tenía esta condición: `if (order.getStatus() != INITIAL_WEIGHING_REGISTERED || order.getActivationDateTime() == null) → ConflictException`. Al pasar la orden a 3, todas las lecturas siguientes caen ahí. La Fase 3 lo había anticipado forzando `status = 3` con SQL (sección 7.6 de su informe); la Fase 4 lo comprobó con el endpoint real.
+
+## E. Trazabilidad de los datos
+
+| Dato | Origen | Dónde queda | Quién lo cambia en el cierre |
+|---|---|---|---|
+| `orderNumber` | Path de la URL | Solo para buscar la orden | Nadie |
+| Usuario | JWT (`getUserLogged()`) | `order_status_logs.actor` | `logStatus` |
+| Estado | `OrderStatus.CLOSED_FOR_LOADING` | `orders.status` = 3 | `OrderBusiness.close` |
+| Fecha y hora del cierre | `LocalDateTime.now()` en el servidor | `order_status_logs.date_time` | `logStatus` |
+| Observación | Texto fijo `"Orden cerrada para carga"` | `order_status_logs.observations` | `logStatus` |
+| Estado anterior | `order.getStatus()` antes del cambio (2) | `order_status_logs.from_status` | `OrderBusiness.close` |
+| Fechas de carga y últimos valores | Lecturas de la Fase 3 | `orders.loading_*`, `orders.last_*` | **Nadie**: el cierre no los toca |
+
+## F. Ejemplo práctico de punta a punta
+
+1. SAP crea la orden 90001 → estado 1 (historial: `null → 1`).
+2. La balanza registra la tara → estado 2 y contraseña 48213 (historial: `1 → 2`).
+3. El sistema de carga se activa con 48213 → recibe el preset 15000 kg (estado 2).
+4. Llegan lecturas: 500 kg, 1200 kg… La cabecera queda con `lastAccumulatedMass` 1200 y `loadingEndDateTime` = la hora de la última lectura.
+5. **Cierre:** `POST /api/v1/integration/loader/orders/90001/close` → 200 con `"status" : 3`. El historial suma `2 → 3`, actor `admin`, "Orden cerrada para carga".
+6. Llega una lectura tarde (1500 kg) → 409 "no acepta lecturas"; `order_details` sigue con 2 filas y la cabecera sigue en 1200.
+7. Se intenta cerrar otra vez → 409 "no se puede cerrar … (estado 3)".
+8. Próximo paso (Fase 5): la balanza envía el pesaje final y la orden pasa a 4.
+
+## G. Preguntas del profesor
+
+1. ¿Qué pide exactamente el Punto 4 de la consigna y cómo lo resolvieron?
+2. ¿Por qué el bloqueo de lecturas no necesitó código nuevo?
+3. ¿Por qué la comprobación del estado está fuera del `try`?
+4. ¿Por qué usan `@Transactional(rollbackFor = Exception.class)` y qué se revierte si algo falla?
+5. ¿Qué pasa si una lectura y el cierre llegan al mismo tiempo? ¿Por qué usan `findByOrderNumberForUpdate`?
+6. ¿Por qué `saveAndFlush` y no `save`?
+7. ¿Por qué responden 409 y no 400 cuando la orden ya está cerrada?
+8. ¿Es idempotente el cierre? ¿Por qué la activación sí y el cierre no?
+9. ¿Dónde queda la fecha y hora del cierre? ¿Por qué no agregaron un campo `closeDateTime`?
+10. ¿Por qué el cierre no modifica `loadingEndDateTime`?
+11. ¿Se puede cerrar una orden que nunca se activó? (decisión 30)
+12. ¿Cómo se sabe quién cerró la orden?
+13. ¿Cómo probaron el cierre sin base de datos? ¿Qué es Mockito?
+14. ¿Cómo comprobaron la concurrencia y qué resultados obtuvieron?
+15. ¿Qué limitaciones tiene la fase?
+
