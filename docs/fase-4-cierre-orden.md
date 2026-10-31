@@ -195,3 +195,49 @@ El log de la app no registró ningún `ERROR` ni ningún *deadlock*. En la corri
 ### 7.5 Swagger
 
 `GET /v3/api-docs` publica `POST /api/v1/integration/loader/orders/{orderNumber}/close` en el grupo "Integración sistema de carga": sin `requestBody`, con seguridad `bearerAuth`, el 200 con el esquema `Order` y las respuestas 401, 404, 409 y 500. `/swagger-ui.html` responde 200. La interfaz gráfica no se recorrió a mano: se comprobó el documento OpenAPI, que es lo que la interfaz muestra.
+
+## 8. Cómo probarlo
+
+**Con Postman:** importar `docs/postman/IW3-Gas-Terminal.postman_collection.json`, ejecutar `00 - Autenticación` y después la carpeta `04 - Fase 4: cierre (sistema de carga)`. Cada carpeta crea sus propias órdenes, así que se puede correr sola. Por consola: `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json`.
+
+**Con `curl`** (app en `localhost:8080`, usuario de desarrollo `admin/admin123`):
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/login -d "username=admin&password=admin123")
+
+# Orden 90001 ya creada (SAP), con tara (TMS) y, opcionalmente, activada y con lecturas
+curl -s -X POST http://localhost:8080/api/v1/integration/loader/orders/90001/close \
+     -H "Authorization: Bearer $TOKEN"
+# 200 → la orden con "status" : 3
+
+curl -s -X POST http://localhost:8080/api/v1/integration/loader/orders/90001/details \
+     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+     -d '{"accumulatedMass": 2000, "density": 0.52, "temperature": 18.4, "flowRate": 3600}'
+# 409 → "La orden 90001 no acepta lecturas: debe estar en estado 2 y activada (estado 3, activada=true)"
+
+curl -s -X POST http://localhost:8080/api/v1/integration/loader/orders/90001/close \
+     -H "Authorization: Bearer $TOKEN"
+# 409 → "La orden 90001 no se puede cerrar: debe estar en estado 2 (estado 3)"
+
+curl -s http://localhost:8080/api/v1/orders/90001/status-log -H "Authorization: Bearer $TOKEN"
+# [..., { "fromStatus" : 2, "toStatus" : 3, "actor" : "admin", "observations" : "Orden cerrada para carga", ... }]
+```
+
+Comprobación en la base: `SELECT from_status, to_status, actor, observations, date_time FROM order_status_logs WHERE id_order = (SELECT id FROM orders WHERE order_number = 90001);`
+
+## 9. Hallazgos y limitaciones
+
+| ID | Tipo | Descripción | Evidencia | Estado |
+|---|---|---|---|---|
+| H-23 | Observación | Un `orderNumber` no numérico en la URL responde 400 con el formato por defecto de Spring, no con `StandartResponse`. Pasa igual en todos los endpoints con `{orderNumber}` desde la Fase 2 | Sección 7.4 | No se cambia (comportamiento por defecto de Spring; el TP no tiene manejador global de errores) |
+| H-24 | Deuda menor | `loadForUpdate` está duplicado en `OrderBusiness` y `OrderDetailBusiness` | Código | Se duplicó a propósito para no refactorizar la Fase 3. Se puede unificar en un cambio aparte, con acuerdo del equipo |
+| H-25 | Limitación (análisis de código, **no reproducida**) | `OrderBusiness.activate` (Fase 3) busca la orden **sin** bloqueo y guarda con `saveAndFlush`, que escribe todas las columnas. Si la **primera** activación de una orden coincide con su cierre, la activación podría escribir el estado 2 que leyó antes y deshacer el estado 3, mientras el historial dice 2 → 3. Solo es posible con la decisión 30 (cerrar una orden no activada) y una activación en el mismo instante | Análisis de código | Aceptado para el parcial, como H-16. Arreglo propuesto para el equipo: que `activate` también use `findByOrderNumberForUpdate`. Es un cambio en la Fase 3, fuera del alcance de esta fase |
+
+Siguen vigentes las limitaciones anteriores que afectan al cierre: el token vence en 1 h (H-18) y no hay roles (cualquier usuario autenticado puede cerrar una orden; los roles son del examen final).
+
+## 10. Pendientes
+
+- **Decisión 30, a confirmar por el equipo:** si se decide que el cierre exija la activación, el cambio es una condición más en `OrderBusiness.close` (409), un test y un pedido de Postman.
+- **H-25:** decidir si se agrega el bloqueo a `activate` (cambio de la Fase 3).
+- **Pull Request a `main`:** lo abre Benjamín (o lo pide). Por la decisión 14 necesita la aprobación de 3 de los 4 integrantes.
+- **Fase 5:** pesaje final (estado 3 → 4) y conciliación. No se empieza sin autorización.
