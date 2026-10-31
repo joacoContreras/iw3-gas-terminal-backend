@@ -3655,6 +3655,86 @@
             },
             "description": "Punto 4: cierra la orden. Sin cuerpo; el actor del historial es el usuario del token."
           }
+        },
+        {
+          "name": "Consultar la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('fechas de carga y últimos valores sin cambios', () => {",
+                  "  const h = JSON.parse(pm.collectionVariables.get('closeHeaderBefore'));",
+                  "  ['loadingStartDateTime', 'loadingEndDateTime', 'lastAccumulatedMass', 'lastDensity', 'lastTemperature', 'lastFlowRate'].forEach(k => pm.expect(o[k], k).to.eql(h[k]));",
+                  "});",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}"
+              ]
+            },
+            "description": "El cierre no toca loadingStartDateTime, loadingEndDateTime ni los últimos valores (decisión 32)."
+          }
+        },
+        {
+          "name": "Historial de estados de la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('tres registros (1, 2 y 3)', () => pm.expect(log.length).to.eql(3));",
+                  "pm.test('el último es 2 → 3 con el usuario del token', () => {",
+                  "  const last = log[log.length - 1];",
+                  "  pm.expect(last.fromStatus).to.eql(2);",
+                  "  pm.expect(last.toStatus).to.eql(3);",
+                  "  pm.expect(last.actor).to.eql(pm.collectionVariables.get('username'));",
+                  "  pm.expect(last.observations).to.include('cerrada');",
+                  "  pm.expect(last.dateTime).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}",
+                "status-log"
+              ]
+            },
+            "description": "El cambio 2 → 3 queda registrado con fecha y hora, usuario y observación."
+          }
         }
       ]
     }
