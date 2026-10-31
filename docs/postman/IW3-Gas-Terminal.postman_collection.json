@@ -66,6 +66,26 @@
     {
       "key": "activationDateTimeLoad",
       "value": ""
+    },
+    {
+      "key": "orderNumberClose",
+      "value": ""
+    },
+    {
+      "key": "activationPasswordClose",
+      "value": ""
+    },
+    {
+      "key": "closeHeaderBefore",
+      "value": ""
+    },
+    {
+      "key": "orderNumberClosePending",
+      "value": ""
+    },
+    {
+      "key": "orderNumberCloseBare",
+      "value": ""
     }
   ],
   "item": [
@@ -3300,6 +3320,70 @@
               "type": "noauth"
             },
             "description": "Sin cabecera Authorization → 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Fase 4: cierre (sistema de carga)",
+      "item": [
+        {
+          "name": "Crear orden para la prueba de cierre",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberClose', String((Date.now() + 50) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberClose');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"plannedLoadDateTime\": \"2026-11-05T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-CLOSE-01\", \"plate\": \"CLO01CD\", \"description\": \"Cisterna cierre\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CLOSE-01\", \"name\": \"Pablo\", \"lastName\": \"Cierre\", \"document\": \"37111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CLOSE-01\", \"companyName\": \"Gas Cierre SA\", \"contact\": \"cierre@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea la orden que se va a cerrar. Queda en estado 1."
           }
         }
       ]
