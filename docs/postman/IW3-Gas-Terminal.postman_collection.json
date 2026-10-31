@@ -3578,6 +3578,83 @@
             },
             "description": "Segunda lectura válida (masa creciente): actualiza la cabecera."
           }
+        },
+        {
+          "name": "Cabecera antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 2 con la última masa', () => {",
+                  "  pm.expect(o.status).to.eql(2);",
+                  "  pm.expect(o.lastAccumulatedMass).to.eql(1200);",
+                  "});",
+                  "const h = {};",
+                  "['loadingStartDateTime', 'loadingEndDateTime', 'lastAccumulatedMass', 'lastDensity', 'lastTemperature', 'lastFlowRate'].forEach(k => h[k] = o[k]);",
+                  "pm.collectionVariables.set('closeHeaderBefore', JSON.stringify(h));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}"
+              ]
+            },
+            "description": "Guarda en closeHeaderBefore las fechas de carga y los últimos valores, para comparar después del cierre."
+          }
+        },
+        {
+          "name": "Cerrar la orden (estado 2 → 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('la orden queda en estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('es la orden pedida', () => pm.expect(String(o.orderNumber)).to.eql(pm.collectionVariables.get('orderNumberClose')));",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "description": "Punto 4: cierra la orden. Sin cuerpo; el actor del historial es el usuario del token."
+          }
         }
       ]
     }
