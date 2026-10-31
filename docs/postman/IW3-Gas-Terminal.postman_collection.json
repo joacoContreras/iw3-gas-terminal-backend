@@ -3480,6 +3480,104 @@
             },
             "description": "Activa la carga con la contraseña de la tara (la orden sigue en estado 2)."
           }
+        },
+        {
+          "name": "Lectura válida 1 antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 500.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Primera lectura válida: inicia la carga."
+          }
+        },
+        {
+          "name": "Lectura válida 2 antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1200.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segunda lectura válida (masa creciente): actualiza la cabecera."
+          }
         }
       ]
     }
