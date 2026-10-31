@@ -4123,6 +4123,95 @@
             },
             "description": "Orden para la decisión 30: se cierra sin activación ni lecturas."
           }
+        },
+        {
+          "name": "Tara de la orden sin activar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberCloseBare}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberCloseBare}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pasa la orden a estado 2; no se activa ni recibe lecturas."
+          }
+        },
+        {
+          "name": "Cerrar una orden en estado 2 sin activar ni lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('sin activación ni lecturas', () => {",
+                  "  pm.expect(o.activationDateTime).to.eql(null);",
+                  "  pm.expect(o.loadingStartDateTime).to.eql(null);",
+                  "  pm.expect(o.lastAccumulatedMass).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCloseBare}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCloseBare}}",
+                "close"
+              ]
+            },
+            "description": "Decisión 30 (a confirmar por el equipo): alcanza con que la orden esté en estado 2."
+          }
         }
       ]
     }
