@@ -3817,6 +3817,87 @@
             },
             "description": "La lectura rechazada no se guardó."
           }
+        },
+        {
+          "name": "Activar la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"password\": {{activationPasswordClose}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Con la orden en estado 3 la activación ya no corresponde."
+          }
+        },
+        {
+          "name": "Cerrar otra vez la misma orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de cierre inválido', () => pm.expect(pm.response.json().message).to.include('no se puede cerrar'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "description": "El cierre no es idempotente (decisión 29): la segunda vez responde 409."
+          }
         }
       ]
     }
