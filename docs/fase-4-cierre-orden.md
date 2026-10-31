@@ -394,3 +394,20 @@ Sin `@RequestBody` ni `consumes`: el cierre no necesita datos, solo el número d
 14. ¿Cómo comprobaron la concurrencia y qué resultados obtuvieron?
 15. ¿Qué limitaciones tiene la fase?
 
+## H. Respuestas modelo
+
+1. **Punto 4.** Un endpoint que cierre la orden, bloquee nuevos datos de detalle y la pase a estado 3. Lo resolvimos con `POST /api/v1/integration/loader/orders/{n}/close`: comprueba que la orden exista (404) y esté en estado 2 (409), la pasa a 3 y registra el cambio en `order_status_logs`.
+2. **Bloqueo sin código nuevo.** Desde la Fase 3, `OrderDetailBusiness.add` rechaza con 409 cualquier lectura de una orden que no esté en estado 2. Faltaba solo la transición 2 → 3, que es lo que agrega el cierre. Lo verificamos en Postman y con lecturas en paralelo.
+3. **Fuera del `try`.** El `catch (Exception e)` convierte todo en `BusinessException` (500). Si el `throw` del 409 estuviera adentro, el cliente recibiría 500 en lugar de 409.
+4. **Transacción.** El `UPDATE` de la orden y el `INSERT` del historial tienen que quedar juntos. Como nuestras excepciones son *checked*, Spring no revertiría sin `rollbackFor = Exception.class`. Si falla el `INSERT`, la orden vuelve al estado 2.
+5. **Concurrencia.** `findByOrderNumberForUpdate` ejecuta `SELECT … FOR UPDATE` y bloquea la fila. Las lecturas usan el mismo bloqueo, así que se procesan de a una. Si la lectura llega antes, el cierre espera y ve la cabecera actualizada; si llega después, ve el estado 3 y da 409. Sin el bloqueo, como Hibernate escribe todas las columnas, el cierre podría pisar la cabecera con valores viejos.
+6. **`saveAndFlush`.** Ejecuta el `UPDATE` dentro del `try`. Con `save`, un error de base aparecería al confirmar, fuera de nuestro código, y saldría como 500 de Spring sin el formato `StandartResponse` (hallazgo H-14 de la Fase 3).
+7. **409 y no 400.** La petición está bien formada; el problema es el estado de la orden. 400 es para datos inválidos (por ejemplo, un número de orden que no es número).
+8. **Idempotencia.** La activación devuelve siempre el mismo preset y no cambia nada la segunda vez: reintentarla es inofensivo. Cerrar una orden ya cerrada no es un estado válido de partida (los cambios son unidireccionales) y no debe sumar otra fila al historial; por eso responde 409 (decisión 29).
+9. **Fecha del cierre.** En `order_status_logs.date_time`, en la fila 2 → 3. Agregar un campo duplicaría el dato; la consigna pide registrar cada cambio de estado, y eso ya lo hace el historial (decisión 32).
+10. **`loadingEndDateTime`.** Es la estampa de la última lectura válida (decisión 25), que es lo que pide la consigna como "fin de carga". El cierre puede ocurrir minutos después.
+11. **Decisión 30.** Sí: alcanza con el estado 2, porque la consigna no pide otra cosa. Sirve, por ejemplo, para cerrar una orden cancelada antes de cargar. Queda a confirmar por el equipo.
+12. **Quién cerró.** El controller toma el usuario del JWT con `getUserLogged()` y lo pasa como `actor`; queda en `order_status_logs.actor`. Si llega vacío, se guarda `"sistema"`.
+13. **Mockito.** Crea dobles de los repositorios (`@Mock`) y los inyecta en `OrderBusiness` (`@InjectMocks`). Programamos qué devuelven (`when(...).thenReturn(...)`) y verificamos qué se llamó (`verify`, `ArgumentCaptor`). Así probamos las reglas sin base: 7 tests.
+14. **Concurrencia probada.** Disparamos 50 lecturas en paralelo y un cierre en medio, dos veces. Resultado: ningún 500, una sola fila 2 → 3, ninguna lectura guardada después del cierre y la masa de la cabecera igual al máximo guardado. Dos cierres simultáneos dieron un 200 y un 409.
+15. **Limitaciones.** H-23 (número no numérico: 400 con formato de Spring), H-24 (helper duplicado), H-25 (una primera activación simultánea con el cierre podría deshacerlo; no reproducida, aceptada como H-16), y sin roles (cualquier usuario autenticado puede cerrar).
