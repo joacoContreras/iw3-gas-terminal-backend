@@ -301,3 +301,54 @@ MySQL: orders.status = 3 · nueva fila en order_status_logs · COMMIT libera la 
 
 Las capas son las de la cátedra: el controller solo traduce HTTP, el negocio tiene las reglas y el repositorio habla con la base.
 
+## D. Código paso a paso
+
+### 1. El negocio (`OrderBusiness.close`)
+
+```java
+@Override
+@Transactional(rollbackFor = Exception.class)
+public Order close(Integer orderNumber, String actor) throws NotFoundException, ConflictException, BusinessException {
+    Order order = loadForUpdate(orderNumber);                          // (1) 404 fuera del try, con bloqueo
+    if (order.getStatus() != OrderStatus.INITIAL_WEIGHING_REGISTERED) { // (2) 409 fuera del try
+        throw ConflictException.builder().message("La orden " + orderNumber
+                + " no se puede cerrar: debe estar en estado 2 (estado " + order.getStatus().getCode() + ")").build();
+    }
+    try {
+        OrderStatus from = order.getStatus();                          // (3) se recuerda el 2 para el historial
+        order.setStatus(OrderStatus.CLOSED_FOR_LOADING);               // (4) 2 → 3
+        order = orderDAO.saveAndFlush(order);                          // (5) UPDATE inmediato (H-14)
+        logStatus(order, from, order.getStatus(), actor, "Orden cerrada para carga"); // (6) auditoría
+        return order;
+    } catch (Exception e) {                                            // (7) falla técnica → 500 y rollback
+        log.error(e.getMessage(), e);
+        throw BusinessException.builder().ex(e).build();
+    }
+}
+```
+
+- **(1) y (2) fuera del `try`:** si estuvieran adentro, `catch (Exception e)` atraparía el 404 y el 409 y los convertiría en 500.
+- **(3)** se guarda el estado anterior **antes** de cambiarlo; si no, el historial diría "de 3 a 3".
+- **(6)** `logStatus` pone `"sistema"` si el actor llega vacío.
+- **No** se tocan `loadingEndDateTime` ni los `last*`: el fin de carga es la estampa del último registro válido (decisión 25), no la del cierre.
+
+### 2. El controller (`OrderLoaderRestController.close`)
+
+```java
+@PostMapping(value = "/orders/{orderNumber}/close", produces = MediaType.APPLICATION_JSON_VALUE)
+public ResponseEntity<?> close(@PathVariable Integer orderNumber) {
+    try {
+        User user = getUserLogged();                                   // usuario del JWT
+        Order order = orderBusiness.close(orderNumber, user == null ? null : user.getUsername());
+        return new ResponseEntity<>(order, HttpStatus.OK);
+    } catch (NotFoundException e) { … 404 … }
+      catch (ConflictException e) { … 409 … }
+      catch (BusinessException e) { … 500 … }
+}
+```
+
+Sin `@RequestBody` ni `consumes`: el cierre no necesita datos, solo el número de orden de la URL. `getUserLogged()` viene de `BaseRestController` (decisión 12).
+
+### 3. El bloqueo de lecturas (código de la Fase 3, sin cambios)
+
+`OrderDetailBusiness.add` ya tenía esta condición: `if (order.getStatus() != INITIAL_WEIGHING_REGISTERED || order.getActivationDateTime() == null) → ConflictException`. Al pasar la orden a 3, todas las lecturas siguientes caen ahí. La Fase 3 lo había anticipado forzando `status = 3` con SQL (sección 7.6 de su informe); la Fase 4 lo comprobó con el endpoint real.
