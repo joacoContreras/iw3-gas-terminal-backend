@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import ar.edu.iua.iw3.auth.User;
 import ar.edu.iua.iw3.business.DetailResult;
 import ar.edu.iua.iw3.business.IOrderBusiness;
 import ar.edu.iua.iw3.business.IOrderDetailBusiness;
@@ -32,7 +33,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-/** Punto 3 de la consigna: el sistema de carga se activa con la contraseña y recibe el preset. */
+/**
+ * Puntos 3 y 4 de la consigna: el sistema de carga se activa con la contraseña, recibe el preset,
+ * envía las lecturas del caudalímetro y cierra la orden.
+ */
 @RestController
 @RequestMapping(Constants.URL_INTEGRATION_LOADER)
 @Tag(name = "Integración sistema de carga", description = "Activación de la carga y recepción de lecturas del caudalímetro")
@@ -97,6 +101,32 @@ public class OrderLoaderRestController extends BaseRestController {
 		} catch (BadRequestException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.BAD_REQUEST, e, e.getMessage()),
 					HttpStatus.BAD_REQUEST);
+		} catch (NotFoundException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
+		} catch (ConflictException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
+		} catch (BusinessException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	@Operation(summary = "Cierra la orden para carga",
+			description = "Punto 4: pasa la orden del estado 2 al 3 (Cerrada para carga). Desde ese momento se rechazan "
+					+ "nuevas lecturas del caudalímetro (409). Registra el cambio en el historial de estados con el usuario "
+					+ "del token. No lleva cuerpo. No es idempotente: cerrar otra vez responde 409.")
+	@ApiResponse(responseCode = "200", description = "Orden cerrada; devuelve la orden en estado 3",
+			content = @Content(schema = @Schema(implementation = Order.class)))
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "409", description = "La orden no está en estado 2 (por ejemplo, ya está cerrada)")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@PostMapping(value = "/orders/{orderNumber}/close", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> close(@PathVariable Integer orderNumber) {
+		try {
+			User user = getUserLogged();
+			Order order = orderBusiness.close(orderNumber, user == null ? null : user.getUsername());
+			return new ResponseEntity<>(order, HttpStatus.OK);
 		} catch (NotFoundException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
 		} catch (ConflictException e) {
