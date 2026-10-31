@@ -4064,6 +4064,65 @@
             },
             "description": "Sin cabecera Authorization → 401."
           }
+        },
+        {
+          "name": "Crear orden para cerrar sin activar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberCloseBare', String((Date.now() + 70) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberCloseBare');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberCloseBare}},\n  \"plannedLoadDateTime\": \"2026-11-05T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-CLOSE-03\", \"plate\": \"CLO03CD\", \"description\": \"Cisterna cierre\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CLOSE-01\", \"name\": \"Pablo\", \"lastName\": \"Cierre\", \"document\": \"37111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CLOSE-01\", \"companyName\": \"Gas Cierre SA\", \"contact\": \"cierre@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden para la decisión 30: se cierra sin activación ni lecturas."
+          }
         }
       ]
     }
