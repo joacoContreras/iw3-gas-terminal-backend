@@ -3735,6 +3735,88 @@
             },
             "description": "El cambio 2 → 3 queda registrado con fecha y hora, usuario y observación."
           }
+        },
+        {
+          "name": "Lectura después del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de lecturas bloqueadas', () => pm.expect(pm.response.json().message).to.include('no acepta lecturas'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1500.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Desde el estado 3 se bloquean los nuevos datos de detalle (Punto 4)."
+          }
+        },
+        {
+          "name": "Histórico de lecturas tras el cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('solo las dos lecturas previas al cierre', () => pm.expect(pm.response.json().page.totalElements).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "description": "La lectura rechazada no se guardó."
+          }
         }
       ]
     }
