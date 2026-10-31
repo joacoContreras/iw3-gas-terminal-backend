@@ -65,3 +65,62 @@ Otras decisiones técnicas de la fase:
 | `CLAUDE.md`, `docs/plan-de-trabajo.md`, `docs/guia-estudio-src.md`, `docs/pdf/README.md`, `docs/pdf/guia-estudio-src.pdf` | Modificados | Estado del proyecto, decisiones 29 a 32 y guía del código | Commits `docs` de la fase |
 
 **No se tocaron:** `OrderDetailBusiness`, `OrderDetailValidator`, `Order`, `OrderRepository`, `Constants`, `SecurityConfiguration` ni el `pom.xml`. No hay tablas ni columnas nuevas.
+
+## 4. Recorrido de `POST /api/v1/integration/loader/orders/{orderNumber}/close`
+
+1. **Filtro JWT** (`JWTAuthorizationFilter`, de la cátedra). Sin token, o con un token inválido, responde **401** y la petición no llega al controller. La ruta no figura entre las públicas de `SecurityConfiguration`, así que la cubre `anyRequest().authenticated()`.
+2. **Controller** — `OrderLoaderRestController.close(@PathVariable Integer orderNumber)`. Spring convierte `{orderNumber}` a `Integer`; si no es numérico, responde **400** antes de entrar al método (H-23). No hay `@RequestBody`: un cuerpo, si llega, se ignora. Toma el usuario con `getUserLogged()` y llama a `orderBusiness.close(orderNumber, username)`.
+3. **Negocio** — `OrderBusiness.close`, dentro de una transacción (`@Transactional(rollbackFor = Exception.class)`):
+   1. `loadForUpdate(orderNumber)` → `orderDAO.findByOrderNumberForUpdate` ejecuta `SELECT … FOR UPDATE` y **bloquea la fila** hasta el fin de la transacción. Una lectura o un cierre de la misma orden que llegue en ese momento espera. Si la consulta falla, `BusinessException` (500). Si no hay fila, `NotFoundException` (**404**), fuera del `try`.
+   2. Si el estado no es `INITIAL_WEIGHING_REGISTERED` (2), `ConflictException` (**409**) con el estado actual en el mensaje, fuera del `try`.
+   3. Dentro del `try`: guarda `from = 2`, pone el estado en `CLOSED_FOR_LOADING` (3), ejecuta `orderDAO.saveAndFlush(order)` (`UPDATE orders …`) y `logStatus(order, 2, 3, actor, "Orden cerrada para carga")` (`INSERT INTO order_status_logs …`).
+   4. Si algo del paso 3 falla, `catch (Exception e)` → `BusinessException` y el *rollback* deshace las dos escrituras.
+4. **Fin de la transacción:** `COMMIT`. Se liberan el bloqueo de la fila y quedan confirmados el estado 3 y la fila del historial.
+5. **Respuesta:** el controller devuelve `200` con la orden. Las excepciones se traducen con `response.build(status, e, e.getMessage())` (formato `StandartResponse`): 404, 409 o 500.
+
+**Qué pasa después con una lectura.** `OrderDetailBusiness.add` también toma el bloqueo de la fila. Si llega mientras el cierre está en curso, espera; cuando el cierre confirma, la lectura lee el estado 3 y responde **409**: *"La orden N no acepta lecturas: debe estar en estado 2 y activada (estado 3, activada=true)"*. No escribe nada.
+
+## 5. Funciones y métodos
+
+### `IOrderBusiness.close` — `SRC/business/IOrderBusiness.java`
+
+`Order close(Integer orderNumber, String actor) throws NotFoundException, ConflictException, BusinessException`. Contrato del cierre, documentado con Javadoc: qué comprueba (existencia y estado 2), qué cambia (estado 3), qué escribe (historial) y qué **no** toca (fechas de carga, últimos valores).
+
+### `OrderBusiness.close` — `SRC/business/OrderBusiness.java`
+
+| | |
+|---|---|
+| Parámetros | `orderNumber`: número de la orden (viene del path). `actor`: usuario del token (puede ser `null`) |
+| Retorno | La orden ya en estado 3 (la que devolvió `saveAndFlush`) |
+| Validaciones | 404 si no existe; 409 si el estado no es 2 (incluye cerrar dos veces). Las dos fuera del `try` |
+| Dependencias | `orderDAO` (`OrderRepository`), `statusLogDAO` (a través de `logStatus`) |
+| Errores | `NotFoundException` → 404 · `ConflictException` → 409 · `BusinessException` → 500 (falla técnica de la consulta, del `UPDATE` o del `INSERT`) |
+| Transacción | `@Transactional(rollbackFor = Exception.class)`: las excepciones de negocio son *checked* y sin `rollbackFor` Spring no revertiría |
+| No modifica | `loadingStartDateTime`, `loadingEndDateTime`, `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `activationPassword`, `activationDateTime` |
+
+### `OrderBusiness.loadForUpdate` (privado, nuevo)
+
+Busca con `findByOrderNumberForUpdate`. Envuelve la consulta en un `try` (un error técnico sale como `BusinessException`) y arma el 404 **fuera** del `try`, con el mismo texto que `load`: `"No se encuentra la Orden numero=N"`. Es equivalente al de `OrderDetailBusiness` (H-24).
+
+### `OrderBusiness.logStatus` (privado, existente, sin cambios)
+
+Guarda una fila `OrderStatusLog(order, from, to, now, actor, observations)`. Si el actor es `null` o está en blanco, usa `"sistema"`.
+
+### `OrderLoaderRestController.close` — `SRC/integration/loader/controllers/OrderLoaderRestController.java`
+
+`@PostMapping(value = "/orders/{orderNumber}/close", produces = APPLICATION_JSON_VALUE)`, sin `consumes` ni `@RequestBody`. Un `try/catch` por excepción, igual que el resto de los controllers. Swagger: `@Operation` y `@ApiResponse` para 200 (esquema `Order`), 401, 404, 409 y 500.
+
+### `OrderBusinessCloseTest` — `src/test/java/ar/edu/iua/iw3/business/OrderBusinessCloseTest.java`
+
+JUnit 5 + Mockito (`@ExtendWith(MockitoExtension.class)`). `@Mock` de `OrderRepository` y `OrderStatusLogRepository`; `@InjectMocks OrderBusiness`. No usa la base. Detalle de los casos en la sección 7.1.
+
+## 6. Relación con la consigna
+
+| Consigna | Dónde se cumple |
+|---|---|
+| "Un endpoint que permita cerrar la orden" | `POST /integration/loader/orders/{orderNumber}/close` |
+| "bloqueando la recepción de nuevos datos de detalle" | La transición a 3 activa el 409 de `OrderDetailBusiness.add` (Fase 3); verificado en Postman y en la prueba de concurrencia |
+| "la orden pasa a estado 3: Cerrada para carga" | `order.setStatus(OrderStatus.CLOSED_FOR_LOADING)` |
+| Cambios de estado secuenciales y unidireccionales | Solo 2 → 3; desde 1, 3 o 4 responde 409 (decisión 29) |
+| Cada cambio registrado: fecha y hora, usuario o proceso, observaciones | Fila en `order_status_logs` con `dateTime`, `actor` (usuario del token) y `"Orden cerrada para carga"` |
+| Notas de estados: los datos de carga llegan en estado 2 | Las lecturas solo se aceptan en estado 2; el diagrama del PDF rotula el 3 como "proceso de carga", pero el anexo y el requisito del final ("tiempo transcurrido, solo estado 2") confirman la interpretación vigente desde la Fase 3 |
