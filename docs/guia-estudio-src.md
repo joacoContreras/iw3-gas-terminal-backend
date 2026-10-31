@@ -2,11 +2,11 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 27/10/2026, al cierre de la Fase 3 (activación de la carga y lecturas del caudalímetro).
+**Última actualización:** 31/10/2026, al cierre de la Fase 4 (cierre de la orden).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3.
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 · *F4* = creado o cambiado en la Fase 4.
 
 ---
 
@@ -37,7 +37,7 @@ Los estados de la orden son secuenciales, nunca vuelven atrás:
 | 1 | **Punto 1:** SAP envía la orden y se crea en estado 1 | Hecha |
 | 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Hecha |
 | 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Hecha |
-| 4 | **Punto 4:** cerrar la orden (estado 3) | Pendiente |
+| 4 | **Punto 4:** cerrar la orden (estado 2 → 3) y bloquear nuevas lecturas | Hecha (rama `fase-4-cierre-orden`) |
 | 5 | **Punto 5:** pesaje final, estado 4 y conciliación | Pendiente |
 
 ## 3. Para qué sirve cada carpeta (lo que hay que recordar)
@@ -102,8 +102,8 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 | Archivo | Qué es | Origen |
 |---|---|---|
-| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare` y `activate` | F1 + F2 + F3 |
-| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare` y `activate` | F1 + F2 + F3 |
+| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare`, `activate` y `close` | F1 + F2 + F3 + F4 |
+| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare`, `activate` y `close` | F1 + F2 + F3 + F4 |
 | `OrderDetailValidator.java` | Función pura que evalúa las condiciones de descarte del caudalímetro (caudal, masa, masa anterior y densidad) | F3 |
 | `DetailResult.java` | DTO interno del resultado de una lectura: booleano `saved` y motivo `reason` | F3 |
 | `IOrderDetailBusiness.java` | Interfaz de negocio de las lecturas del caudalímetro (`add` y `list`) | F3 |
@@ -120,7 +120,7 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. Así los controllers no dependen de cómo está escrita la regla.
 
-**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`, `registerTare(orderNumber, weight, actor)`, `activate(orderNumber, password)`.
+**Operaciones de `IOrderBusiness` hoy:** `list(Pageable)`, `load(orderNumber)`, `listStatusLog(orderNumber)`, `add(order, actor)`, `registerTare(orderNumber, weight, actor)`, `activate(orderNumber, password)`, `close(orderNumber, actor)`.
 
 ### Qué hace `OrderBusiness.registerTare` (paso a paso)
 
@@ -146,9 +146,18 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 6. Si `activationDateTime` es nulo, lo guarda con la hora actual (`saveAndFlush`, para que un error de base salga dentro del `try`). Si ya estaba, **no lo toca**: la activación es idempotente (activar de nuevo con la contraseña correcta devuelve el mismo preset).
 7. No cambia el estado (la orden sigue en 2) y **no escribe en el historial** de estados. Devuelve la orden; el controller responde el `preset`.
 
+### Qué hace `OrderBusiness.close` (paso a paso) — F4
+
+1. Busca la orden con `loadForUpdate` → `findByOrderNumberForUpdate` (`SELECT … FOR UPDATE`): **bloquea la fila** hasta el fin de la transacción, así un cierre y una lectura de la misma orden se procesan de a uno. Si no existe, 404.
+2. Si la orden no está en estado 2, 409 `ConflictException` ("no se puede cerrar … (estado X)"). Cerrar dos veces también da 409: **no** es idempotente.
+3. Las comprobaciones 1 y 2 van **fuera del try/catch**.
+4. Dentro de `@Transactional(rollbackFor = Exception.class)`: recuerda el estado anterior (2), pasa a `CLOSED_FOR_LOADING` (3), guarda con `saveAndFlush` y escribe el historial con `logStatus` (de 2 a 3, usuario del token, "Orden cerrada para carga").
+5. **No toca** las fechas de carga, los últimos valores ni la contraseña. La fecha del cierre queda en `order_status_logs`.
+6. El bloqueo de lecturas no es código nuevo: `OrderDetailBusiness.add` ya rechaza con 409 todo lo que no esté en estado 2.
+
 ### Qué hace `OrderDetailBusiness.add` (paso a paso) — F3
 
-1. Carga la orden con `orderBusiness.load(orderNumber)` (404 si no existe).
+1. Carga la orden con bloqueo de fila (`loadForUpdate` → `findByOrderNumberForUpdate`; 404 si no existe).
 2. Valida presencia obligatoria de los cuatro valores numéricos (`accumulatedMass`, `density`, `temperature`, `flowRate`). Si alguno es nulo, 400 `BadRequestException`.
 3. Valida que la orden esté en estado 2 (`INITIAL_WEIGHING_REGISTERED`) y activada (`activationDateTime != null`). Si no, 409 `ConflictException`.
 4. Evalúa descarte con `OrderDetailValidator.discardReasons(...)` pasando la última masa de la cabecera. Si hay motivos, devuelve `DetailResult.discarded(...)` sin persistir nada.
@@ -216,7 +225,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `loader/model/ActivationResponse.java` | DTO de respuesta de la activación con `Double preset` (kg a cargar) | F3 |
 | `loader/model/DetailRequest.java` | DTO del pedido de lecturas: `Double` para los 4 campos numéricos (sin `timestamp`: la estampa la pone el servidor) | F3 |
 | `loader/model/DetailResponse.java` | DTO de respuesta a la recepción de lecturas con `boolean saved` y `String reason` | F3 |
-| `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Expone `POST /activation` (Preset) y `POST /orders/{orderNumber}/details` (lecturas en tiempo real con descarte y actualización de cabecera) | F3 |
+| `loader/controllers/OrderLoaderRestController.java` | La puerta del sistema de carga. Expone `POST /activation` (Preset), `POST /orders/{orderNumber}/details` (lecturas en tiempo real con descarte y actualización de cabecera) y `POST /orders/{orderNumber}/close` (cierre, estado 2 → 3) | F3 + F4 |
 
 ## 8. `security/` y `auth/`
 
@@ -256,6 +265,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `src/test/java/.../Iw3ApplicationTests.java` | Un test: que la aplicación arranque (`contextLoads`). Necesita MySQL | Cátedra |
 | `src/test/java/.../ActivationPasswordGeneratorTest.java` | Prueba unitaria del generador de contraseñas (rango 10000–99999 y entropía). Sin base de datos | F2 |
 | `src/test/java/.../OrderDetailValidatorTest.java` | Pruebas unitarias de las reglas de descarte del caudalímetro (válidas, masa igual, caudal, masa, densidad, NaN, motivos acumulados). Sin Spring Boot | F3 |
+| `src/test/java/.../OrderBusinessCloseTest.java` | Pruebas unitarias del cierre con Mockito (repositorios simulados): 404, 409 en los estados 1, 3 y 4, transición 2 → 3 con una fila de historial, actor `"sistema"` por defecto y cabecera sin cambios. Sin base de datos | F4 |
 
 ---
 
@@ -268,6 +278,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `POST /api/v1/integration/tms/orders/{n}/tare` | **Punto 2:** la balanza envía la tara; devuelve la contraseña de activación de 5 dígitos | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/activation` | **Punto 3:** el sistema de carga se activa con `orderNumber` y `password`; devuelve el `preset`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{n}/details` | **Punto 3:** una lectura del caudalímetro. Responde `{ saved, reason }`: guardada o descartada, siempre 200 | 200, 400, 401, 404, 409, 500 |
+| `POST /api/v1/integration/loader/orders/{n}/close` | **Punto 4:** cierra la orden (estado 2 → 3) y desde ahí se rechazan las lecturas. Sin cuerpo; registra el cambio en el historial con el usuario del token. Responde la orden | 200, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
 | `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
@@ -285,10 +296,10 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | `docker-compose.yml` | La base MySQL (contenedor `iw3-gas-mysql`, puerto 3306, base `iw3_db`) |
 | `CLAUDE.md` | Estado del proyecto y reglas del equipo |
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
-| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
+| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md`, `docs/fase-4-cierre-orden.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
 | `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
 | `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
-| `docs/postman/` | Colección Postman (65 pedidos, 160 verificaciones: carpetas 00 a 03) |
+| `docs/postman/` | Colección Postman (86 pedidos, 204 verificaciones: carpetas 00 a 04) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 
@@ -322,6 +333,10 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | Pedidos con `Double` e `Integer` (F3) | Un campo ausente llega como `null` y da 400; con primitivos llegaría como 0 y se descartaría |
 | Masa anterior = la de la cabecera (F3) | No se recorre el histórico en cada lectura; una masa igual a la anterior es válida |
 | `saveAndFlush` en las lecturas y la activación (F3) | Un error de base sale dentro del `try` y responde con `StandartResponse` |
+| Cierre solo desde el estado 2, no idempotente (F4) | Los estados avanzan de a uno; cerrar dos veces es un error del cliente y no debe sumar otra fila al historial |
+| Cierre con bloqueo pesimista (F4) | Hibernate escribe todas las columnas: sin bloqueo, un cierre podría pisar la cabecera que acaba de actualizar una lectura |
+| Sin campo `closeDateTime` (F4) | La fecha y el usuario del cierre ya quedan en `order_status_logs` |
+| Cierre sin exigir activación ni lecturas (F4, decisión 30, a confirmar por el equipo) | La consigna solo pide el estado esperado |
 
 ## 15. Buscador rápido: "si quiero..., voy a..."
 
@@ -335,6 +350,7 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | Cambiar la generación de contraseñas | `business/ActivationPasswordGenerator.java` |
 | Cambiar las reglas de descarte de las lecturas | `business/OrderDetailValidator.java` |
 | Cambiar lo que pasa al recibir una lectura | `business/OrderDetailBusiness.java` (`add`) |
+| Cambiar la regla del cierre de la orden | `business/OrderBusiness.java` (`close`) |
 | Cambiar un código HTTP | El controller del endpoint (`integration/sap/...`, `integration/tms/...`, `integration/loader/...` o `controllers/...`) |
 | Agregar una URL | `controllers/Constants.java` y el controller |
 | Abrir o cerrar una ruta sin token | `security/SecurityConfiguration.java` |

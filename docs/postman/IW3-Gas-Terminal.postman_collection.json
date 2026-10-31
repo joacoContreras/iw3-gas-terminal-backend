@@ -66,6 +66,26 @@
     {
       "key": "activationDateTimeLoad",
       "value": ""
+    },
+    {
+      "key": "orderNumberClose",
+      "value": ""
+    },
+    {
+      "key": "activationPasswordClose",
+      "value": ""
+    },
+    {
+      "key": "closeHeaderBefore",
+      "value": ""
+    },
+    {
+      "key": "orderNumberClosePending",
+      "value": ""
+    },
+    {
+      "key": "orderNumberCloseBare",
+      "value": ""
     }
   ],
   "item": [
@@ -3300,6 +3320,897 @@
               "type": "noauth"
             },
             "description": "Sin cabecera Authorization → 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Fase 4: cierre (sistema de carga)",
+      "item": [
+        {
+          "name": "Crear orden para la prueba de cierre",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberClose', String((Date.now() + 50) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberClose');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"plannedLoadDateTime\": \"2026-11-05T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-CLOSE-01\", \"plate\": \"CLO01CD\", \"description\": \"Cisterna cierre\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CLOSE-01\", \"name\": \"Pablo\", \"lastName\": \"Cierre\", \"document\": \"37111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CLOSE-01\", \"companyName\": \"Gas Cierre SA\", \"contact\": \"cierre@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea la orden que se va a cerrar. Queda en estado 1."
+          }
+        },
+        {
+          "name": "Tara de la orden de cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('activationPasswordClose', String(pm.response.json().activationPassword));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberClose}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberClose}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Registra la tara (estado 1 → 2) y guarda la contraseña en activationPasswordClose."
+          }
+        },
+        {
+          "name": "Activar la orden de cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('activa: 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"password\": {{activationPasswordClose}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Activa la carga con la contraseña de la tara (la orden sigue en estado 2)."
+          }
+        },
+        {
+          "name": "Lectura válida 1 antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 500.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Primera lectura válida: inicia la carga."
+          }
+        },
+        {
+          "name": "Lectura válida 2 antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1200.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segunda lectura válida (masa creciente): actualiza la cabecera."
+          }
+        },
+        {
+          "name": "Cabecera antes del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 2 con la última masa', () => {",
+                  "  pm.expect(o.status).to.eql(2);",
+                  "  pm.expect(o.lastAccumulatedMass).to.eql(1200);",
+                  "});",
+                  "const h = {};",
+                  "['loadingStartDateTime', 'loadingEndDateTime', 'lastAccumulatedMass', 'lastDensity', 'lastTemperature', 'lastFlowRate'].forEach(k => h[k] = o[k]);",
+                  "pm.collectionVariables.set('closeHeaderBefore', JSON.stringify(h));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}"
+              ]
+            },
+            "description": "Guarda en closeHeaderBefore las fechas de carga y los últimos valores, para comparar después del cierre."
+          }
+        },
+        {
+          "name": "Cerrar la orden (estado 2 → 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('la orden queda en estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('es la orden pedida', () => pm.expect(String(o.orderNumber)).to.eql(pm.collectionVariables.get('orderNumberClose')));",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "description": "Punto 4: cierra la orden. Sin cuerpo; el actor del historial es el usuario del token."
+          }
+        },
+        {
+          "name": "Consultar la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('fechas de carga y últimos valores sin cambios', () => {",
+                  "  const h = JSON.parse(pm.collectionVariables.get('closeHeaderBefore'));",
+                  "  ['loadingStartDateTime', 'loadingEndDateTime', 'lastAccumulatedMass', 'lastDensity', 'lastTemperature', 'lastFlowRate'].forEach(k => pm.expect(o[k], k).to.eql(h[k]));",
+                  "});",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}"
+              ]
+            },
+            "description": "El cierre no toca loadingStartDateTime, loadingEndDateTime ni los últimos valores (decisión 32)."
+          }
+        },
+        {
+          "name": "Historial de estados de la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('tres registros (1, 2 y 3)', () => pm.expect(log.length).to.eql(3));",
+                  "pm.test('el último es 2 → 3 con el usuario del token', () => {",
+                  "  const last = log[log.length - 1];",
+                  "  pm.expect(last.fromStatus).to.eql(2);",
+                  "  pm.expect(last.toStatus).to.eql(3);",
+                  "  pm.expect(last.actor).to.eql(pm.collectionVariables.get('username'));",
+                  "  pm.expect(last.observations).to.include('cerrada');",
+                  "  pm.expect(last.dateTime).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}",
+                "status-log"
+              ]
+            },
+            "description": "El cambio 2 → 3 queda registrado con fecha y hora, usuario y observación."
+          }
+        },
+        {
+          "name": "Lectura después del cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de lecturas bloqueadas', () => pm.expect(pm.response.json().message).to.include('no acepta lecturas'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1500.0,\n  \"density\": 0.52,\n  \"temperature\": 18.5,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Desde el estado 3 se bloquean los nuevos datos de detalle (Punto 4)."
+          }
+        },
+        {
+          "name": "Histórico de lecturas tras el cierre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));",
+                  "pm.test('solo las dos lecturas previas al cierre', () => pm.expect(pm.response.json().page.totalElements).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberClose}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberClose}}",
+                "details"
+              ]
+            },
+            "description": "La lectura rechazada no se guardó."
+          }
+        },
+        {
+          "name": "Activar la orden cerrada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClose}},\n  \"password\": {{activationPasswordClose}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Con la orden en estado 3 la activación ya no corresponde."
+          }
+        },
+        {
+          "name": "Cerrar otra vez la misma orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de cierre inválido', () => pm.expect(pm.response.json().message).to.include('no se puede cerrar'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "description": "El cierre no es idempotente (decisión 29): la segunda vez responde 409."
+          }
+        },
+        {
+          "name": "Crear orden que queda en estado 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberClosePending', String((Date.now() + 60) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberClosePending');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberClosePending}},\n  \"plannedLoadDateTime\": \"2026-11-05T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-CLOSE-02\", \"plate\": \"CLO02CD\", \"description\": \"Cisterna cierre\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CLOSE-01\", \"name\": \"Pablo\", \"lastName\": \"Cierre\", \"document\": \"37111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CLOSE-01\", \"companyName\": \"Gas Cierre SA\", \"contact\": \"cierre@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden sin tara: queda en estado 1."
+          }
+        },
+        {
+          "name": "Cerrar una orden en estado 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rechazada: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('informa el estado actual', () => pm.expect(pm.response.json().message).to.include('estado 1'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClosePending}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClosePending}}",
+                "close"
+              ]
+            },
+            "description": "Solo se cierra desde el estado 2 (decisión 29)."
+          }
+        },
+        {
+          "name": "Cerrar una orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('no existe: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje de orden inexistente', () => pm.expect(pm.response.json().message).to.include('No se encuentra'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/1999999999/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "1999999999",
+                "close"
+              ]
+            },
+            "description": "Número que la colección nunca genera (los números se toman módulo 10^9)."
+          }
+        },
+        {
+          "name": "Cerrar sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Sin cabecera Authorization → 401."
+          }
+        },
+        {
+          "name": "Crear orden para cerrar sin activar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberCloseBare', String((Date.now() + 70) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberCloseBare');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberCloseBare}},\n  \"plannedLoadDateTime\": \"2026-11-05T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-CLOSE-03\", \"plate\": \"CLO03CD\", \"description\": \"Cisterna cierre\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CLOSE-01\", \"name\": \"Pablo\", \"lastName\": \"Cierre\", \"document\": \"37111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CLOSE-01\", \"companyName\": \"Gas Cierre SA\", \"contact\": \"cierre@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden para la decisión 30: se cierra sin activación ni lecturas."
+          }
+        },
+        {
+          "name": "Tara de la orden sin activar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberCloseBare}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberCloseBare}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pasa la orden a estado 2; no se activa ni recibe lecturas."
+          }
+        },
+        {
+          "name": "Cerrar una orden en estado 2 sin activar ni lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 3', () => pm.expect(o.status).to.eql(3));",
+                  "pm.test('sin activación ni lecturas', () => {",
+                  "  pm.expect(o.activationDateTime).to.eql(null);",
+                  "  pm.expect(o.loadingStartDateTime).to.eql(null);",
+                  "  pm.expect(o.lastAccumulatedMass).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCloseBare}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCloseBare}}",
+                "close"
+              ]
+            },
+            "description": "Decisión 30 (a confirmar por el equipo): alcanza con que la orden esté en estado 2."
           }
         }
       ]
