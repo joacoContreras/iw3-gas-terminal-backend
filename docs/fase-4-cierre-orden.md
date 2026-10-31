@@ -124,3 +124,74 @@ JUnit 5 + Mockito (`@ExtendWith(MockitoExtension.class)`). `@Mock` de `OrderRepo
 | Cambios de estado secuenciales y unidireccionales | Solo 2 → 3; desde 1, 3 o 4 responde 409 (decisión 29) |
 | Cada cambio registrado: fecha y hora, usuario o proceso, observaciones | Fila en `order_status_logs` con `dateTime`, `actor` (usuario del token) y `"Orden cerrada para carga"` |
 | Notas de estados: los datos de carga llegan en estado 2 | Las lecturas solo se aceptan en estado 2; el diagrama del PDF rotula el 3 como "proceso de carga", pero el anexo y el requisito del final ("tiempo transcurrido, solo estado 2") confirman la interpretación vigente desde la Fase 3 |
+
+## 7. Pruebas ejecutadas (31/10/2026)
+
+Entorno: Windows 11, JDK 21, MySQL 8.0 en Docker (`iw3-gas-mysql`). Las pruebas de API se hicieron sobre una base **descartable** (`iw3_scratch`) con la app en el puerto 8089, para no ensuciar `iw3_db`; al terminar se borró.
+
+### 7.1 Tests de Maven
+
+Línea base **antes** de tocar código: `./mvnw -B test` → **12 tests, 0 fallas**. Con la fase: **19 tests, 0 fallas, 0 errores** (`BUILD SUCCESS`).
+
+| Test (`OrderBusinessCloseTest`) | Qué comprueba |
+|---|---|
+| `close_orderNotFound_throwsNotFound` | Orden inexistente → `NotFoundException` con "No se encuentra la Orden numero=…"; no guarda ni escribe historial |
+| `close_status1_throwsConflict` | Estado 1 → `ConflictException` ("no se puede cerrar", "estado 1"); nada se escribe |
+| `close_status3_alreadyClosed_throwsConflict` | Estado 3 (cerrar dos veces) → 409; nada se escribe |
+| `close_status4_throwsConflict` | Estado 4 → 409; nada se escribe |
+| `close_status2_movesTo3AndLogsOneRow` | Estado 2 → 3; `saveAndFlush` una vez; usa la consulta **con bloqueo** y nunca `findByOrderNumber`; **una** fila de log con from 2, to 3, actor `admin`, observación y fecha |
+| `close_nullOrBlankActor_logsSistema` | Actor `null` o `"  "` → el log queda con `"sistema"` |
+| `close_doesNotChangeLoadingDatesNorLastValues` | Las fechas de carga, los `last*` y la contraseña quedan iguales |
+
+### 7.2 Postman con newman
+
+`npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json --env-var baseUrl=http://localhost:8089` → **86 pedidos, 204 aserciones, 0 fallas**. Las carpetas 00 a 03 (66 pedidos, 163 aserciones) siguen igual; la carpeta 04 suma 20 pedidos y 41 aserciones. Las aserciones de mensajes usan fragmentos (`include`), nunca el texto completo.
+
+Nota de honestidad: la línea base de newman (66 y 163) **no** se corrió antes de cambiar el código, porque la máquina no tenía Node.js. Se instaló durante la fase y la corrida completa se hizo con el código nuevo; las carpetas 00 a 03 no se modificaron y dieron los mismos números esperados.
+
+| Pedidos de la carpeta 04 | Esperado y obtenido |
+|---|---|
+| Crear orden, tara y activación de la orden de cierre | 201, 200, 200 |
+| Dos lecturas válidas (500 y 1200 kg) | 200, `saved: true` |
+| Cabecera antes del cierre | Estado 2 y `lastAccumulatedMass` 1200; se guardan fechas y últimos valores en `closeHeaderBefore` |
+| Cerrar la orden | 200, estado 3, mismo número, sin `activationPassword` |
+| Consultar la orden cerrada | Estado 3; fechas de carga y `last*` **iguales** a los guardados |
+| Historial de estados | 3 filas; la última de 2 a 3, actor `admin`, observación con "cerrada" y fecha |
+| Lectura después del cierre | 409 con "no acepta lecturas" |
+| Histórico de lecturas | `totalElements` 2 (la rechazada no se guardó) |
+| Activar la orden cerrada · cerrar otra vez | 409 · 409 con "no se puede cerrar" |
+| Crear orden en estado 1 y cerrarla | 201 · 409 con "estado 1" |
+| Orden inexistente (`1999999999`) · sin token | 404 con "No se encuentra" · 401 |
+| Decisión 30: crear, tara y cerrar sin activar ni lecturas | 201, 200, 200 con estado 3 y `activationDateTime`, `loadingStartDateTime` y `lastAccumulatedMass` en `null` |
+
+### 7.3 Concurrencia (CA-6)
+
+Script descartable de bash y `curl`, fuera del repo. Una orden activada con 3 lecturas previas; luego **50 lecturas** de masa creciente disparadas en paralelo y un **cierre** lanzado en medio de ellas. Se corrió **dos veces**:
+
+| Medición | Corrida 1 | Corrida 2 |
+|---|---|---|
+| Respuestas de las lecturas | 24 × 200, 26 × 409 | 25 × 200, 25 × 409 |
+| Respuesta del cierre | 200 | 200 |
+| Respuestas 500 | 0 | 0 |
+| Estado final | 3 | 3 |
+| `last_accumulated_mass` = `MAX(accumulated_mass)` de `order_details` | 1240 = 1240 | 1250 = 1250 |
+| Filas 2→3 en el historial | 1 | 1 |
+| Lecturas con `reading_timestamp` posterior a la fecha del cierre | 0 | 0 |
+| `loading_end_date_time` ≤ fecha del cierre | Sí | Sí |
+| Dos cierres simultáneos de otra orden en estado 2 | Un 200 y un 409; 1 fila 2→3 | Un 200 y un 409; 1 fila 2→3 |
+
+El log de la app no registró ningún `ERROR` ni ningún *deadlock*. En la corrida 1, `order_details` quedó con 26 filas (3 previas + 23 nuevas): una de las 24 lecturas con 200 fue un descarte (`saved: false`), porque al serializarse en otro orden llegó con una masa menor que la anterior; es el comportamiento de la Fase 3. En la corrida 2 quedaron 28 filas (3 + 25): ningún descarte.
+
+### 7.4 Casos límite (a mano, con `curl`)
+
+| Caso | Resultado |
+|---|---|
+| `POST …/orders/abc/close` (número no numérico) | **400** con el formato por defecto de Spring (`status`, `error`, `message: "Method parameter 'orderNumber': Failed to convert…"`), no `StandartResponse` (H-23) |
+| `Content-Type: application/json` sin cuerpo | 200; el cuerpo no se lee |
+| `Content-Type: application/json` con `{}` sobre una orden cerrada | 409; el cuerpo se ignora |
+| `GET …/close` | 405 (solo existe `POST`) |
+| Cierre de una orden con lecturas / sin lecturas | 200 en los dos casos (Postman y prueba manual) |
+
+### 7.5 Swagger
+
+`GET /v3/api-docs` publica `POST /api/v1/integration/loader/orders/{orderNumber}/close` en el grupo "Integración sistema de carga": sin `requestBody`, con seguridad `bearerAuth`, el 200 con el esquema `Order` y las respuestas 401, 404, 409 y 500. `/swagger-ui.html` responde 200. La interfaz gráfica no se recorrió a mano: se comprobó el documento OpenAPI, que es lo que la interfaz muestra.
