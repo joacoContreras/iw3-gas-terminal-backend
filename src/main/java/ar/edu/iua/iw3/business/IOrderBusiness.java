@@ -43,4 +43,13 @@ public interface IOrderBusiness {
 	 */
 	public Order activate(Integer orderNumber, Integer password)
 			throws NotFoundException, BadRequestException, ConflictException, ForbiddenException, BusinessException;
+
+	/**
+	 * Cierra la orden para carga (punto 4): comprueba que exista (404) y que este en estado 2
+	 * (409; cerrar dos veces tambien da 409), la pasa al estado 3 y registra el cambio en el
+	 * historial de estados con el actor recibido. Busca la orden con bloqueo de fila para no
+	 * cruzarse con una lectura en curso. No modifica las fechas de carga ni los ultimos valores.
+	 * Desde el estado 3 el sistema rechaza nuevas lecturas.
+	 */
+	public Order close(Integer orderNumber, String actor) throws NotFoundException, ConflictException, BusinessException;
 }
