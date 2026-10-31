@@ -241,3 +241,63 @@ Siguen vigentes las limitaciones anteriores que afectan al cierre: el token venc
 - **H-25:** decidir si se agrega el bloqueo a `activate` (cambio de la Fase 3).
 - **Pull Request a `main`:** lo abre Benjamín (o lo pide). Por la decisión 14 necesita la aprobación de 3 de los 4 integrantes.
 - **Fase 5:** pesaje final (estado 3 → 4) y conciliación. No se empieza sin autorización.
+
+---
+
+# Parte 2 — Guía de estudio de la Fase 4
+
+## A. Objetivo de la fase
+
+Que el sistema de carga pueda **dar por terminada la carga** de una orden. Al cerrarla, la orden pasa del estado 2 (*con pesaje inicial registrado*, donde se reciben las lecturas) al estado 3 (*cerrada para carga*). Desde ese momento el backend **no acepta más lecturas** del caudalímetro, y la orden queda lista para el pesaje final (Fase 5). El cambio queda auditado en el historial de estados.
+
+## B. Conceptos teóricos
+
+### 1. Máquina de estados (dominio de la consigna)
+
+La orden recorre 1 → 2 → 3 → 4, **de a un paso y sin volver atrás**. Cada operación solo es válida en un estado: la tara en el 1, la activación y las lecturas en el 2, el cierre en el 2 y el pesaje final en el 3. Implementarlo es simple: antes de cambiar nada, se compara el estado actual con el esperado y, si no coincide, se rechaza. El enum `OrderStatus` guarda el número (1 a 4) en la base y en el JSON.
+
+### 2. Transacciones y excepciones *checked* (clases 3 y 7 de la cátedra)
+
+`@Transactional` hace que todo el método sea una sola unidad: el `UPDATE` de la orden y el `INSERT` del historial se confirman juntos o no se confirma ninguno. Por defecto, Spring solo revierte ante excepciones *unchecked* (`RuntimeException`). Las de negocio de la cátedra son *checked*: por eso el TP usa `rollbackFor = Exception.class`.
+
+### 3. Bloqueo pesimista (complementario: la cátedra no lo usa)
+
+`@Lock(LockModeType.PESSIMISTIC_WRITE)` hace que la consulta sea `SELECT … FOR UPDATE`: MySQL **bloquea la fila** hasta que termina la transacción. Otra transacción que quiera la misma fila con `FOR UPDATE` espera su turno. Así un cierre y una lectura de la misma orden no se mezclan: o la lectura entra antes (y el cierre ve la cabecera ya actualizada) o entra después (y ve el estado 3 → 409). El bloqueo **optimista** (`@Version`) detecta el choque al guardar y obliga a reintentar; acá se eligió el pesimista porque ya lo usaban las lecturas (hallazgo H-15 de la Fase 3).
+
+### 4. `save` frente a `saveAndFlush` (complementario)
+
+`save` deja el `UPDATE` pendiente hasta el `COMMIT`, que ocurre **después** de que el método terminó, fuera del `try/catch`. Si la base falla en ese momento, Spring responde un 500 con su propio formato. `saveAndFlush` ejecuta el `UPDATE` en el acto, dentro del `try`, y el error sale como `BusinessException` con el formato de la cátedra (lección de H-14).
+
+### 5. Códigos HTTP: 409 frente a 400 (complementario: la cátedra usa 404, 302 y 500)
+
+- **400 Bad Request:** la petición está mal formada (un número que no es número, un campo obligatorio ausente). Repetirla igual nunca va a funcionar.
+- **409 Conflict:** la petición es correcta, pero choca con el **estado actual** del recurso (la orden ya está cerrada, o todavía no tiene tara). Si el estado cambiara, la misma petición podría funcionar.
+- **404:** la orden no existe. **401:** falta el token o no es válido (lo responde el filtro de seguridad).
+
+### 6. Idempotencia (complementario)
+
+Una operación es idempotente si repetirla deja el sistema igual que hacerla una vez. La activación lo es (decisión 19). El cierre **no** (decisión 29): la segunda llamada responde 409 y no agrega otra fila al historial.
+
+## C. Arquitectura
+
+```
+Sistema de carga ── POST /api/v1/integration/loader/orders/{n}/close + JWT
+        │
+        ▼
+JWTAuthorizationFilter ── sin token → 401
+        │
+        ▼
+OrderLoaderRestController.close  (getUserLogged → actor; try/catch → 404 / 409 / 500)
+        │
+        ▼
+IOrderBusiness.close → OrderBusiness.close   @Transactional(rollbackFor = Exception.class)
+        │   loadForUpdate ──▶ OrderRepository.findByOrderNumberForUpdate  (SELECT … FOR UPDATE)
+        │   estado ≠ 2 → ConflictException
+        │   setStatus(3) ──▶ orderDAO.saveAndFlush  (UPDATE orders)
+        │   logStatus ─────▶ statusLogDAO.save      (INSERT order_status_logs)
+        ▼
+MySQL: orders.status = 3 · nueva fila en order_status_logs · COMMIT libera la fila
+```
+
+Las capas son las de la cátedra: el controller solo traduce HTTP, el negocio tiene las reglas y el repositorio habla con la base.
+
