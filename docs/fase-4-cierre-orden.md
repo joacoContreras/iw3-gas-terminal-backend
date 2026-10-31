@@ -411,3 +411,32 @@ Sin `@RequestBody` ni `consumes`: el cierre no necesita datos, solo el número d
 13. **Mockito.** Crea dobles de los repositorios (`@Mock`) y los inyecta en `OrderBusiness` (`@InjectMocks`). Programamos qué devuelven (`when(...).thenReturn(...)`) y verificamos qué se llamó (`verify`, `ArgumentCaptor`). Así probamos las reglas sin base: 7 tests.
 14. **Concurrencia probada.** Disparamos 50 lecturas en paralelo y un cierre en medio, dos veces. Resultado: ningún 500, una sola fila 2 → 3, ninguna lectura guardada después del cierre y la masa de la cabecera igual al máximo guardado. Dos cierres simultáneos dieron un 200 y un 409.
 15. **Limitaciones.** H-23 (número no numérico: 400 con formato de Spring), H-24 (helper duplicado), H-25 (una primera activación simultánea con el cierre podría deshacerlo; no reproducida, aceptada como H-16), y sin roles (cualquier usuario autenticado puede cerrar).
+
+## I. Errores frecuentes
+
+1. **Poner el `throw` del 409 dentro del `try`:** el cliente recibe 500 en lugar de 409.
+2. **Buscar la orden con `load` (sin bloqueo):** compila y pasa las pruebas secuenciales, pero con lecturas simultáneas el cierre puede pisar la cabecera con valores viejos.
+3. **Olvidar `rollbackFor = Exception.class`:** si falla el historial, la orden queda en estado 3 sin registro del cambio.
+4. **Guardar el estado anterior después de cambiarlo:** el historial queda "de 3 a 3".
+5. **Actualizar `loadingEndDateTime` al cerrar:** mezcla el fin de carga (última lectura válida) con el momento del cierre.
+6. **Hacer el cierre idempotente (200 la segunda vez):** suma filas repetidas al historial y oculta un error del cliente.
+7. **Pedir `@RequestBody` o `consumes = JSON`:** el sistema de carga tendría que mandar un cuerpo que no se usa. Con `consumes`, un pedido sin `Content-Type: application/json` daría 415; con un `@RequestBody` obligatorio, uno sin cuerpo daría 400.
+8. **Tocar `OrderDetailBusiness` para "bloquear" las lecturas:** el bloqueo ya existe; basta con la transición.
+9. **Comparar mensajes completos en Postman:** un cambio de redacción rompe la prueba; se usan fragmentos con `include`.
+10. **Reutilizar las variables de la carpeta 03 en la 04:** las carpetas dejan de ser independientes. La 04 usa las suyas (`orderNumberClose`, `activationPasswordClose`, `closeHeaderBefore`, `orderNumberClosePending`, `orderNumberCloseBare`).
+
+## J. Lista de comprobación para rendir
+
+- [ ] Sé citar el Punto 4 y decir qué endpoint lo cumple, con su método, su ruta y sus respuestas (200, 401, 404, 409, 500).
+- [ ] Puedo recorrer la petición: filtro JWT → controller → `OrderBusiness.close` → repositorio → MySQL.
+- [ ] Explico el orden de comprobaciones (404 → 409) y por qué van fuera del `try`.
+- [ ] Explico `@Transactional(rollbackFor = Exception.class)` y qué se revierte.
+- [ ] Explico el bloqueo pesimista y qué pasa con una lectura que llega durante el cierre.
+- [ ] Explico `saveAndFlush` frente a `save` (H-14).
+- [ ] Distingo 409 de 400 y de 404.
+- [ ] Defiendo las decisiones 29 a 32 y sé que la 30 está a confirmar por el equipo.
+- [ ] Sé dónde queda la fecha del cierre y quién lo hizo (`order_status_logs`).
+- [ ] Sé por qué el cierre no toca las fechas de carga ni los últimos valores.
+- [ ] Puedo correr `./mvnw -B test` (19 tests) y la carpeta 04 de Postman, y explicar qué prueba cada caso.
+- [ ] Puedo contar la prueba de concurrencia y sus resultados.
+- [ ] Conozco las limitaciones H-23 a H-25.
