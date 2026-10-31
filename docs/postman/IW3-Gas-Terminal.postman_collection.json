@@ -3992,6 +3992,78 @@
             },
             "description": "Solo se cierra desde el estado 2 (decisión 29)."
           }
+        },
+        {
+          "name": "Cerrar una orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('no existe: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje de orden inexistente', () => pm.expect(pm.response.json().message).to.include('No se encuentra'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/1999999999/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "1999999999",
+                "close"
+              ]
+            },
+            "description": "Número que la colección nunca genera (los números se toman módulo 10^9)."
+          }
+        },
+        {
+          "name": "Cerrar sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberClose}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberClose}}",
+                "close"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Sin cabecera Authorization → 401."
+          }
         }
       ]
     }
