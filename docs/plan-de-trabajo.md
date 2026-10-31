@@ -63,10 +63,10 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 26 | Historial de estados en la activación (D9) | **Aplicada en la Fase 3.** La activación no agrega registros: no es un cambio de estado. | Fase 3 |
 | 27 | Capa de negocio de las lecturas (D10) | **Aplicada en la Fase 3.** `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness`. | Fase 3 |
 | 28 | Consulta del histórico (decisión 11 de la división) | **Aplicada en la Fase 3** (aprobada el 27/10/2026). `GET /orders/{orderNumber}/details` paginado: `size` 20 por defecto y máximo 100, orden fijo por `id` ascendente, `PagedModel`; 404 si la orden no existe. | Fase 3 |
-| 29 | Estados desde los que se puede cerrar | **Propuesta (Fase 4).** Solo desde el estado 2. Cualquier otro estado (1, 3 o 4) responde 409; cerrar dos veces **no** es idempotente (la segunda da 409), a diferencia de la activación. | Fase 4 |
-| 30 | El cierre no exige activación ni lecturas previas | **Propuesta (Fase 4), a confirmar por el equipo.** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
-| 31 | Concurrencia del cierre | **Propuesta (Fase 4).** La orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`, el mismo bloqueo de las lecturas) para que un cierre y una lectura en curso se serialicen y el cierre no pise la cabecera con valores viejos. | Fase 4 |
-| 32 | Qué guarda y qué responde el cierre | **Propuesta (Fase 4).** Una fila en `order_status_logs` (2→3, usuario del token, observación) y respuesta 200 con la orden. No se agregan campos al modelo y `loadingEndDateTime` no se toca (es la estampa del último registro válido). | Fase 4 |
+| 29 | Estados desde los que se puede cerrar | **Aplicada en la Fase 4.** Solo desde el estado 2. Cualquier otro estado (1, 3 o 4) responde 409; cerrar dos veces **no** es idempotente (la segunda da 409), a diferencia de la activación. | Fase 4 |
+| 30 | El cierre no exige activación ni lecturas previas | **Aplicada en la Fase 4; a confirmar por el equipo.** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
+| 31 | Concurrencia del cierre | **Aplicada en la Fase 4** (verificada con 50 lecturas y un cierre simultáneos, sin respuestas 500). La orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`, el mismo bloqueo de las lecturas) para que un cierre y una lectura en curso se serialicen y el cierre no pise la cabecera con valores viejos. | Fase 4 |
+| 32 | Qué guarda y qué responde el cierre | **Aplicada en la Fase 4.** Una fila en `order_status_logs` (2→3, usuario del token, observación) y respuesta 200 con la orden. No se agregan campos al modelo y `loadingEndDateTime` no se toca (es la estampa del último registro válido). | Fase 4 |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -113,12 +113,14 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 | 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. **(Completada e integrada en main)** |
 | 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada e integrada en main, PR #6)** |
 | 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada e integrada en main, PR #7; correcciones de la auditoría en el PR #9, 27/10/2026)** |
-| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Planificada; autorizada el 27/10/2026, sin implementar)** |
+| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Completada y verificada en su rama el 31/10/2026; espera PR a main. Informe: `docs/fase-4-cierre-orden.md`)** |
 | 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |
 
 ### 6.1 Fase 4 en detalle — Cierre de la orden (Punto 4)
 
 **Responsable: Benjamín Alasino (única persona; no se divide).** Autorizada el 27/10/2026. Guía y prompt: `docs/fase-4-guia-de-inicio.md`.
+
+**Estado (31/10/2026): completada y verificada** en la rama `fase-4-cierre-orden`. Los 8 criterios de aceptación se cumplen (19 tests de Maven; newman 86 pedidos y 204 aserciones, 0 fallas; prueba de concurrencia sin respuestas 500). Resultados, decisiones y limitaciones (H-23 a H-25) en `docs/fase-4-cierre-orden.md`.
 
 **Objetivo.** Un endpoint cierra la orden (estado 2 → 3), deja registrado el cambio y, desde ese momento, el sistema rechaza nuevos datos de detalle (consigna, Punto 4).
 
