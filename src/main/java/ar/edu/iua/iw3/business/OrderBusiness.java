@@ -176,6 +176,48 @@ public class OrderBusiness implements IOrderBusiness {
 		return order;
 	}
 
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Order close(Integer orderNumber, String actor) throws NotFoundException, ConflictException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500.
+		// La orden se busca con bloqueo de fila: un cierre y una lectura de la misma orden se serializan
+		Order order = loadForUpdate(orderNumber);
+		if (order.getStatus() != OrderStatus.INITIAL_WEIGHING_REGISTERED) {
+			throw ConflictException.builder().message("La orden " + orderNumber
+					+ " no se puede cerrar: debe estar en estado 2 (estado " + order.getStatus().getCode() + ")").build();
+		}
+		try {
+			OrderStatus from = order.getStatus();
+			order.setStatus(OrderStatus.CLOSED_FOR_LOADING);
+			// saveAndFlush: un error de base sale aca, dentro del try, y no al confirmar (H-14)
+			order = orderDAO.saveAndFlush(order);
+			logStatus(order, from, order.getStatus(), actor, "Orden cerrada para carga");
+			return order;
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	/**
+	 * Busca la orden con bloqueo PESSIMISTIC_WRITE hasta el fin de la transaccion. Equivale al helper
+	 * de OrderDetailBusiness (se duplica a proposito para no refactorizar la Fase 3).
+	 */
+	private Order loadForUpdate(Integer orderNumber) throws NotFoundException, BusinessException {
+		Optional<Order> r;
+		try {
+			r = orderDAO.findByOrderNumberForUpdate(orderNumber);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+		// El 404 va fuera del try: si no, saldria como 500
+		if (r.isEmpty()) {
+			throw NotFoundException.builder().message("No se encuentra la Orden numero=" + orderNumber).build();
+		}
+		return r.get();
+	}
+
 	/** Registra un cambio de estado en el log de auditoria de la orden. */
 	private void logStatus(Order order, OrderStatus from, OrderStatus to, String actor, String observations) {
 		String who = (actor == null || actor.isBlank()) ? "sistema" : actor;
