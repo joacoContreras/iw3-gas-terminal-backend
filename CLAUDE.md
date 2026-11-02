@@ -334,13 +334,15 @@ Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondea
 
 **Fase 4 — Cierre de la orden (Punto 4)** · rama `fase-4-cierre-orden`
 
-- **Estado: COMPLETADA y verificada** en su rama (31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente: PR a `main`
-  con las aprobaciones acordadas y confirmación de la decisión 30 por el equipo.
+- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente:
+  confirmación de la decisión 30 por el equipo.
 - `POST /api/v1/integration/loader/orders/{orderNumber}/close`: estado 2 → 3. Desde ahí se rechazan los
   detalles. Rechazar transiciones inválidas (cerrar dos veces, o desde el estado 1).
 
 **Fase 5 — Pesaje final, conciliación y circuito completo (Punto 5)** · rama `fase-5-conciliacion`
 
+- **Estado: COMPLETADA y verificada** en su rama (02/11/2026; ver `docs/fase-5-conciliacion.md`). Lista para el PR a `main`
+  (borrador, con las aprobaciones de Martín, Contreras y Calvo).
 - `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight`: estado 3 → 4 y devuelve la conciliación.
 - `GET /api/v1/orders/{orderNumber}/reconciliation`: solo para estado 4.
 - Promedios con `AVG` sobre los detalles almacenados (decisión 3).
@@ -357,8 +359,10 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 
 - ~~Revisión de la Fase 1 por el equipo~~ — hecha, sin observaciones (19/10/2026).
 - **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
-  del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
-  llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
+  del repo (`joacoContreras`, único admin) puede configurarlo. **Estado real (02/11/2026):** existe un *ruleset*
+  ("iw3 - Estandar de Repositorios") pero su *enforcement* está **deshabilitado**: GitHub no exige las aprobaciones y los PR
+  se mergean con las que haya (el PR #12 entró con una). El acuerdo de las 3 aprobaciones se cumple a mano. En GitHub el
+  autor del PR **no** cuenta como aprobación.
 - ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Se redespliega solo al mergear a `main`:
   hoy el workflow de GitHub Actions lo hace en cada push a `main`.
 
