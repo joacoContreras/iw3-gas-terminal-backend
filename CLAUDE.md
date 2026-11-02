@@ -24,7 +24,7 @@
 | | |
 |---|---|
 | **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada, auditada e integrada en `main`** (PR #14, 02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial. Después, en la rama `cierre-segundo-parcial` (sin PR todavía): `/demo/**` cerrado, chequeo del deploy corregido, Swagger completo y carpeta Postman 07 (sección 5) |
-| **Qué sigue** | PR de `cierre-segundo-parcial` a `main` (decisión 14) y **entrega del 10/11/2026**. Confirmar la decisión 30 y decidir H-29. Después, el examen final |
+| **Qué sigue** | PR de `cierre-segundo-parcial` a `main` (decisión 14) y **entrega del 10/11/2026**. Decidir H-29. Después, el examen final |
 | `main` | Contiene las Fases 0 a 5 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026; Fase 5 por el PR #14, 02/11/2026) y la guía de inicio de la Fase 4 (PR #11). **El 02/11/2026 se reescribió la historia de `main`** con un push forzado (respaldo temporal ya borrado): se quitaron los commits duplicados y los trailers `Co-Authored-By: Claude` y quedaron 286 commits con el mismo contenido. Si alguien tiene un `main` anterior, debe correr `git fetch` y `git reset --hard origin/main` |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
 | Despliegue | La VM (`jc755.duckdns.org`) se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`). Verificado el 02/11/2026: corre la Fase 5 y el circuito completo 1 → 4 funcionó con el usuario `martin`. El chequeo del workflow sondea `/v3/api-docs` y exige 200 (decisión 48). Detalles en la sección 13 |
@@ -345,8 +345,8 @@ Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondea
 
 **Fase 4 — Cierre de la orden (Punto 4)** · rama `fase-4-cierre-orden`
 
-- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente:
-  confirmación de la decisión 30 por el equipo.
+- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). La decisión 30 quedó
+  confirmada el 02/11/2026.
 - `POST /api/v1/integration/loader/orders/{orderNumber}/close`: estado 2 → 3. Desde ahí se rechazan los
   detalles. Rechazar transiciones inválidas (cerrar dos veces, o desde el estado 1).
 
@@ -377,7 +377,7 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
   hoy el workflow de GitHub Actions lo hace en cada push a `main`.
 
 - **Cierre del segundo parcial:** abrir el PR de `cierre-segundo-parcial` a `main` (con las aprobaciones de Martín, Contreras y Calvo), vigilar que el *workflow* de deploy termine en verde con el chequeo nuevo y entregar el 10/11/2026 la colección Postman (`docs/postman/IW3-Gas-Terminal.postman_collection.json`, 8 carpetas, 154 pedidos).
-- **Decisión 30:** el equipo todavía no la confirmó (sigue como «a confirmar»).
+- **Decisión 30:** confirmada el 02/11/2026 (se deja como está; el enunciado no define condiciones para el cierre).
 
 ### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
 
@@ -435,7 +435,7 @@ JSON
 | 27 | (D10) `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness` | Aplicada (Fase 3) |
 | 28 | (Decisión 11 de la división) `GET /orders/{orderNumber}/details` paginado, orden fijo por `id`, tope de 100 | Aplicada (Fase 3; aprobada por Tomás Calvo el 27/10/2026) |
 | 29 | Solo se cierra desde el estado 2; los estados 1, 3 y 4 dan 409; cerrar dos veces **no** es idempotente | Aplicada (Fase 4) |
-| 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **a confirmar por el equipo** |
+| 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **confirmada el 02/11/2026**: se deja así (la consigna no exige activación ni lecturas para cerrar) |
 | 31 | El cierre busca la orden con `findByOrderNumberForUpdate` (`PESSIMISTIC_WRITE`) para serializarse con las lecturas | Aplicada (Fase 4) |
 | 32 | Una fila 2→3 en `order_status_logs` (usuario del token, "Orden cerrada para carga") y 200 con la orden; sin campos nuevos ni cambios en fechas de carga o últimos valores | Aplicada (Fase 4) |
 | 33 | (D1) Pesaje final solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente | Aplicada (Fase 5) |

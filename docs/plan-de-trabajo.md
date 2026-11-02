@@ -64,7 +64,7 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 27 | Capa de negocio de las lecturas (D10) | **Aplicada en la Fase 3.** `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness`. | Fase 3 |
 | 28 | Consulta del histórico (decisión 11 de la división) | **Aplicada en la Fase 3** (aprobada el 27/10/2026). `GET /orders/{orderNumber}/details` paginado: `size` 20 por defecto y máximo 100, orden fijo por `id` ascendente, `PagedModel`; 404 si la orden no existe. | Fase 3 |
 | 29 | Estados desde los que se puede cerrar | **Aplicada en la Fase 4.** Solo desde el estado 2. Cualquier otro estado (1, 3 o 4) responde 409; cerrar dos veces **no** es idempotente (la segunda da 409), a diferencia de la activación. | Fase 4 |
-| 30 | El cierre no exige activación ni lecturas previas | **Aplicada en la Fase 4; a confirmar por el equipo.** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
+| 30 | El cierre no exige activación ni lecturas previas | **Aplicada en la Fase 4; confirmada el 02/11/2026 (se deja así).** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
 | 31 | Concurrencia del cierre | **Aplicada en la Fase 4** (verificada con 50 lecturas y un cierre simultáneos, sin respuestas 500). La orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`, el mismo bloqueo de las lecturas) para que un cierre y una lectura en curso se serialicen y el cierre no pise la cabecera con valores viejos. | Fase 4 |
 | 32 | Qué guarda y qué responde el cierre | **Aplicada en la Fase 4.** Una fila en `order_status_logs` (2→3, usuario del token, observación) y respuesta 200 con la orden. No se agregan campos al modelo y `loadingEndDateTime` no se toca (es la estampa del último registro válido). | Fase 4 |
 | 33 | Estado de partida del pesaje final (D1) | **Aplicada en la Fase 5.** Solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente. | Fase 5 |
@@ -214,7 +214,7 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 
 **Fuera de alcance.** Frecuencia de almacenamiento configurable (decisión 49: no se hace), roles, alarmas, frontend y el resto de la seguridad (H-5: clave JWT, contraseñas por defecto, `dev.info`).
 
-**Pendiente para la entrega del 10/11/2026.** PR a `main` con las aprobaciones de Martín, Contreras y Calvo; que el *workflow* de deploy termine en verde; entregar la colección Postman; confirmar la decisión 30.
+**Pendiente para la entrega del 10/11/2026.** PR a `main` con las aprobaciones de Martín, Contreras y Calvo; que el *workflow* de deploy termine en verde; entregar la colección Postman. La decisión 30 quedó confirmada el 02/11/2026.
 
 ## 7. Forma de trabajo
 
