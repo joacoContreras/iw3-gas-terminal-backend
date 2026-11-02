@@ -1,5 +1,8 @@
 package ar.edu.iua.iw3.business;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -7,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -17,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.iua.iw3.business.exception.BadRequestException;
 import ar.edu.iua.iw3.business.exception.ConflictException;
+import ar.edu.iua.iw3.business.exception.ForbiddenException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.model.OrderStatus;
@@ -80,4 +85,40 @@ class OrderBusinessActivateTest {
 		verify(orderDAO, never()).saveAndFlush(any());
 	}
 
+	@Test
+	void activate_wrongPassword_throwsForbiddenWithoutPasswordsInMessage() {
+		Order o = order(OrderStatus.INITIAL_WEIGHING_REGISTERED);
+		ForbiddenException e = assertThrows(ForbiddenException.class, () -> orderBusiness.activate(NUMBER, 11111));
+		assertEquals("La contraseña de activación es incorrecta", e.getMessage());
+		assertTrue(!e.getMessage().contains("11111") && !e.getMessage().contains(PASSWORD.toString()));
+		assertNull(o.getActivationDateTime());
+		verify(orderDAO, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void activate_firstActivation_savesActivationDateTime() throws Exception {
+		Order o = order(OrderStatus.INITIAL_WEIGHING_REGISTERED);
+		when(orderDAO.saveAndFlush(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		Order result = orderBusiness.activate(NUMBER, PASSWORD);
+
+		assertNotNull(result.getActivationDateTime());
+		assertEquals(OrderStatus.INITIAL_WEIGHING_REGISTERED, result.getStatus());
+		verify(orderDAO).saveAndFlush(o);
+		// Se usa la consulta con bloqueo, nunca la comun, y no se escribe el historial
+		verify(orderDAO, never()).findByOrderNumber(any());
+		verify(statusLogDAO, never()).save(any());
+	}
+
+	@Test
+	void activate_secondActivation_keepsTheFirstDate() throws Exception {
+		Order o = order(OrderStatus.INITIAL_WEIGHING_REGISTERED);
+		LocalDateTime first = LocalDateTime.of(2026, 11, 2, 9, 30, 0);
+		o.setActivationDateTime(first);
+
+		Order result = orderBusiness.activate(NUMBER, PASSWORD);
+
+		assertEquals(first, result.getActivationDateTime());
+		verify(orderDAO, never()).saveAndFlush(any());
+	}
 }
