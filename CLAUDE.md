@@ -214,9 +214,9 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | Paquete (bajo `src/main/java/ar/edu/iua/iw3`) | Contenido |
 |---|---|
 | `controllers` | `BaseRestController` (`getUserLogged()`), `Constants` (URLs), `OrderRestController` |
-| `integration/<sistema>/controllers`, `integration/<sistema>/model` | Endpoints y DTO por sistema externo: `sap` (`OrderSapRestController`), `tms` (`OrderTmsRestController`, `TareRequest`, `TareResponse`) y `loader` (`OrderLoaderRestController`, `ActivationRequest`/`Response`, `DetailRequest`/`Response`) |
-| `business`, `business/exception` | `I*Business` + `*Business` (`IOrderBusiness`, `IOrderDetailBusiness`), `OrderValidator`, `OrderDetailValidator`, `DetailResult`, `ActivationPasswordGenerator`; excepciones de negocio |
-| `model`, `model/persistence` | Entidades JPA y repositorios Spring Data |
+| `integration/<sistema>/controllers`, `integration/<sistema>/model` | Endpoints y DTO por sistema externo: `sap` (`OrderSapRestController`), `tms` (`OrderTmsRestController`, `TareRequest`, `TareResponse`, `FinalWeightRequest`) y `loader` (`OrderLoaderRestController`, `ActivationRequest`/`Response`, `DetailRequest`/`Response`) |
+| `business`, `business/exception` | `I*Business` + `*Business` (`IOrderBusiness`, `IOrderDetailBusiness`), `OrderValidator`, `OrderDetailValidator`, `DetailResult`, `Reconciliation`, `ActivationPasswordGenerator`; excepciones de negocio |
+| `model`, `model/persistence` | Entidades JPA y repositorios Spring Data (más la proyección `ReadingAverages`) |
 | `auth`, `security` | Usuarios, roles, JWT y reglas de acceso (de la cátedra) |
 | `config` | `OpenApiConfig` (Swagger con esquema Bearer) |
 | `util` | `StandartResponse` y su servicio (respuesta de error estándar) |
@@ -258,6 +258,8 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | `POST /api/v1/integration/loader/activation` | **Punto 3**: activa la carga con `{ orderNumber, password }` y devuelve `{ preset }`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{orderNumber}/details` | **Punto 3**: una lectura del caudalímetro. Siempre 200 con `{ saved, reason }` (guardada o descartada) | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{orderNumber}/close` | **Punto 4**: cierra la orden (estado 2 → 3); desde ahí las lecturas dan 409. Sin cuerpo; registra el cambio con el usuario del token y responde la orden. No es idempotente | 200, 401, 404, 409, 500 |
+| `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` | **Punto 5**: registra el pesaje final (estado 3 → 4, fila "Pesaje final registrado") y devuelve la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
+| `GET /api/v1/orders/{orderNumber}/reconciliation` | **Punto 5**: conciliación, solo para órdenes en estado 4 (se calcula, no se guarda) | 200, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200 |
 | `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
@@ -285,11 +287,21 @@ Respuesta 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason"
 
 `POST /integration/loader/orders/{orderNumber}/close` no lleva cuerpo; responde la orden (como `GET /orders/{n}`) con `"status": 3`.
 
-**Pruebas actuales:** `./mvnw -B test` → 19 tests; colección Postman → 86 pedidos y 204 aserciones (carpetas 00 a 04).
+Cuerpo de `POST /integration/tms/orders/{orderNumber}/final-weight`: `{ "weight": 16490.0 }`. Respuesta 200 (igual que `GET /orders/{n}/reconciliation`),
+con tara 14500 y lecturas de 1000 kg (20 °C, 0.5, 3000 kg/h) y 2000 kg (22 °C, 0.5, 3600 kg/h):
+
+```json
+{ "orderNumber": 90001, "tare": 14500.0, "finalWeight": 16490.0, "loadedProduct": 2000.0, "scaleNet": 1990.0,
+  "difference": -10.0, "averageTemperature": 21.0, "averageDensity": 0.5, "averageFlowRate": 3300.0 }
+```
+
+Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondean.
+
+**Pruebas actuales** (medidas el 02/11/2026): `./mvnw -B test` → 40 tests; colección Postman → 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04: 86 y 204; 05: 44 y 98; 06: 21 y 56).
 
 | Entidad (clase → tabla) | Notas |
 |---|---|
-| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime`, `tare`, `initialWeighingDateTime`, `activationPassword` (con `@JsonIgnore`), `activationDateTime`, `loadingStartDateTime`, `loadingEndDateTime`, `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`. Sin lista de detalles |
+| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime`, `tare`, `initialWeighingDateTime`, `activationPassword` (con `@JsonIgnore`), `activationDateTime`, `loadingStartDateTime`, `loadingEndDateTime`, `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `finalWeight`, `finalWeighingDateTime`. Sin lista de detalles |
 | `OrderDetail` → `order_details` | Lecturas válidas del caudalímetro: `accumulatedMass`, `density`, `temperature`, `flowRate`, `timestamp` (columna `reading_timestamp`); `@ManyToOne LAZY` a `Order` con `@JsonIgnore` (columna `id_order`) |
 | `OrderStatusLog` → `order_status_logs` | Estado anterior (`null` al crear) y nuevo, fecha y hora, `actor`, observaciones |
 | `Truck`, `TruckTank` → `trucks`, `truck_tanks` | Camión con su cisternado (una fila por cisterna) |
