@@ -86,6 +86,70 @@
     {
       "key": "orderNumberCloseBare",
       "value": ""
+    },
+    {
+      "key": "orderNumberFinal",
+      "value": ""
+    },
+    {
+      "key": "activationPasswordFinal",
+      "value": ""
+    },
+    {
+      "key": "reconciliationFinal",
+      "value": ""
+    },
+    {
+      "key": "orderNumberFinalPending",
+      "value": ""
+    },
+    {
+      "key": "orderNumberFinalTared",
+      "value": ""
+    },
+    {
+      "key": "orderNumberFinalBare",
+      "value": ""
+    },
+    {
+      "key": "reconciliationFinalBare",
+      "value": ""
+    },
+    {
+      "key": "orderNumberFinalTare",
+      "value": ""
+    },
+    {
+      "key": "tokenCircuit",
+      "value": ""
+    },
+    {
+      "key": "orderNumberCircuit",
+      "value": ""
+    },
+    {
+      "key": "presetCircuit",
+      "value": ""
+    },
+    {
+      "key": "tareCircuit",
+      "value": ""
+    },
+    {
+      "key": "activationPasswordCircuit",
+      "value": ""
+    },
+    {
+      "key": "readingsCircuit",
+      "value": ""
+    },
+    {
+      "key": "finalWeightCircuit",
+      "value": ""
+    },
+    {
+      "key": "reconciliationCircuit",
+      "value": ""
     }
   ],
   "item": [
@@ -4211,6 +4275,3084 @@
               ]
             },
             "description": "Decisión 30 (a confirmar por el equipo): alcanza con que la orden esté en estado 2."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Fase 5: pesaje final y conciliación (TMS)",
+      "item": [
+        {
+          "name": "Crear orden para el pesaje final",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberFinal', String((Date.now() + 80) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberFinal');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinal}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-FINAL-01\", \"plate\": \"FIN01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-FINAL-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-FINAL-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea la orden que va a recibir el pesaje final. Queda en estado 1."
+          }
+        },
+        {
+          "name": "Tara de la orden de pesaje final",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('activationPasswordFinal', String(pm.response.json().activationPassword));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tara 14500 kg (estado 1 → 2); guarda la contraseña en activationPasswordFinal."
+          }
+        },
+        {
+          "name": "Activar la orden de pesaje final",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('activa: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve el preset', () => pm.expect(pm.response.json().preset).to.eql(15000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinal}},\n  \"password\": {{activationPasswordFinal}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Activa la carga con la contraseña de la tara."
+          }
+        },
+        {
+          "name": "Lectura 1 del ejemplo (1000 kg)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinal}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinal}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1000.0,\n  \"density\": 0.5,\n  \"temperature\": 20.0,\n  \"flowRate\": 3000.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Primera lectura del ejemplo de la sección 3.5 (valores exactos en double)."
+          }
+        },
+        {
+          "name": "Lectura 2 del ejemplo (2000 kg)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinal}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinal}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 2000.0,\n  \"density\": 0.5,\n  \"temperature\": 22.0,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segunda lectura del ejemplo: producto cargado 2000 kg."
+          }
+        },
+        {
+          "name": "Cerrar la orden de pesaje final",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('la orden queda en estado 3', () => pm.expect(pm.response.json().status).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinal}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinal}}",
+                "close"
+              ]
+            },
+            "description": "Punto 4: deja la orden en estado 3, lista para el pesaje final."
+          }
+        },
+        {
+          "name": "Pesaje final sin campo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin weight: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del peso', () => pm.expect(pm.response.json().message).to.include('mayor que 0'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un campo ausente llega como 0.0 (double primitivo) y se rechaza con 400."
+          }
+        },
+        {
+          "name": "Pesaje final con peso 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso 0: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del peso', () => pm.expect(pm.response.json().message).to.include('mayor que 0'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Peso 0 → 400."
+          }
+        },
+        {
+          "name": "Pesaje final con peso negativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso negativo: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del peso', () => pm.expect(pm.response.json().message).to.include('mayor que 0'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": -100.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Peso negativo → 400."
+          }
+        },
+        {
+          "name": "Pesaje final con peso infinito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso infinito: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del número finito', () => pm.expect(pm.response.json().message).to.include('finito'));",
+                  "pm.test('responde con StandartResponse', () => pm.expect(pm.response.json().code).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 1e999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Jackson convierte 1e999 en Infinity: 400 (D13), no 500."
+          }
+        },
+        {
+          "name": "Pesaje final menor que la tara",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('menor que la tara: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje de la tara', () => pm.expect(pm.response.json().message).to.include('menor que la tara'));",
+                  "pm.test('el mensaje incluye la tara', () => pm.expect(pm.response.json().message).to.include('14500'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14000.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Peso menor que la tara (14500) → 400 (D2: va después del 409 de estado)."
+          }
+        },
+        {
+          "name": "Consultar la orden tras los pesajes inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('sigue en estado 3 sin pesaje final', () => {",
+                  "  pm.expect(o.status).to.eql(3);",
+                  "  pm.expect(o.finalWeight).to.eql(null);",
+                  "  pm.expect(o.finalWeighingDateTime).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}"
+              ]
+            },
+            "description": "Un 400 no cambia nada: estado 3, finalWeight y finalWeighingDateTime nulos."
+          }
+        },
+        {
+          "name": "Historial tras los pesajes inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sigue con tres registros (sin fila 3 → 4)', () => pm.expect(pm.response.json().length).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "status-log"
+              ]
+            },
+            "description": "Los 400 no escriben en el historial."
+          }
+        },
+        {
+          "name": "Pesaje final de orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('no existe: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje de orden inexistente', () => pm.expect(pm.response.json().message).to.include('No se encuentra'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/1999999999/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "1999999999",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden inexistente → 404."
+          }
+        },
+        {
+          "name": "Pesaje final sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Sin JWT → 401 (lo responde el filtro de seguridad)."
+          }
+        },
+        {
+          "name": "Conciliación de la orden en estado 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estado 3: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de la conciliación', () => pm.expect(pm.response.json().message).to.include('solo está disponible para órdenes en estado 4'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 3'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "reconciliation"
+              ]
+            },
+            "description": "La conciliación solo existe en estado 4: antes del pesaje final da 409."
+          }
+        },
+        {
+          "name": "Pesaje final (estado 3 → 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('pesaje final: 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('es la orden pedida', () => pm.expect(String(r.orderNumber)).to.eql(pm.collectionVariables.get('orderNumberFinal')));",
+                  "pm.test('tara y pesaje final', () => {",
+                  "  pm.expect(r.tare).to.be.closeTo(14500.0, 1e-9);",
+                  "  pm.expect(r.finalWeight).to.be.closeTo(16490.0, 1e-9);",
+                  "});",
+                  "pm.test('producto cargado, neto y diferencia del ejemplo', () => {",
+                  "  pm.expect(r.loadedProduct).to.be.closeTo(2000.0, 1e-9);",
+                  "  pm.expect(r.scaleNet).to.be.closeTo(1990.0, 1e-9);",
+                  "  pm.expect(r.difference).to.be.closeTo(-10.0, 1e-9);",
+                  "});",
+                  "pm.test('promedios simples de las dos lecturas', () => {",
+                  "  pm.expect(r.averageTemperature).to.be.closeTo(21.0, 1e-9);",
+                  "  pm.expect(r.averageDensity).to.be.closeTo(0.5, 1e-9);",
+                  "  pm.expect(r.averageFlowRate).to.be.closeTo(3300.0, 1e-9);",
+                  "});",
+                  "pm.collectionVariables.set('reconciliationFinal', JSON.stringify(r));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 5: registra el pesaje final y devuelve la conciliación (ejemplo de la sección 3.5). Guarda la respuesta en reconciliationFinal."
+          }
+        },
+        {
+          "name": "Consultar la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 4 con el pesaje final', () => {",
+                  "  pm.expect(o.status).to.eql(4);",
+                  "  pm.expect(o.finalWeight).to.eql(16490);",
+                  "  pm.expect(o.finalWeighingDateTime).to.be.a('string');",
+                  "});",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}"
+              ]
+            },
+            "description": "La orden queda en estado 4 con finalWeight y finalWeighingDateTime (hora del servidor)."
+          }
+        },
+        {
+          "name": "Historial de la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('cuatro registros (1, 2, 3 y 4)', () => pm.expect(log.length).to.eql(4));",
+                  "pm.test('el último es 3 → 4 con el usuario del token', () => {",
+                  "  const last = log[log.length - 1];",
+                  "  pm.expect(last.fromStatus).to.eql(3);",
+                  "  pm.expect(last.toStatus).to.eql(4);",
+                  "  pm.expect(last.actor).to.eql(pm.collectionVariables.get('username'));",
+                  "  pm.expect(last.observations).to.include('Pesaje final registrado');",
+                  "  pm.expect(last.dateTime).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "status-log"
+              ]
+            },
+            "description": "El pesaje final deja una fila 3 → 4 (D8)."
+          }
+        },
+        {
+          "name": "Conciliación de la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('conciliación: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('mismos valores que el POST', () => {",
+                  "  const r = pm.response.json();",
+                  "  const p = JSON.parse(pm.collectionVariables.get('reconciliationFinal'));",
+                  "  pm.expect(r.orderNumber).to.eql(p.orderNumber);",
+                  "  ['tare', 'finalWeight', 'loadedProduct', 'scaleNet', 'difference', 'averageTemperature', 'averageDensity', 'averageFlowRate'].forEach(k => {",
+                  "    if (p[k] === null) { pm.expect(r[k], k).to.eql(null); } else { pm.expect(r[k], k).to.be.closeTo(p[k], 1e-9); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "reconciliation"
+              ]
+            },
+            "description": "El GET calcula con la misma función que el POST: mismos valores (D4)."
+          }
+        },
+        {
+          "name": "Segundo pesaje final",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('no es idempotente: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje del estado', () => pm.expect(pm.response.json().message).to.include('no admite pesaje final'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 4'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El pesaje final no es idempotente (D1): el segundo da 409."
+          }
+        },
+        {
+          "name": "Lectura sobre la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lectura en estado 4: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de las lecturas', () => pm.expect(pm.response.json().message).to.include('no acepta lecturas'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinal}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinal}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 2500.0,\n  \"density\": 0.5,\n  \"temperature\": 22.0,\n  \"flowRate\": 3600.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El estado 4 es final: las lecturas dan 409."
+          }
+        },
+        {
+          "name": "Activar la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('activación en estado 4: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de la activación', () => pm.expect(pm.response.json().message).to.include('no está lista para activar'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinal}},\n  \"password\": {{activationPasswordFinal}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El estado 4 es final: la activación da 409."
+          }
+        },
+        {
+          "name": "Cerrar la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierre en estado 4: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje del cierre', () => pm.expect(pm.response.json().message).to.include('no se puede cerrar'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinal}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinal}}",
+                "close"
+              ]
+            },
+            "description": "El estado 4 es final: el cierre da 409."
+          }
+        },
+        {
+          "name": "Tara sobre la orden finalizada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara en estado 4: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de la tara', () => pm.expect(pm.response.json().message).to.include('no está pendiente'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinal}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinal}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El estado 4 es final: la tara da 409."
+          }
+        },
+        {
+          "name": "Conciliación tras los intentos rechazados",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('conciliación: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('la conciliación no cambió', () => {",
+                  "  const r = pm.response.json();",
+                  "  const p = JSON.parse(pm.collectionVariables.get('reconciliationFinal'));",
+                  "  pm.expect(r.orderNumber).to.eql(p.orderNumber);",
+                  "  ['tare', 'finalWeight', 'loadedProduct', 'scaleNet', 'difference', 'averageTemperature', 'averageDensity', 'averageFlowRate'].forEach(k => {",
+                  "    if (p[k] === null) { pm.expect(r[k], k).to.eql(null); } else { pm.expect(r[k], k).to.be.closeTo(p[k], 1e-9); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "reconciliation"
+              ]
+            },
+            "description": "Los 409 no cambiaron nada: la conciliación sigue igual."
+          }
+        },
+        {
+          "name": "Crear orden que queda en estado 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberFinalPending', String((Date.now() + 90) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberFinalPending');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinalPending}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-FINAL-01\", \"plate\": \"FIN01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-FINAL-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-FINAL-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden sin tara (estado 1)."
+          }
+        },
+        {
+          "name": "Crear orden que queda en estado 2",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberFinalTared', String((Date.now() + 100) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberFinalTared');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinalTared}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-FINAL-01\", \"plate\": \"FIN01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-FINAL-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-FINAL-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden que va a quedar con tara (estado 2)."
+          }
+        },
+        {
+          "name": "Tara de la orden en estado 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde: 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalTared}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalTared}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Estado 1 → 2."
+          }
+        },
+        {
+          "name": "Conciliación de una orden en estado 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estado 1: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de la conciliación', () => pm.expect(pm.response.json().message).to.include('solo está disponible para órdenes en estado 4'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 1'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinalPending}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinalPending}}",
+                "reconciliation"
+              ]
+            },
+            "description": "Conciliación fuera del estado 4 → 409."
+          }
+        },
+        {
+          "name": "Conciliación de una orden en estado 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estado 2: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de la conciliación', () => pm.expect(pm.response.json().message).to.include('solo está disponible para órdenes en estado 4'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 2'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinalTared}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinalTared}}",
+                "reconciliation"
+              ]
+            },
+            "description": "Conciliación fuera del estado 4 → 409."
+          }
+        },
+        {
+          "name": "Conciliación de orden inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('no existe: 404', () => pm.response.to.have.status(404));",
+                  "pm.test('mensaje de orden inexistente', () => pm.expect(pm.response.json().message).to.include('No se encuentra'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/1999999999/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "1999999999",
+                "reconciliation"
+              ]
+            },
+            "description": "Orden inexistente → 404."
+          }
+        },
+        {
+          "name": "Conciliación sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinal}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinal}}",
+                "reconciliation"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Sin JWT → 401."
+          }
+        },
+        {
+          "name": "Pesaje final de una orden en estado 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estado 1: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje del estado', () => pm.expect(pm.response.json().message).to.include('no admite pesaje final'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 1'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalPending}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalPending}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pesaje final fuera del estado 3 → 409. La comparación con la tara (nula en estado 1) no llega a ejecutarse."
+          }
+        },
+        {
+          "name": "Pesaje final de una orden en estado 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('estado 2: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje del estado', () => pm.expect(pm.response.json().message).to.include('no admite pesaje final'));",
+                  "pm.test('informa el estado', () => pm.expect(pm.response.json().message).to.include('estado 2'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalTared}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalTared}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 16490.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pesaje final fuera del estado 3 → 409."
+          }
+        },
+        {
+          "name": "Peso inválido sobre una orden en estado 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el peso se valida antes que el estado: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del peso', () => pm.expect(pm.response.json().message).to.include('mayor que 0'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalPending}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalPending}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden de D2 (404 → 400 → 409 → 400): un peso inválido da 400 aunque el estado también sea incorrecto."
+          }
+        },
+        {
+          "name": "Crear orden que se cierra sin lecturas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberFinalBare', String((Date.now() + 110) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberFinalBare');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinalBare}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-FINAL-01\", \"plate\": \"FIN01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-FINAL-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-FINAL-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden para el caso límite: sin activación ni lecturas."
+          }
+        },
+        {
+          "name": "Tara de la orden sin lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde: 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalBare}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalBare}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Estado 1 → 2."
+          }
+        },
+        {
+          "name": "Cerrar la orden sin lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('estado 3 sin masa acumulada', () => {",
+                  "  const o = pm.response.json();",
+                  "  pm.expect(o.status).to.eql(3);",
+                  "  pm.expect(o.lastAccumulatedMass).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberFinalBare}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberFinalBare}}",
+                "close"
+              ]
+            },
+            "description": "Decisión 30: se cierra sin activar ni lecturas."
+          }
+        },
+        {
+          "name": "Pesaje final igual a la tara (sin lecturas)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('peso igual a la tara es válido: 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('producto, neto y diferencia en 0', () => {",
+                  "  pm.expect(r.loadedProduct).to.eql(0);",
+                  "  pm.expect(r.scaleNet).to.eql(0);",
+                  "  pm.expect(r.difference).to.eql(0);",
+                  "});",
+                  "pm.test('promedios null sin lecturas', () => {",
+                  "  pm.expect(r.averageTemperature).to.eql(null);",
+                  "  pm.expect(r.averageDensity).to.eql(null);",
+                  "  pm.expect(r.averageFlowRate).to.eql(null);",
+                  "});",
+                  "pm.collectionVariables.set('reconciliationFinalBare', JSON.stringify(r));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalBare}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalBare}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 14500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "D2 y D6: un peso igual a la tara es válido; sin lecturas, producto cargado 0.0 y promedios null."
+          }
+        },
+        {
+          "name": "Conciliación de la orden sin lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('conciliación: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('mismos valores que el POST', () => {",
+                  "  const r = pm.response.json();",
+                  "  const p = JSON.parse(pm.collectionVariables.get('reconciliationFinalBare'));",
+                  "  pm.expect(r.orderNumber).to.eql(p.orderNumber);",
+                  "  ['tare', 'finalWeight', 'loadedProduct', 'scaleNet', 'difference', 'averageTemperature', 'averageDensity', 'averageFlowRate'].forEach(k => {",
+                  "    if (p[k] === null) { pm.expect(r[k], k).to.eql(null); } else { pm.expect(r[k], k).to.be.closeTo(p[k], 1e-9); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinalBare}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinalBare}}",
+                "reconciliation"
+              ]
+            },
+            "description": "El GET devuelve lo mismo que el POST, con los promedios null."
+          }
+        },
+        {
+          "name": "Crear orden para la tara infinita",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberFinalTare', String((Date.now() + 120) % 1000000000));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberFinalTare');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberFinalTare}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": 15000,\n  \"truck\": {\n    \"externalCode\": \"TRK-FINAL-01\", \"plate\": \"FIN01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-FINAL-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-FINAL-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Orden en estado 1 para la regresión de H-26."
+          }
+        },
+        {
+          "name": "Tara con peso infinito (H-26)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara infinita: 400', () => pm.response.to.have.status(400));",
+                  "pm.test('mensaje del número finito', () => pm.expect(pm.response.json().message).to.include('finito'));",
+                  "pm.test('responde con StandartResponse', () => pm.expect(pm.response.json().code).to.eql(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberFinalTare}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberFinalTare}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 1e999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "H-26 (D13): antes daba 500 con el formato de Spring; ahora 400."
+          }
+        },
+        {
+          "name": "Consultar la orden tras la tara infinita",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('sigue en estado 1 con tara nula', () => {",
+                  "  const o = pm.response.json();",
+                  "  pm.expect(o.status).to.eql(1);",
+                  "  pm.expect(o.tare).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberFinalTare}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberFinalTare}}"
+              ]
+            },
+            "description": "El 400 no cambió la orden."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Circuito completo (1 a 4)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{tokenCircuit}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Login del circuito",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve un JWT de tres partes', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                  "  pm.collectionVariables.set('tokenCircuit', t);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
+              ]
+            },
+            "description": "Login propio de la carpeta (el token dura 1 hora): guarda el JWT en tokenCircuit, que usan todos los pedidos de la carpeta."
+          }
+        },
+        {
+          "name": "Punto 1: SAP crea la orden",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('orderNumberCircuit', String((Date.now() + 150) % 1000000000));",
+                  "pm.collectionVariables.set('presetCircuit', '15000');",
+                  "pm.collectionVariables.set('readingsCircuit', '[]');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('crea la orden: 201', () => pm.response.to.have.status(201));",
+                  "pm.test('location apunta a la orden', () => {",
+                  "  const n = pm.collectionVariables.get('orderNumberCircuit');",
+                  "  pm.expect(pm.response.headers.get('location')).to.eql('/api/v1/orders/' + n);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberCircuit}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": {{presetCircuit}},\n  \"truck\": {\n    \"externalCode\": \"TRK-CIRC-01\", \"plate\": \"CIR01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CIRC-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CIRC-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 1: recepción de la orden. Genera orderNumberCircuit y reinicia readingsCircuit."
+          }
+        },
+        {
+          "name": "Punto 1: la orden queda en estado 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 1 con la fecha de recepción', () => {",
+                  "  pm.expect(o.status).to.eql(1);",
+                  "  pm.expect(o.receptionDateTime).to.be.a('string');",
+                  "  pm.expect(o.tare).to.eql(null);",
+                  "  pm.expect(o.preset).to.eql(Number(pm.collectionVariables.get('presetCircuit')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}"
+              ]
+            },
+            "description": "Comprueba el estado 1."
+          }
+        },
+        {
+          "name": "Punto 1: reenviar la misma orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('duplicado: 302', () => pm.response.to.have.status(302));",
+                  "pm.test('mensaje de la orden repetida', () => pm.expect(pm.response.json().message).to.include('Se encontró la Orden'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "sap",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberCircuit}},\n  \"plannedLoadDateTime\": \"2026-11-10T08:00:00\",\n  \"preset\": {{presetCircuit}},\n  \"truck\": {\n    \"externalCode\": \"TRK-CIRC-01\", \"plate\": \"CIR01CD\", \"description\": \"Cisterna pesaje final\",\n    \"tanks\": [ { \"number\": 1, \"capacityLiters\": 10000 }, { \"number\": 2, \"capacityLiters\": 5000 } ]\n  },\n  \"driver\": {\n    \"externalCode\": \"DRV-CIRC-01\", \"name\": \"Lucia\", \"lastName\": \"Balanza\", \"document\": \"38111222\"\n  },\n  \"customer\": {\n    \"externalCode\": \"CUS-CIRC-01\", \"companyName\": \"Gas Final SA\", \"contact\": \"final@gas.example\"\n  },\n  \"product\": {\n    \"externalCode\": \"PRD-GLP\", \"name\": \"GLP\", \"description\": \"Gas licuado de petroleo\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Un reenvío de SAP con el mismo número responde 302 (convención de la cátedra)."
+          },
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "Punto 2: la balanza registra la tara",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('tareCircuit', '14500.5');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('tara responde: 200', () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().activationPassword;",
+                  "pm.test('contraseña de 5 dígitos', () => pm.expect(String(p)).to.match(/^[0-9]{5}$/));",
+                  "pm.collectionVariables.set('activationPasswordCircuit', String(p));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberCircuit}}/tare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "tare"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": {{tareCircuit}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 2: tara (tareCircuit) y contraseña de activación (activationPasswordCircuit)."
+          }
+        },
+        {
+          "name": "Punto 2: la orden queda en estado 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 2 con la tara', () => {",
+                  "  pm.expect(o.status).to.eql(2);",
+                  "  pm.expect(o.tare).to.be.closeTo(Number(pm.collectionVariables.get('tareCircuit')), 1e-9);",
+                  "  pm.expect(o.initialWeighingDateTime).to.be.a('string');",
+                  "});",
+                  "pm.test('no expone la contraseña', () => pm.expect(o).to.not.have.property('activationPassword'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}"
+              ]
+            },
+            "description": "Comprueba el estado 2."
+          }
+        },
+        {
+          "name": "Punto 3: activación con la contraseña",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('activa: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve el preset de la orden', () => pm.expect(pm.response.json().preset).to.eql(Number(pm.collectionVariables.get('presetCircuit'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "activation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": {{orderNumberCircuit}},\n  \"password\": {{activationPasswordCircuit}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 3: el sistema de carga recibe el preset."
+          }
+        },
+        {
+          "name": "Punto 3: lectura válida 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const sent = { accumulatedMass: 1200.5, density: 0.51, temperature: 18.2, flowRate: 3500.0 };",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit') || '[]');",
+                  "if (pm.response.json().saved === true) { list.push(sent); }",
+                  "pm.collectionVariables.set('readingsCircuit', JSON.stringify(list));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 1200.5,\n  \"density\": 0.51,\n  \"temperature\": 18.2,\n  \"flowRate\": 3500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Primera lectura válida: inicia la carga."
+          }
+        },
+        {
+          "name": "Punto 3: lectura válida 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const sent = { accumulatedMass: 2400.25, density: 0.52, temperature: 18.9, flowRate: 3600.5 };",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit') || '[]');",
+                  "if (pm.response.json().saved === true) { list.push(sent); }",
+                  "pm.collectionVariables.set('readingsCircuit', JSON.stringify(list));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 2400.25,\n  \"density\": 0.52,\n  \"temperature\": 18.9,\n  \"flowRate\": 3600.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segunda lectura válida."
+          }
+        },
+        {
+          "name": "Punto 3: lectura válida 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const sent = { accumulatedMass: 3600.75, density: 0.515, temperature: 19.4, flowRate: 3550.0 };",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit') || '[]');",
+                  "if (pm.response.json().saved === true) { list.push(sent); }",
+                  "pm.collectionVariables.set('readingsCircuit', JSON.stringify(list));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 3600.75,\n  \"density\": 0.515,\n  \"temperature\": 19.4,\n  \"flowRate\": 3550.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tercera lectura válida."
+          }
+        },
+        {
+          "name": "Punto 3: lectura descartada (masa menor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const sent = { accumulatedMass: 3000.0, density: 0.52, temperature: 19.6, flowRate: 3500.0 };",
+                  "pm.test('lectura descartada con motivo', () => { const j = pm.response.json(); pm.expect(j.saved).to.eql(false); pm.expect(j.reason).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 3000.0,\n  \"density\": 0.52,\n  \"temperature\": 19.6,\n  \"flowRate\": 3500.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Masa menor que la anterior: se descarta (200, saved false) y no cuenta para la conciliación."
+          }
+        },
+        {
+          "name": "Punto 3: lectura válida 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const sent = { accumulatedMass: 4800.1, density: 0.53, temperature: 20.1, flowRate: 3480.2 };",
+                  "pm.test('lectura guardada', () => pm.expect(pm.response.json().saved).to.eql(true));",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit') || '[]');",
+                  "if (pm.response.json().saved === true) { list.push(sent); }",
+                  "pm.collectionVariables.set('readingsCircuit', JSON.stringify(list));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 4800.1,\n  \"density\": 0.53,\n  \"temperature\": 20.1,\n  \"flowRate\": 3480.2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cuarta lectura válida: última masa acumulada."
+          }
+        },
+        {
+          "name": "Punto 3: la cabecera tiene los últimos valores",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit'));",
+                  "const last = list[list.length - 1];",
+                  "pm.test('cuatro lecturas válidas enviadas', () => pm.expect(list.length).to.eql(4));",
+                  "pm.test('estado 2, activada y con inicio y fin de carga', () => {",
+                  "  pm.expect(o.status).to.eql(2);",
+                  "  pm.expect(o.activationDateTime).to.be.a('string');",
+                  "  pm.expect(o.loadingStartDateTime).to.be.a('string');",
+                  "  pm.expect(o.loadingEndDateTime).to.be.a('string');",
+                  "});",
+                  "pm.test('últimos valores = última lectura válida', () => {",
+                  "  pm.expect(o.lastAccumulatedMass).to.be.closeTo(last.accumulatedMass, 1e-9);",
+                  "  pm.expect(o.lastDensity).to.be.closeTo(last.density, 1e-9);",
+                  "  pm.expect(o.lastTemperature).to.be.closeTo(last.temperature, 1e-9);",
+                  "  pm.expect(o.lastFlowRate).to.be.closeTo(last.flowRate, 1e-9);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}"
+              ]
+            },
+            "description": "La cabecera guarda el último valor válido de cada atributo (el descarte no la tocó)."
+          }
+        },
+        {
+          "name": "Punto 4: cierre de la orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('la orden queda en estado 3', () => pm.expect(pm.response.json().status).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "close"
+              ]
+            },
+            "description": "Punto 4: estado 2 → 3."
+          }
+        },
+        {
+          "name": "Punto 4: lectura tardía rechazada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lectura tras el cierre: 409', () => pm.response.to.have.status(409));",
+                  "pm.test('mensaje de las lecturas', () => pm.expect(pm.response.json().message).to.include('no acepta lecturas'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberCircuit}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "loader",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accumulatedMass\": 5000.0,\n  \"density\": 0.53,\n  \"temperature\": 20.2,\n  \"flowRate\": 3400.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Después del cierre las lecturas dan 409 y no se guardan."
+          }
+        },
+        {
+          "name": "Punto 5: pesaje final y conciliación",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('finalWeightCircuit', '19310.35');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('pesaje final: 200', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit'));",
+                  "const tare = Number(pm.collectionVariables.get('tareCircuit'));",
+                  "const fin = Number(pm.collectionVariables.get('finalWeightCircuit'));",
+                  "const avg = k => list.reduce((s, x) => s + x[k], 0) / list.length;",
+                  "const loaded = list[list.length - 1].accumulatedMass;",
+                  "const expected = { tare: tare, finalWeight: fin, loadedProduct: loaded, scaleNet: fin - tare,",
+                  "  difference: (fin - tare) - loaded, averageTemperature: avg('temperature'), averageDensity: avg('density'), averageFlowRate: avg('flowRate') };",
+                  "pm.test('es la orden del circuito', () => pm.expect(String(r.orderNumber)).to.eql(pm.collectionVariables.get('orderNumberCircuit')));",
+                  "Object.keys(expected).forEach(k => pm.test(k + ' calculado en el test', () => pm.expect(r[k]).to.be.closeTo(expected[k], 1e-6)));",
+                  "pm.collectionVariables.set('reconciliationCircuit', JSON.stringify(r));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberCircuit}}/final-weight",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "integration",
+                "tms",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "final-weight"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": {{finalWeightCircuit}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Punto 5: la conciliación se calcula en el test con la tara, el pesaje final y las lecturas válidas enviadas, y se compara con closeTo."
+          }
+        },
+        {
+          "name": "Punto 5: la consulta coincide con el pesaje final",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('conciliación: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('mismos valores que el POST', () => {",
+                  "  const r = pm.response.json();",
+                  "  const p = JSON.parse(pm.collectionVariables.get('reconciliationCircuit'));",
+                  "  pm.expect(r.orderNumber).to.eql(p.orderNumber);",
+                  "  ['tare', 'finalWeight', 'loadedProduct', 'scaleNet', 'difference', 'averageTemperature', 'averageDensity', 'averageFlowRate'].forEach(k => {",
+                  "    if (p[k] === null) { pm.expect(r[k], k).to.eql(null); } else { pm.expect(r[k], k).to.be.closeTo(p[k], 1e-9); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}/reconciliation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "reconciliation"
+              ]
+            },
+            "description": "El endpoint de consulta (solo estado 4) devuelve la misma conciliación."
+          }
+        },
+        {
+          "name": "Punto 5: la orden queda en estado 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const o = pm.response.json();",
+                  "pm.test('estado 4 con el pesaje final', () => {",
+                  "  pm.expect(o.status).to.eql(4);",
+                  "  pm.expect(o.finalWeight).to.be.closeTo(Number(pm.collectionVariables.get('finalWeightCircuit')), 1e-9);",
+                  "  pm.expect(o.finalWeighingDateTime).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}"
+              ]
+            },
+            "description": "Comprueba el estado 4."
+          }
+        },
+        {
+          "name": "Historial completo de la orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const log = pm.response.json();",
+                  "pm.test('exactamente cuatro registros', () => pm.expect(log.length).to.eql(4));",
+                  "pm.test('secuencia null→1, 1→2, 2→3, 3→4', () => {",
+                  "  pm.expect(log.map(l => [l.fromStatus, l.toStatus])).to.eql([[null, 1], [1, 2], [2, 3], [3, 4]]);",
+                  "});",
+                  "pm.test('cada cambio tiene usuario y fecha', () => log.forEach(l => {",
+                  "  pm.expect(l.actor).to.eql(pm.collectionVariables.get('username'));",
+                  "  pm.expect(l.dateTime).to.be.a('string');",
+                  "}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}/status-log",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "status-log"
+              ]
+            },
+            "description": "Cada cambio de estado quedó registrado con fecha y usuario."
+          }
+        },
+        {
+          "name": "La orden figura en el listado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const n = Number(pm.collectionVariables.get('orderNumberCircuit'));",
+                  "const base = pm.variables.get('baseUrl');",
+                  "const auth = { key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('tokenCircuit') };",
+                  "const check = (page, body) => {",
+                  "  if (body.content.some(o => o.orderNumber === n)) { pm.test('la orden está en GET /orders', () => pm.expect(true).to.eql(true)); return; }",
+                  "  if (page + 1 >= body.page.totalPages) { pm.test('la orden está en GET /orders', () => pm.expect.fail('no aparece en ninguna página')); return; }",
+                  "  pm.sendRequest({ url: base + '/api/v1/orders?page=' + (page + 1) + '&size=100', header: [auth] }, (err, res) => {",
+                  "    if (err) { pm.test('la orden está en GET /orders', () => pm.expect.fail(String(err))); return; }",
+                  "    check(page + 1, res.json());",
+                  "  });",
+                  "};",
+                  "check(0, pm.response.json());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders?page=0&size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "La orden aparece en la lista paginada (busca en las páginas siguientes si hiciera falta)."
+          }
+        },
+        {
+          "name": "Lecturas guardadas de la orden",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde: 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const list = JSON.parse(pm.collectionVariables.get('readingsCircuit'));",
+                  "pm.test('solo las cuatro lecturas válidas', () => pm.expect(j.page.totalElements).to.eql(list.length));",
+                  "pm.test('en el orden enviado', () => pm.expect(j.content.map(d => d.accumulatedMass)).to.eql(list.map(x => x.accumulatedMass)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberCircuit}}/details?page=0&size=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderNumberCircuit}}",
+                "details"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "El histórico tiene las lecturas válidas (sin la descartada ni la tardía)."
           }
         }
       ]
