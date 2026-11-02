@@ -19,15 +19,15 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 02/11/2026, tras completar y verificar la Fase 5 en la rama `fase-5-conciliacion`.
+**Última actualización:** 02/11/2026, tras integrar la Fase 5 en `main` y cerrar el segundo parcial en la rama `cierre-segundo-parcial`.
 
 | | |
 |---|---|
-| **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada y auditada en `fase-5-conciliacion`** (02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial |
-| **Qué sigue** | PR de la Fase 5 a `main` como borrador (decisión 14) y **entrega del 10/11/2026**. Confirmar la decisión 30 y decidir H-27 a H-29. Después, el examen final |
-| `main` | Contiene las Fases 0 a 4 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026) y la guía de inicio de la Fase 4 (PR #11); recibirá la Fase 5 por PR |
+| **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada, auditada e integrada en `main`** (PR #14, 02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial. Después, en la rama `cierre-segundo-parcial` (sin PR todavía): `/demo/**` cerrado, chequeo del deploy corregido, Swagger completo y carpeta Postman 07 (sección 5) |
+| **Qué sigue** | PR de `cierre-segundo-parcial` a `main` (decisión 14) y **entrega del 10/11/2026**. Decidir H-29. Después, el examen final |
+| `main` | Contiene las Fases 0 a 5 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026; Fase 5 por el PR #14, 02/11/2026) y la guía de inicio de la Fase 4 (PR #11). **El 02/11/2026 se reescribió la historia de `main`** con un push forzado (respaldo temporal ya borrado): se quitaron los commits duplicados y los trailers `Co-Authored-By: Claude` y quedaron 286 commits con el mismo contenido. Si alguien tiene un `main` anterior, debe correr `git fetch` y `git reset --hard origin/main` |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
-| Despliegue | La VM se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`); funciona con la Fase 3 |
+| Despliegue | La VM (`jc755.duckdns.org`) se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`). Verificado el 02/11/2026: corre la Fase 5 y el circuito completo 1 → 4 funcionó con el usuario `martin`. El chequeo del workflow sondea `/v3/api-docs` y exige 200 (decisión 48). Detalles en la sección 13 |
 
 | Fase | Contenido | Rama | Estado |
 |---|---|---|---|
@@ -36,7 +36,8 @@
 | 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Completada e integrada en `main` (PR #6) |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Completada e integrada en `main` (PR #7; correcciones en el PR #9) |
 | 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Completada e integrada en `main` (PR #12) |
-| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Completada y verificada (espera PR a `main`) |
+| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Completada e integrada en `main` (PR #14) |
+| — | Cierre del segundo parcial: Swagger completo, carpeta Postman 07, `/demo/**` cerrado y chequeo del deploy | `cierre-segundo-parcial` | Hecha en la rama (espera PR a `main`) |
 
 **No avanzar de fase sin autorización explícita del usuario.**
 
@@ -130,7 +131,7 @@ La conciliación se consulta con un endpoint específico, **solo para órdenes e
 | Instancia | Requisitos |
 |---|---|
 | **Segundo parcial (obligatorio)** | Puntos 1 a 5 como API **sin interfaz gráfica**; documentación **OpenAPI/Swagger**; **colección Postman** que pruebe todas las APIs |
-| Segundo parcial (opcional) | *Tests* de Postman que simulen el circuito completo; frecuencia de almacenamiento configurable; promedios (alcanza con el último valor) |
+| Segundo parcial (opcional) | *Tests* de Postman que simulen el circuito completo; frecuencia de almacenamiento configurable (**no se implementa**, decisión 49); promedios (alcanza con el último valor) |
 | **Examen final** | 100 % de los endpoints; **roles** de usuario; **alarma de temperatura** por e-mail (umbral y destinatarios configurables, sin reenvío hasta que un usuario autorizado la acepte); **frontend** con login, monitoreo en tiempo real (número, estado, camión, preset, carga actual, últimas temperatura, densidad y caudal, filtros y orden), ETA, tiempo transcurrido (solo estado 2), gestión de alarmas y visualización de conciliaciones (solo estado 4) |
 
 Los requisitos del examen final **no** se incorporan al alcance del parcial.
@@ -195,7 +196,7 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Hallazgos:** H-23 a H-25 (observaciones y una limitación; ninguno bloquea).
 - **Informe y guía:** `docs/fase-4-cierre-orden.md` (15 preguntas con respuestas).
 
-### Fase 5 — Pesaje final y conciliación (Punto 5, completada en rama `fase-5-conciliacion`)
+### Fase 5 — Pesaje final y conciliación (Punto 5, completada e integrada en `main` por el PR #14)
 
 - **Trabajo secuencial en 2 partes** (`docs/fase-5-division-de-trabajo.md`, autorizada por Martín González el 02/11/2026): Parte 1 (Tomás Calvo: negocio, endpoints y arreglos) y Parte 2 (Benjamín Alasino: Postman, concurrencia, auditoría y documentación). Decisiones D1 a D14 = decisiones 33 a 46.
 - **Modelo:** `Order` suma `finalWeight` y `finalWeighingDateTime` (opcionales). `OrderDetailRepository.averagesByOrder` (`AVG`) con la proyección `ReadingAverages`. La conciliación (`Reconciliation`) **no se guarda**.
@@ -204,6 +205,16 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Pruebas:** `./mvnw -B test` 40 tests, 0 fallas. Postman: carpetas `05` (44 pedidos, 98 aserciones) y `06 - Circuito completo (1 a 4)` (21 pedidos, 56 aserciones); newman 151 pedidos y 358 aserciones, 0 fallas. Concurrencia: pesaje final doble, activación contra cierre, activación doble y 50 lecturas con un cierre, sin 500 y sin estados inconsistentes.
 - **Auditoría final** del segundo parcial contra el PDF: Puntos 1 a 5 implementados y verificados; observaciones H-27 a H-29.
 - **Informe y guía:** `docs/fase-5-conciliacion.md` (16 preguntas con respuestas y qué debe explicar cada integrante).
+
+### Cierre del segundo parcial (02/11/2026, rama `cierre-segundo-parcial`, sin PR todavía)
+
+- **Historial de `main` limpio:** push forzado que quitó los commits duplicados y los trailers `Co-Authored-By: Claude` (286 commits, mismo contenido); la rama `fase-5-conciliacion` se borró de GitHub.
+- **`/demo/**` cerrado** (decisión 47): `GET /demo/encodepass` exige token. Con token sigue devolviendo el hash BCrypt.
+- **Chequeo del deploy corregido** (decisión 48): sondea `/v3/api-docs` y exige 200 (antes llamaba a `/api/v1/products`, ruta retirada, y aceptaba 200, 401 o 403).
+- **Swagger completo** (decisión 50, resuelve H-27): los 13 endpoints tienen `@Operation`, y los protegidos declaran 401 y 500 y el 404 donde corresponde; el login figura sin candado (`@SecurityRequirements`) y con su tag *Autenticación*.
+- **Postman:** carpeta `07 - Demo de la cátedra (encodepass)` (3 pedidos y 6 aserciones: login propio, `/demo/encodepass` sin token 401 y con token 200 con un hash BCrypt de 60 caracteres). Cubre las 13 rutas del documento OpenAPI (resuelve H-28). Newman: **154 pedidos y 364 aserciones, 0 fallas**; las carpetas 00 a 06 no cambiaron. `./mvnw -B test`: 40 tests.
+- **Prueba en la VM** (verificada a mano): el login con `martin` (usuario `ROLE_ADMIN` creado en la base de la VM, que no tenía usuarios) y el circuito 1 → 4 con la orden de prueba `97001` dieron los resultados esperados: pesaje final, conciliación idéntica en el POST y el GET, historial de 4 filas y segundo pesaje 409.
+- **No se hace** la frecuencia de almacenamiento configurable (decisión 49): se guardan todas las lecturas válidas, como permite la consigna.
 
 ## 6. Arquitectura y convenciones del código
 
@@ -243,7 +254,7 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
   hora de Argentina.
 - Tablas: `orders` (ORDER es reservada) y `gas_products` (la tabla `products` del demo existe en bases
   viejas con otro esquema). `ddl-auto=update`: crea y agrega, **nunca borra ni renombra**.
-- Seguridad: todo exige JWT salvo `POST /api/v1/login`, `/error`, la documentación y `/demo/**`. El token
+- Seguridad: todo exige JWT salvo `POST /api/v1/login`, `/error` y la documentación (desde el 02/11/2026 `/demo/**` también exige token). El token
   es HS512, vence en 1 h y viaja en `Authorization: Bearer <jwt>` (o `?authtoken=`).
 - Perfiles de Spring: `mysqldev` y `mysqlprod` (properties). Se activan con
   `-Dspring-boot.run.profiles=<perfil>` o `SPRING_PROFILES_ACTIVE`; el `-P` de Maven **no** los activa (H-3).
@@ -252,7 +263,7 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
-| `POST /api/v1/login` | Formulario `username`/`password`; devuelve el JWT en texto | 200, 401 (con JSON) |
+| `POST /api/v1/login` | Formulario `username`/`password`; devuelve el JWT en texto. Único endpoint público | 200, 401 (con JSON), 500 |
 | `POST /api/v1/integration/sap/orders` | **Punto 1**: recibe la orden | 201 + `location`, 302, 400, 401, 500 |
 | `POST /api/v1/integration/tms/orders/{orderNumber}/tare` | **Punto 2**: registra la tara y devuelve la contraseña de activación | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/activation` | **Punto 3**: activa la carga con `{ orderNumber, password }` y devuelve `{ preset }`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
@@ -260,11 +271,11 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | `POST /api/v1/integration/loader/orders/{orderNumber}/close` | **Punto 4**: cierra la orden (estado 2 → 3); desde ahí las lecturas dan 409. Sin cuerpo; registra el cambio con el usuario del token y responde la orden. No es idempotente | 200, 401, 404, 409, 500 |
 | `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` | **Punto 5**: registra el pesaje final (estado 3 → 4, fila "Pesaje final registrado") y devuelve la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders/{orderNumber}/reconciliation` | **Punto 5**: conciliación, solo para órdenes en estado 4 (se calcula, no se guarda) | 200, 401, 404, 409, 500 |
-| `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200 |
-| `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 404 |
-| `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
-| `GET /api/v1/orders/{orderNumber}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100; se ignora `sort`). Responde `{ content, page }` | 200, 404 |
-| `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, **público**, cerrar antes de desplegar) | 200 |
+| `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200, 401, 500 |
+| `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 401, 404, 500 |
+| `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 401, 404, 500 |
+| `GET /api/v1/orders/{orderNumber}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100; se ignora `sort`). Responde `{ content, page }` | 200, 401, 404, 500 |
+| `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra). **Exige token** desde el 02/11/2026 (decisión 47) | 200, 401, 500 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación OpenAPI | públicos |
 
 Cuerpo de `POST /integration/sap/orders` (resumido; ejemplo completo en la colección Postman):
@@ -297,7 +308,7 @@ con tara 14500 y lecturas de 1000 kg (20 °C, 0.5, 3000 kg/h) y 2000 kg (22 °C,
 
 Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondean.
 
-**Pruebas actuales** (medidas el 02/11/2026): `./mvnw -B test` → 40 tests; colección Postman → 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04: 86 y 204; 05: 44 y 98; 06: 21 y 56).
+**Pruebas actuales** (medidas el 02/11/2026): `./mvnw -B test` → 40 tests; colección Postman → 154 pedidos y 364 aserciones, 0 fallas (carpetas 00 a 04: 86 y 204; 05: 44 y 98; 06: 21 y 56; 07: 3 y 6). Los 13 endpoints del documento OpenAPI tienen al menos un pedido.
 
 | Entidad (clase → tabla) | Notas |
 |---|---|
@@ -334,20 +345,19 @@ Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondea
 
 **Fase 4 — Cierre de la orden (Punto 4)** · rama `fase-4-cierre-orden`
 
-- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente:
-  confirmación de la decisión 30 por el equipo.
+- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). La decisión 30 quedó
+  confirmada el 02/11/2026.
 - `POST /api/v1/integration/loader/orders/{orderNumber}/close`: estado 2 → 3. Desde ahí se rechazan los
   detalles. Rechazar transiciones inválidas (cerrar dos veces, o desde el estado 1).
 
 **Fase 5 — Pesaje final, conciliación y circuito completo (Punto 5)** · rama `fase-5-conciliacion`
 
-- **Estado: COMPLETADA y verificada** en su rama (02/11/2026; ver `docs/fase-5-conciliacion.md`). Lista para el PR a `main`
-  (borrador, con las aprobaciones de Martín, Contreras y Calvo).
+- **Estado: COMPLETADA, verificada e integrada en `main`** (PR #14, 02/11/2026; ver `docs/fase-5-conciliacion.md`).
 - `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight`: estado 3 → 4 y devuelve la conciliación.
 - `GET /api/v1/orders/{orderNumber}/reconciliation`: solo para estado 4.
 - Promedios con `AVG` sobre los detalles almacenados (decisión 3).
-- Swagger completo, Postman consolidado con *Tests* que simulen el circuito 1 → 4, pruebas de integración y
-  verificación de los requisitos obligatorios del parcial.
+- Postman consolidado con *Tests* que simulen el circuito 1 → 4 y verificación de los requisitos obligatorios del
+  parcial: hechos. Swagger completo y carpeta 07: ver «Cierre del segundo parcial» (sección 5).
 
 ### 8.2 Para el examen final
 
@@ -365,6 +375,9 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
   autor del PR **no** cuenta como aprobación.
 - ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Se redespliega solo al mergear a `main`:
   hoy el workflow de GitHub Actions lo hace en cada push a `main`.
+
+- **Cierre del segundo parcial:** abrir el PR de `cierre-segundo-parcial` a `main` (con las aprobaciones de Martín, Contreras y Calvo), vigilar que el *workflow* de deploy termine en verde con el chequeo nuevo y entregar el 10/11/2026 la colección Postman (`docs/postman/IW3-Gas-Terminal.postman_collection.json`, 8 carpetas, 154 pedidos).
+- **Decisión 30:** confirmada el 02/11/2026 (se deja como está; el enunciado no define condiciones para el cierre).
 
 ### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
 
@@ -422,7 +435,7 @@ JSON
 | 27 | (D10) `IOrderDetailBusiness` aparte; la activación va en `IOrderBusiness` | Aplicada (Fase 3) |
 | 28 | (Decisión 11 de la división) `GET /orders/{orderNumber}/details` paginado, orden fijo por `id`, tope de 100 | Aplicada (Fase 3; aprobada por Tomás Calvo el 27/10/2026) |
 | 29 | Solo se cierra desde el estado 2; los estados 1, 3 y 4 dan 409; cerrar dos veces **no** es idempotente | Aplicada (Fase 4) |
-| 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **a confirmar por el equipo** |
+| 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **confirmada el 02/11/2026**: se deja así (la consigna no exige activación ni lecturas para cerrar) |
 | 31 | El cierre busca la orden con `findByOrderNumberForUpdate` (`PESSIMISTIC_WRITE`) para serializarse con las lecturas | Aplicada (Fase 4) |
 | 32 | Una fila 2→3 en `order_status_logs` (usuario del token, "Orden cerrada para carga") y 200 con la orden; sin campos nuevos ni cambios en fechas de carga o últimos valores | Aplicada (Fase 4) |
 | 33 | (D1) Pesaje final solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente | Aplicada (Fase 5) |
@@ -439,12 +452,16 @@ JSON
 | 44 | (D12) Fuera de alcance: frecuencia de almacenamiento, roles, alarmas, frontend y seguridad | Vigente |
 | 45 | (D13) La tara rechaza un peso infinito con 400 (`requireValidWeight`, compartido con el pesaje final) | Aplicada (Fase 5; arreglo de la Fase 2, H-26) |
 | 46 | (D14) `activate` busca la orden con bloqueo de fila | Aplicada (Fase 5; arreglo de la Fase 3, H-25 y H-16) |
+| 47 | `/demo/**` deja de ser público: `GET /demo/encodepass` exige token | Aplicada (cierre del parcial, 02/11/2026; parte de H-5) |
+| 48 | El chequeo del deploy sondea `/v3/api-docs` y exige HTTP 200 | Aplicada (cierre del parcial, 02/11/2026; parte de H-5) |
+| 49 | No se implementa la frecuencia de almacenamiento configurable (opcional del parcial): se guardan todas las lecturas válidas, como permite la consigna | Vigente (decisión del usuario, 02/11/2026) |
+| 50 | Swagger completo: `@Operation` en los 13 endpoints, 401 y 500 en los protegidos, 404 donde corresponde; carpeta Postman 07 para `/demo/encodepass` | Aplicada (cierre del parcial, 02/11/2026; resuelve H-27 y H-28) |
 
 ## 10. Hallazgos y deuda abierta
 
 | ID | Tema | Estado |
 |---|---|---|
-| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), `/demo/**` público, CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. El chequeo del *workflow* de deploy llama a `/api/v1/products`, ruta retirada en la Fase 1 (pasa porque responde 401) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
+| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. Resueltos el 02/11/2026: `/demo/**` público (decisión 47) y el chequeo del *workflow* de deploy sobre `/api/v1/products` (decisión 48) | Abierto: cerrar el resto en la etapa de seguridad y **antes de cualquier despliegue real** |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
 | H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Sigue aceptado para el parcial (análogo a N-2 de Fase 1; la Fase 5 solo cambió el chequeo del peso) |
 | H-14 | Una falla de base al confirmar la activación respondía 500 con el formato de Spring, no `StandartResponse` (`activate` usaba `save`) | Resuelto (27/10/2026): `saveAndFlush` en `OrderBusiness.activate` (`4ed54c8`), verificado |
@@ -456,8 +473,8 @@ JSON
 | H-24 | `loadForUpdate` duplicado en `OrderBusiness` y `OrderDetailBusiness` | Deuda menor; unificar con acuerdo del equipo |
 | H-25 | `activate` buscaba sin bloqueo: una primera activación simultánea con el cierre podía reescribir el estado 2 (solo posible por la decisión 30) | **Resuelto** (Fase 5, D14): `loadForUpdate` en `activate`; 20 de 20 activaciones simultáneas con el cierre terminaron en estado 3 |
 | H-26 | `POST …/tare` con `1e999` respondía 500 con el formato de Spring | **Resuelto** (Fase 5, D13): 400 «weight debe ser un número finito» |
-| H-27 | Swagger incompleto fuera de lo nuevo: login y `/demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 | Observación; arreglo de anotaciones a decidir por el equipo |
-| H-28 | `GET /demo/encodepass` (demo de la cátedra) no tiene pedido en Postman | Observación; retirarlo con H-5 o agregar un pedido |
+| H-27 | Swagger incompleto fuera de lo nuevo: login y `/demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 | **Resuelto** (02/11/2026, decisión 50): anotaciones en los 13 endpoints |
+| H-28 | `GET /demo/encodepass` (demo de la cátedra) no tiene pedido en Postman | **Resuelto** (02/11/2026): carpeta 07 (sin token 401, con token 200) |
 | H-29 | `registerTare` guarda con `save` y no con `saveAndFlush` (lección de H-14) | Deuda menor; fuera del alcance de D13 |
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
@@ -536,7 +553,7 @@ SET FOREIGN_KEY_CHECKS=1;
 
 ## 13. Despliegue en la VM
 
-- La VM (Ubuntu con Docker) corre tres contenedores: `iw3-app` (backend), `iw3-mysql-prod` y `nginx`.
+- La VM (Ubuntu con Docker) corre cuatro contenedores: `iw3-app` (backend), `iw3-frontend`, `iw3-mysql-prod` y `nginx`.
 - **Incidente del 14/10/2026:** `iw3-app` ejecutaba una imagen construida con un commit anterior a
   `344cc78`, donde `AuthRestController` ya existía pero `SecurityConfiguration` todavía no definía el bean
   `AuthenticationManager`. Fallaba al arrancar y la política `unless-stopped` lo reinició 334 veces: CPU al
@@ -549,6 +566,8 @@ SET FOREIGN_KEY_CHECKS=1;
   - El host de la base debe ser el nombre del servicio MySQL en la misma red de Docker.
   - Política de reinicio `on-failure:3`, no `unless-stopped`.
   - Crear un usuario y sus roles en la base de producción (el seed es solo de desarrollo).
+- **Usuario de prueba en la VM (02/11/2026):** la base de producción no tenía usuarios; se creó `martin` con `ROLE_ADMIN` a mano (las tres columnas `account_*` hay que fijarlas en 1: su valor por defecto es 0 y con 0 el login falla). El hash BCrypt se generó fuera de la VM, con `htpasswd -nbBC 10` (devuelve `$2y$`; Spring lo acepta, y se puede cambiar por `$2a$`). Las contraseñas de la VM y de su base **no** se guardan en el repo.
+- **Datos de prueba que quedaron en la base de la VM:** la orden `97001` (estado 4) y el camión, chofer, cliente y producto `VM-*`.
 - Sin base accesible, la app muere en ~15 s con código 1 y consume mucha CPU: con reinicio automático es un bucle.
 - El TP usa la tabla `gas_products`, por lo que no choca con la `products` del demo de la base de producción.
 
@@ -569,7 +588,7 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
 | `docs/pdf/consigna-trabajo-integrador-2026.pdf` | **Consigna oficial del trabajo integrador** (referencia; no se regenera) |
-| `docs/postman/` | Colección Postman (carpetas 00 a 06; la 06 es el circuito completo con *Tests*) |
+| `docs/postman/` | Colección Postman (carpetas 00 a 07; la 06 es el circuito completo con *Tests* y la 07 prueba el demo de la cátedra) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
 | `README.md` | Descripción general y base de datos |
 
