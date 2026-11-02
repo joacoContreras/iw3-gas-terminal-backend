@@ -240,6 +240,23 @@ public class OrderBusiness implements IOrderBusiness {
 		}
 	}
 
+	@Override
+	public Reconciliation reconciliation(Integer orderNumber)
+			throws NotFoundException, ConflictException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500. Sin bloqueo: solo lee
+		Order order = load(orderNumber);
+		if (order.getStatus() != OrderStatus.FINISHED) {
+			throw ConflictException.builder().message("La conciliación solo está disponible para órdenes en estado 4 (orden "
+					+ orderNumber + " en estado " + order.getStatus().getCode() + ")").build();
+		}
+		try {
+			return buildReconciliation(order);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
 	/**
 	 * Calcula la conciliacion de una orden con pesaje final. Es la unica funcion que la arma, para que el
 	 * POST del pesaje final y el GET de la consulta no puedan diferir. No redondea y no guarda nada.
