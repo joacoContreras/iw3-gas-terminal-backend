@@ -316,10 +316,12 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | `docker-compose.yml` | La base MySQL (contenedor `iw3-gas-mysql`, puerto 3306, base `iw3_db`) |
 | `CLAUDE.md` | Estado del proyecto y reglas del equipo |
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
-| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md`, `docs/fase-4-cierre-orden.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
+| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md`, `docs/fase-4-cierre-orden.md`, `docs/fase-5-conciliacion.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
 | `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
 | `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
-| `docs/postman/` | Colección Postman (86 pedidos, 204 verificaciones: carpetas 00 a 04) |
+| `docs/fase-5-division-de-trabajo.md` | División del trabajo para la Fase 5 (2 partes, trabajo secuencial: Calvo y Alasino), con las decisiones D1 a D14, los prompts y el registro de cada parte (F5) |
+| `docs/fase-5-conciliacion.md` | Informe de la Fase 5, **auditoría final del segundo parcial** (matriz de trazabilidad contra el PDF) y guía de estudio (F5) |
+| `docs/postman/` | Colección Postman: 151 pedidos y 358 verificaciones en las carpetas 00 a 06. La 05 prueba el pesaje final y la conciliación; la 06 simula el **circuito completo 1 → 4** con *Tests* encadenados y su propio login (F5) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 
