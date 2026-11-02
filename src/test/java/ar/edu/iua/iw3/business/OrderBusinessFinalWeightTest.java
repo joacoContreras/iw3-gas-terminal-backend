@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.iua.iw3.business.exception.BadRequestException;
+import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.model.OrderStatus;
@@ -84,6 +85,40 @@ class OrderBusinessFinalWeightTest {
 			assertEquals(OrderStatus.CLOSED_FOR_LOADING, o.getStatus());
 			assertNull(o.getFinalWeight());
 		}
+		verifyNothingWritten();
+	}
+
+	@Test
+	void registerFinalWeight_statusNot3_throwsConflict() {
+		OrderStatus[] others = { OrderStatus.PENDING_INITIAL_WEIGHING, OrderStatus.INITIAL_WEIGHING_REGISTERED,
+				OrderStatus.FINISHED };
+		for (OrderStatus status : others) {
+			lockedOrder(status);
+			ConflictException e = assertThrows(ConflictException.class,
+					() -> orderBusiness.registerFinalWeight(NUMBER, 16490.0, "admin"));
+			assertTrue(e.getMessage().contains("no admite pesaje final"));
+			assertTrue(e.getMessage().contains("estado " + status.getCode()));
+		}
+		verifyNothingWritten();
+	}
+
+	@Test
+	void registerFinalWeight_noTare_throwsConflict() {
+		Order o = lockedOrder(OrderStatus.CLOSED_FOR_LOADING);
+		o.setTare(null);
+		ConflictException e = assertThrows(ConflictException.class,
+				() -> orderBusiness.registerFinalWeight(NUMBER, 16490.0, "admin"));
+		assertTrue(e.getMessage().contains("no tiene tara registrada"));
+		verifyNothingWritten();
+	}
+
+	@Test
+	void registerFinalWeight_weightLessThanTare_throwsBadRequest() {
+		Order o = lockedOrder(OrderStatus.CLOSED_FOR_LOADING);
+		BadRequestException e = assertThrows(BadRequestException.class,
+				() -> orderBusiness.registerFinalWeight(NUMBER, 14000.0, "admin"));
+		assertTrue(e.getMessage().contains("no puede ser menor que la tara (14500.0 kg)"));
+		assertEquals(OrderStatus.CLOSED_FOR_LOADING, o.getStatus());
 		verifyNothingWritten();
 	}
 }
