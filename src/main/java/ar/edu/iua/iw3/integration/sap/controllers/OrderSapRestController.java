@@ -41,6 +41,8 @@ public class OrderSapRestController extends BaseRestController {
 	@ApiResponse(responseCode = "201", description = "Orden creada; el header location apunta a la orden")
 	@ApiResponse(responseCode = "302", description = "Ya existe una orden con ese número (convención de la cátedra)")
 	@ApiResponse(responseCode = "400", description = "Datos obligatorios ausentes o fuera de rango")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "500", description = "Error interno")
 	@PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> add(@RequestBody Order order) {
 		try {
