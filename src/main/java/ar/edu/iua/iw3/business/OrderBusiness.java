@@ -151,7 +151,8 @@ public class OrderBusiness implements IOrderBusiness {
 		if (orderNumber == null || password == null) {
 			throw BadRequestException.builder().message("orderNumber y password son obligatorios").build();
 		}
-		Order order = load(orderNumber);
+		// Con bloqueo de fila (H-25): una activacion no se cruza con un cierre ni con otra activacion
+		Order order = loadForUpdate(orderNumber);
 		if (order.getStatus() != OrderStatus.INITIAL_WEIGHING_REGISTERED) {
 			throw ConflictException.builder().message("La orden " + orderNumber
 					+ " no está lista para activar (estado " + order.getStatus().getCode() + ")").build();
