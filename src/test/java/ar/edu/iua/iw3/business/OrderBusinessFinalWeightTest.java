@@ -208,4 +208,52 @@ class OrderBusinessFinalWeightTest {
 		assertNull(r.getAverageDensity());
 		assertNull(r.getAverageFlowRate());
 	}
+
+	/** Orden para la consulta (sin bloqueo): la busca la consulta comun. */
+	private Order queryOrder(OrderStatus status) {
+		Order o = new Order();
+		o.setId(1L);
+		o.setOrderNumber(NUMBER);
+		o.setStatus(status);
+		o.setTare(TARE);
+		o.setFinalWeight(16490.0);
+		o.setLastAccumulatedMass(2000.0);
+		when(orderDAO.findByOrderNumber(NUMBER)).thenReturn(Optional.of(o));
+		return o;
+	}
+
+	@Test
+	void reconciliation_orderNotFound_throwsNotFound() {
+		when(orderDAO.findByOrderNumber(NUMBER)).thenReturn(Optional.empty());
+		assertThrows(NotFoundException.class, () -> orderBusiness.reconciliation(NUMBER));
+	}
+
+	@Test
+	void reconciliation_statusNot4_throwsConflict() {
+		OrderStatus[] others = { OrderStatus.PENDING_INITIAL_WEIGHING, OrderStatus.INITIAL_WEIGHING_REGISTERED,
+				OrderStatus.CLOSED_FOR_LOADING };
+		for (OrderStatus status : others) {
+			queryOrder(status);
+			ConflictException e = assertThrows(ConflictException.class, () -> orderBusiness.reconciliation(NUMBER));
+			assertTrue(e.getMessage().contains("solo está disponible para órdenes en estado 4"));
+			assertTrue(e.getMessage().contains("en estado " + status.getCode()));
+		}
+	}
+
+	@Test
+	void reconciliation_status4_returnsTheSameValuesWithoutLockingNorWriting() throws Exception {
+		Order o = queryOrder(OrderStatus.FINISHED);
+		when(orderDetailDAO.averagesByOrder(o)).thenReturn(averages(21.0, 0.5, 3300.0));
+
+		Reconciliation r = orderBusiness.reconciliation(NUMBER);
+
+		assertEquals(2000.0, r.getLoadedProduct());
+		assertEquals(1990.0, r.getScaleNet());
+		assertEquals(-10.0, r.getDifference());
+		assertEquals(21.0, r.getAverageTemperature());
+		assertEquals(0.5, r.getAverageDensity());
+		assertEquals(3300.0, r.getAverageFlowRate());
+		verify(orderDAO, never()).findByOrderNumberForUpdate(any());
+		verifyNothingWritten();
+	}
 }
