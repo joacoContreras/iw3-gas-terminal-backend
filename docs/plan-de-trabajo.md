@@ -13,7 +13,7 @@ Este documento es el registro vivo del plan: se actualiza fase a fase y no se re
 | Categoría | Requisitos |
 |---|---|
 | **Obligatorio 2º parcial** | Puntos 1 a 5 como API sin interfaz gráfica. Documentación OpenAPI/Swagger. Colección Postman que pruebe todas las APIs. Persistencia, estados secuenciales y registro de cada cambio de estado (fecha/hora, usuario o proceso, observaciones). Descarte de registros de detalle inválidos. |
-| **Opcional 2º parcial** | Simulación del circuito completo con *Tests* de Postman. Frecuencia de almacenamiento distinta de la de recepción. Promedios de temperatura, densidad y caudal. |
+| **Opcional 2º parcial** | Simulación del circuito completo con *Tests* de Postman. Frecuencia de almacenamiento distinta de la de recepción (no se implementa: decisión 49). Promedios de temperatura, densidad y caudal. |
 | **Examen final** | 100 % de los endpoints. Roles de usuario. Alarma de temperatura por e-mail (umbral y destinatarios configurables; sin reenvío hasta ser aceptada). Frontend (login, monitoreo en tiempo real, ETA, tiempo transcurrido, alarmas, conciliaciones). |
 
 Los requisitos del examen final **no** se incorporan al alcance del segundo parcial.
@@ -81,6 +81,10 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 44 | Fuera de alcance (D12) | Frecuencia de almacenamiento, roles, alarmas, frontend y seguridad. | Fase 5 |
 | 45 | Arreglo H-26 (D13) | **Aplicada en la Fase 5.** La tara rechaza el peso infinito con 400 (`requireValidWeight`). | Fase 5 (cambio en la Fase 2) |
 | 46 | Arreglo H-25 (D14) | **Aplicada en la Fase 5.** `activate` busca la orden con bloqueo; resuelve también H-16. | Fase 5 (cambio en la Fase 3) |
+| 47 | `/demo/**` cerrado | **Aplicada.** `GET /demo/encodepass` exige token (se quitó el `permitAll` de `/demo/**`). | Cierre del parcial (02/11/2026) |
+| 48 | Chequeo del deploy | **Aplicada.** El *workflow* sondea `/v3/api-docs` y exige HTTP 200 (antes llamaba a `/api/v1/products`, ruta retirada, y aceptaba 200, 401 o 403). | Cierre del parcial |
+| 49 | Frecuencia de almacenamiento | **No se implementa** (opcional del parcial). Se guardan todas las lecturas válidas, como permite la consigna. Decisión del usuario. | Cierre del parcial |
+| 50 | Swagger completo y Postman 07 | **Aplicada.** `@Operation` en los 13 endpoints; 401 y 500 en los protegidos y 404 donde corresponde; carpeta Postman 07 para `/demo/encodepass` (resuelve H-27 y H-28). | Cierre del parcial |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
@@ -128,7 +132,8 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 | 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada e integrada en main, PR #6)** |
 | 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada e integrada en main, PR #7; correcciones de la auditoría en el PR #9, 27/10/2026)** |
 | 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Completada e integrada en main, PR #12, 31/10/2026. Informe: `docs/fase-4-cierre-orden.md`)** |
-| 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. Plan detallado en la sección 6.2. | Circuito completo 1→4 verificado; consulta solo en estado 4. **(Completada y verificada en su rama el 02/11/2026; espera PR a main. Informe: `docs/fase-5-conciliacion.md`)** |
+| 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. Plan detallado en la sección 6.2. | Circuito completo 1→4 verificado; consulta solo en estado 4. **(Completada e integrada en main, PR #14, 02/11/2026. Informe: `docs/fase-5-conciliacion.md`)** |
+| — | `cierre-segundo-parcial` | Swagger completo, carpeta Postman 07, `/demo/**` cerrado y chequeo del deploy corregido. Detalle en la sección 6.3. | Los 13 endpoints documentados y con pedido en Postman; newman 154 pedidos y 364 aserciones. **(Hecha en su rama el 02/11/2026; espera PR a main)** |
 
 ### 6.1 Fase 4 en detalle — Cierre de la orden (Punto 4)
 
@@ -171,7 +176,7 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 
 **Responsables:** trabajo secuencial en dos partes, autorizado por Martín González el 02/11/2026 (`docs/fase-5-division-de-trabajo.md`): Parte 1, Tomás Calvo (negocio, endpoints y arreglos H-25 y H-26); Parte 2, Benjamín Alasino (Postman 05 y 06, concurrencia, auditoría final, documentación y PR).
 
-**Estado (02/11/2026): completada y verificada** en la rama `fase-5-conciliacion`. Los 21 criterios de la división se cumplen: `./mvnw -B test` 40 tests; newman 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04 sin cambios: 86 y 204); concurrencia sin respuestas 500 ni estados inconsistentes. La auditoría del segundo parcial contra el PDF deja los Puntos 1 a 5 implementados y verificados, con tres observaciones (H-27 a H-29). Detalle en `docs/fase-5-conciliacion.md`.
+**Estado (02/11/2026): completada, verificada e integrada en `main`** (PR #14). Los 21 criterios de la división se cumplen: `./mvnw -B test` 40 tests; newman 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04 sin cambios: 86 y 204); concurrencia sin respuestas 500 ni estados inconsistentes. La auditoría del segundo parcial contra el PDF deja los Puntos 1 a 5 implementados y verificados, con tres observaciones (H-27 a H-29); H-27 y H-28 se resolvieron en el cierre del parcial (sección 6.3). Detalle en `docs/fase-5-conciliacion.md`.
 
 **Objetivo.** La balanza envía el pesaje final; la orden pasa de 3 a 4, queda registrado el cambio y se devuelve la conciliación, que también se puede consultar solo en estado 4 (consigna, Punto 5).
 
@@ -190,6 +195,26 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 **Criterios de aceptación:** los 21 de la sección 6 de `docs/fase-5-division-de-trabajo.md`, verificados uno por uno en la sección 1 de `docs/fase-5-conciliacion.md`.
 
 **Fuera de alcance (D12).** Frecuencia de almacenamiento configurable (opcional del parcial), roles, alarma de temperatura, frontend y seguridad (examen final), listado de conciliaciones y reabrir órdenes.
+
+### 6.3 Cierre del segundo parcial
+
+**Rama:** `cierre-segundo-parcial` (02/11/2026). No es una fase nueva: son los ajustes que quedaron de la auditoría final de la Fase 5 y de la puesta en marcha en la VM. Pedidos por Martín González.
+
+**Estado (02/11/2026): hecha en la rama, sin PR todavía.** `./mvnw -B test` 40 tests; newman 154 pedidos y 364 aserciones, 0 fallas (las carpetas 00 a 06 no cambiaron); los 13 endpoints del documento OpenAPI tienen al menos un pedido.
+
+| # | Tarea | Decisión |
+|---|---|---|
+| C1 | `/demo/**` deja de ser público (`SecurityConfiguration`) | 47 |
+| C2 | El chequeo del deploy sondea `/v3/api-docs` y exige 200 (`deploy.yml`) | 48 |
+| C3 | `@Operation` en el login y el demo; 401 y 500 en todos los endpoints protegidos; 404 en `GET /orders/{n}` y `/status-log`; el login sin candado | 50 (H-27) |
+| C4 | Carpeta Postman `07 - Demo de la cátedra (encodepass)`: login propio, sin token 401 y con token 200 (hash BCrypt de 60 caracteres) | 50 (H-28) |
+| C5 | `CLAUDE.md`, este plan y la guía de `src` al día | — |
+
+**Verificado en la VM** (`jc755.duckdns.org`, 02/11/2026, a mano): login con un usuario creado en la base de producción (estaba sin usuarios) y circuito completo 1 → 4 con la orden de prueba `97001`; el segundo pesaje dio 409.
+
+**Fuera de alcance.** Frecuencia de almacenamiento configurable (decisión 49: no se hace), roles, alarmas, frontend y el resto de la seguridad (H-5: clave JWT, contraseñas por defecto, `dev.info`).
+
+**Pendiente para la entrega del 10/11/2026.** PR a `main` con las aprobaciones de Martín, Contreras y Calvo; que el *workflow* de deploy termine en verde; entregar la colección Postman; confirmar la decisión 30.
 
 ## 7. Forma de trabajo
 
