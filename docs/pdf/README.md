@@ -12,6 +12,7 @@ La fuente de verdad son los Markdown de `docs/`: **si cambian, hay que regenerar
 | [fase-3-carga-tiempo-real.pdf](fase-3-carga-tiempo-real.pdf) | [docs/fase-3-carga-tiempo-real.md](../fase-3-carga-tiempo-real.md) |
 | [fase-3-division-de-trabajo.pdf](fase-3-division-de-trabajo.pdf) | [docs/fase-3-division-de-trabajo.md](../fase-3-division-de-trabajo.md) (guía y prompts de las 3 partes, trabajo secuencial) |
 | [fase-4-cierre-orden.pdf](fase-4-cierre-orden.pdf) | [docs/fase-4-cierre-orden.md](../fase-4-cierre-orden.md) (informe y guía de estudio de la Fase 4) |
+| [fase-5-division-de-trabajo.pdf](fase-5-division-de-trabajo.pdf) | [docs/fase-5-division-de-trabajo.md](../fase-5-division-de-trabajo.md) (guía y prompts de las 2 partes, trabajo secuencial: Calvo y Alasino) |
 | [guia-estudio-src.pdf](guia-estudio-src.pdf) | [docs/guia-estudio-src.md](../guia-estudio-src.md) (se actualiza en cada fase) |
 | [Guia_Inicio_Fase_4.pdf](Guia_Inicio_Fase_4.pdf) | [docs/fase-4-guia-de-inicio.md](../fase-4-guia-de-inicio.md) (alcance, plan, checklist y prompt de la Fase 4; responsable: Benjamín Alasino) |
 
@@ -33,6 +34,7 @@ node docs/pdf/md2pdf.js docs/fase-2-pesaje-inicial.md docs/pdf/fase-2-pesaje-ini
 node docs/pdf/md2pdf.js docs/fase-3-carga-tiempo-real.md docs/pdf/fase-3-carga-tiempo-real.pdf "Fase 3 · Carga y datos en tiempo real"
 node docs/pdf/md2pdf.js docs/fase-3-division-de-trabajo.md docs/pdf/fase-3-division-de-trabajo.pdf "Fase 3 · División del trabajo"
 node docs/pdf/md2pdf.js docs/fase-4-cierre-orden.md docs/pdf/fase-4-cierre-orden.pdf "Fase 4 · Cierre de la orden"
+node docs/pdf/md2pdf.js docs/fase-5-division-de-trabajo.md docs/pdf/fase-5-division-de-trabajo.pdf "Fase 5 · División del trabajo"
 node docs/pdf/md2pdf.js docs/guia-estudio-src.md docs/pdf/guia-estudio-src.pdf "Guía de estudio del código"
 node docs/pdf/md2pdf.js docs/fase-4-guia-de-inicio.md docs/pdf/Guia_Inicio_Fase_4.pdf "Fase 4 · Guía de inicio (Benjamín Alasino)"
 ```
