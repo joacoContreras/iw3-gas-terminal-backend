@@ -739,7 +739,7 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 | Parte | Responsable | Estado | Último commit | Fecha |
 |---|---|---|---|---|
 | 1 | Tomás Calvo | Completa y verificada (local, sin push) | `7408b07` (último commit de código) | 02/11/2026 |
-| 2 | Benjamín Alasino | Pendiente | — | — |
+| 2 | Benjamín Alasino | Completa y verificada (local, sin push; PR pendiente) | `bcda1b3` (antes del bloque de estado) | 02/11/2026 |
 
 ## Modelo del bloque "Estado de la Parte N"
 
@@ -847,3 +847,54 @@ Casos comprobados con pedidos reales (orden con tara 14500 y lecturas 1000/0.5/2
 - **newman contra otro puerto:** `--env-var "baseUrl=http://localhost:8089"` sobrescribe la variable de la colección.
 - **Hallazgos sin tocar:** H-12 (taras simultáneas) sigue aceptado; H-21 y H-23 (números como texto y rutas no numéricas) no cambian: un `weight` `"abc"` sigue saliendo con el formato por defecto de Spring.
 - **Atribución:** todos los commits de esta parte son de `tomas-calvo01`. De las fases anteriores solo se tocaron `registerTare` (D13) y `activate` (D14), con la autorización de Martín González.
+
+## Estado de la Parte 2 (02/11/2026)
+
+| Paso | Commit | Estado |
+|---|---|---|
+| Carpetas Postman 05 y 06 (solo el JSON; `git diff --numstat`: 3142 agregadas, 0 borradas) | `0622a20` `test(postman): agrega las carpetas 05 (pesaje final y conciliación) y 06 (circuito completo)` | Local |
+| Informe, auditoría final y guía de estudio | `1c281f0` `docs(fase-5): agrega el informe, la auditoría final y la guía de estudio de la Fase 5`, `1b2c049` (aclaración de la sección K) | Local |
+| `CLAUDE.md` secciones 2 y 5 | `0a643b7` | Local |
+| `CLAUDE.md` secciones 6 y 7 | `0cf47b7` | Local |
+| `CLAUDE.md` secciones 8.1 y 8.3 | `cfc5fa3` | Local |
+| `CLAUDE.md` sección 9 (decisiones 33 a 46) | `8f01997` | Local |
+| `CLAUDE.md` secciones 10 y 14 | `ecdd957` | Local |
+| Plan: decisiones 33 a 46 · filas de las Fases 4 y 5 y sección 6.2 | `b3082fa`, `6a0669f` | Local |
+| Guía de `src`: fecha, fases, endpoints y códigos · filas F5 de la Parte 2 | `014d87c`, `194f79f` | Local |
+| PDF de la Fase 5 y fila en el índice · PDF de la guía de `src` | `ac69aa4`, `bcda1b3` | Local |
+| Este bloque y el PDF de este documento | Commits `docs(fase-5)` y `docs(pdf)` siguientes | Local |
+
+Todos los commits tienen 100 líneas o menos, salvo las dos excepciones acordadas (el JSON de Postman y el informe nuevo completo, cada uno en su commit). Autor: `Benjamin Alasino`; ningún mensaje lleva `Co-Authored-By` ni "Generated with Claude Code". **No hay push**: se hace cuando Benjamín lo pida, después de `git pull --rebase`.
+
+**Punto de partida verificado.** `git fetch`, `git checkout fase-5-conciliacion` y `git pull --rebase`: la rama local coincidía con `origin/fase-5-conciliacion` (`9347a95`). La Parte 1 **sí estaba publicada** en `origin`, aunque su bloque diga "Local / sin push" (el bloque quedó escrito antes del push; no se modificó porque es de Calvo).
+
+**Qué quedó hecho.** Solo documentación y la colección Postman: la Parte 2 **no modificó** `src/main` ni `src/test`. El generador de las carpetas 05 y 06 y el script de concurrencia fueron descartables y quedaron fuera del repo.
+
+- **Carpeta 05** (44 pedidos, 98 aserciones; variables `orderNumberFinal`, `activationPasswordFinal`, `reconciliationFinal`, `orderNumberFinalPending`, `orderNumberFinalTared`, `orderNumberFinalBare`, `reconciliationFinalBare`, `orderNumberFinalTare`): preparación del ejemplo, 5 pesajes inválidos (400) con la orden intacta y sin fila nueva, 404, 401, pesaje final 16490.0 con `closeTo`, estado 4, historial de 4 filas, GET = POST, estado 4 final (5 × 409), conciliación en estados 1, 2 y 3 (409), pesaje final en estados 1 y 2 (409), **peso 0 sobre una orden en estado 1 (400: el peso se valida antes que el estado, D2)**, orden sin lecturas con peso igual a la tara y regresión H-26.
+- **Carpeta 06** (21 pedidos, 56 aserciones; login propio con `tokenCircuit` y auth Bearer a nivel de carpeta): Puntos 1 a 5 encadenados, 302 al reenviar, 4 lecturas válidas no enteras y una descartada, cabecera, lectura tardía 409, conciliación **recalculada en el test** con `closeTo`, GET = POST, historial exacto `null→1, 1→2, 2→3, 3→4` con el usuario, presencia en `GET /orders` (recorre páginas con `pm.sendRequest` si hace falta) y en `GET /orders/{n}/details`.
+
+**Verificado** (02/11/2026, base descartable `iw3_scratch` con la app en el puerto 8089; al terminar se bajó la app y se borró la base):
+
+| Verificación | Resultado |
+|---|---|
+| `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json --env-var "baseUrl=http://localhost:8089"` | **151 pedidos, 358 aserciones, 0 fallas**. Carpetas 00 a 04: **86 y 204** (sin cambios); 05: 44 y 98; 06: 21 y 56 |
+| Carpetas por separado | 00 + 05: 46 y 102, 0 fallas · 06 sola (sin la 00): 21 y 56, 0 fallas |
+| `./mvnw -B test` | **40 tests, 0 fallas**, `BUILD SUCCESS` |
+| (a) Dos pesajes finales simultáneos, 5 veces | Siempre un 200 y un 409; estado 4; 1 fila 3 → 4 |
+| (b) Activación y cierre simultáneos (orden en estado 2 sin activar), 20 veces | 18 × (200, 200) y 2 × (409, 200); **estado final 3 en las 20**; 1 fila 2 → 3 |
+| (c) Dos activaciones simultáneas, 5 veces | Ambas 200; *general log* de MySQL: **1** `UPDATE` con `activation_date_time` por orden |
+| (d) 50 lecturas y un cierre en paralelo, 2 corridas | 25 × 200 y 25 × 409, **0 × 500**; cierre 200; 1 fila 2 → 3; cabecera 550 = máximo 550; 0 lecturas posteriores al cierre |
+| Log de la app | 0 `ERROR`, ningún *deadlock*. **0 apariciones** de las contraseñas generadas |
+| `/v3/api-docs` contra la colección | 12 de 13 endpoints con pedidos; falta `GET /demo/encodepass` (H-28) |
+
+**Honestidad sobre la concurrencia:** la primera corrida del script tenía dos errores propios (el número de orden no avanzaba porque se calculaba en una *subshell*, y no se extraía la contraseña de la respuesta en varias líneas). Se descartó y se repitió completa con el script corregido; los números de arriba son de esa segunda corrida. Una pausa de ~1 min 47 s en (b) fue del proceso o del equipo (`HikariPool … clock leap detected`), no de la base.
+
+**Resultado de la auditoría** (detalle y matriz en `docs/fase-5-conciliacion.md`, sección 9): los **21 criterios** de la sección 6 se cumplen con evidencia. Los Puntos 1 a 5 contra el PDF y D1 a D14 contra el código coinciden. Las comprobaciones están fuera del `try`, la función de cálculo es una sola, no hay dependencias nuevas ni lista de detalles en `Order`, y los únicos cambios en las Fases 2 y 3 son los de D13 y D14. **Fase 5: completa. Requisitos obligatorios del segundo parcial para los Puntos 1 a 5: implementados y verificados.**
+
+**Defectos y pendientes** (ninguno bloquea; no se cambió código):
+
+- **H-27** (documentación): `POST /login` y `GET /demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 (tampoco `final-weight` ni `reconciliation`). Arreglo propuesto: anotaciones. Lo decide el equipo; corresponde a los autores de cada endpoint (para los de la Fase 5, Calvo).
+- **H-28** (Postman): `GET /demo/encodepass` (demo de la cátedra) sin pedido. Propuesta: retirarlo con H-5; si se conserva, agregar un pedido (Parte 2).
+- **H-29** (Fase 2): `registerTare` guarda con `save` y no con `saveAndFlush`. Deuda menor, fuera del alcance de D13.
+- Siguen: decisión 30 a confirmar, H-12 aceptado, H-21 y H-23 sin cambios.
+- **PR a `main`** como borrador: cuando Benjamín lo pida, sin `.postman/` ni `postman/` (no existen en esta copia).
