@@ -19,13 +19,13 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 31/10/2026, tras completar y verificar la Fase 4 en la rama `fase-4-cierre-orden`.
+**Última actualización:** 02/11/2026, tras completar y verificar la Fase 5 en la rama `fase-5-conciliacion`.
 
 | | |
 |---|---|
-| **Última fase completada** | **Fase 4 — Cierre de la orden (Punto 4): implementada y probada en `fase-4-cierre-orden`** (31/10/2026; responsable: Benjamín Alasino) |
-| **Qué sigue** | PR de la Fase 4 a `main` (decisión 14) y confirmar la decisión 30. Después, **Fase 5 — Pesaje final y conciliación (Punto 5): pendiente**, con autorización del usuario |
-| `main` | Contiene las Fases 0 a 3 (Fase 2 por el PR #6; Fase 3 por el PR #7 y sus correcciones de auditoría por el PR #9) y la guía de inicio de la Fase 4 (PR #11); recibirá la Fase 4 por PR |
+| **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada y auditada en `fase-5-conciliacion`** (02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial |
+| **Qué sigue** | PR de la Fase 5 a `main` como borrador (decisión 14) y **entrega del 10/11/2026**. Confirmar la decisión 30 y decidir H-27 a H-29. Después, el examen final |
+| `main` | Contiene las Fases 0 a 4 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026) y la guía de inicio de la Fase 4 (PR #11); recibirá la Fase 5 por PR |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
 | Despliegue | La VM se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`); funciona con la Fase 3 |
 
@@ -35,8 +35,8 @@
 | 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada e integrada en `main` (PR #2) |
 | 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Completada e integrada en `main` (PR #6) |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Completada e integrada en `main` (PR #7; correcciones en el PR #9) |
-| 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Completada y verificada (espera PR a `main`) |
-| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Pendiente |
+| 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Completada e integrada en `main` (PR #12) |
+| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Completada y verificada (espera PR a `main`) |
 
 **No avanzar de fase sin autorización explícita del usuario.**
 
@@ -181,11 +181,11 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Activación:** `OrderBusiness.activate` (400 → 404 → 409 → 403, fuera del `try`), idempotente, no escribe historial; `ForbiddenException` → 403.
 - **Lecturas:** `IOrderDetailBusiness`/`OrderDetailBusiness.add` (404 → 400 → 409 → descarte); `OrderDetailValidator` descarta caudal ≤ 0, masa ≤ 0, masa menor que la última válida y densidad fuera de (0, 1); siempre 200 con `{ saved, reason }`; detalle y cabecera en una transacción con `saveAndFlush`.
 - **Histórico (decisión 11 = 28):** `GET /api/v1/orders/{orderNumber}/details` paginado (`OrderDetailBusiness.list`, `OrderDetailRepository.findByOrder`), orden fijo por `id`, tope de 100.
-- **Pruebas:** carpeta Postman `03 - Fase 3: carga (sistema de carga)` (44 pedidos, 114 aserciones); newman: 65 pedidos y 160 aserciones, 0 fallas. `./mvnw -B test`: 11 tests, 0 fallas. Auditoría con matriz de trazabilidad, simulación de estado 3 (409) y prueba de atomicidad.
+- **Pruebas:** carpeta Postman `03 - Fase 3: carga (sistema de carga)` (hoy 45 pedidos y 117 aserciones, tras las correcciones de la auditoría); newman al cerrar la fase: 65 pedidos y 160 aserciones, 0 fallas. `./mvnw -B test`: 11 tests, 0 fallas. Auditoría con matriz de trazabilidad, simulación de estado 3 (409) y prueba de atomicidad.
 - **Hallazgos:** H-14 (defecto menor: una falla de base al confirmar la activación no respondía con `StandartResponse`) **corregido** con `saveAndFlush` (`4ed54c8`); limitaciones H-15 a H-22.
 - **Informe y guía:** `docs/fase-3-carga-tiempo-real.md` (16 preguntas con respuestas y qué debe explicar cada integrante).
 
-### Fase 4 — Cierre de la orden (Punto 4, completada en rama `fase-4-cierre-orden`)
+### Fase 4 — Cierre de la orden (Punto 4, completada e integrada en `main` por el PR #12)
 
 - **Responsable único:** Benjamín Alasino (autorizada por Martín González el 27/10/2026). Decisiones 29 a 32.
 - **Negocio:** `IOrderBusiness.close`/`OrderBusiness.close`: 404 → 409 fuera del `try`; busca con `findByOrderNumberForUpdate` (helper privado `loadForUpdate`, duplicado del de `OrderDetailBusiness`); estado 2 → 3 con `saveAndFlush`; fila en `order_status_logs` ("Orden cerrada para carga", usuario del token). No toca fechas de carga ni últimos valores; no hay campos nuevos.
@@ -194,6 +194,16 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Pruebas:** `OrderBusinessCloseTest` (7 tests con Mockito): `./mvnw -B test` 19 tests, 0 fallas. Carpeta Postman `04 - Fase 4: cierre (sistema de carga)` (20 pedidos, 41 aserciones): newman 86 pedidos y 204 aserciones, 0 fallas. Concurrencia: 50 lecturas + 1 cierre en paralelo (dos corridas) sin 500, una sola fila 2→3 y cabecera = máximo guardado; dos cierres simultáneos dan 200 y 409.
 - **Hallazgos:** H-23 a H-25 (observaciones y una limitación; ninguno bloquea).
 - **Informe y guía:** `docs/fase-4-cierre-orden.md` (15 preguntas con respuestas).
+
+### Fase 5 — Pesaje final y conciliación (Punto 5, completada en rama `fase-5-conciliacion`)
+
+- **Trabajo secuencial en 2 partes** (`docs/fase-5-division-de-trabajo.md`, autorizada por Martín González el 02/11/2026): Parte 1 (Tomás Calvo: negocio, endpoints y arreglos) y Parte 2 (Benjamín Alasino: Postman, concurrencia, auditoría y documentación). Decisiones D1 a D14 = decisiones 33 a 46.
+- **Modelo:** `Order` suma `finalWeight` y `finalWeighingDateTime` (opcionales). `OrderDetailRepository.averagesByOrder` (`AVG`) con la proyección `ReadingAverages`. La conciliación (`Reconciliation`) **no se guarda**.
+- **Negocio:** `registerFinalWeight` (404 → 400 → 409 → 409 → 400, fuera del `try`; con bloqueo; estado 3 → 4; fila "Pesaje final registrado") y `reconciliation` (solo estado 4); una sola función `buildReconciliation`. Arreglos: `requireValidWeight` en la tara (H-26) y `loadForUpdate` en `activate` (H-25, y con eso H-16).
+- **Endpoints:** `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` y `GET /api/v1/orders/{orderNumber}/reconciliation`.
+- **Pruebas:** `./mvnw -B test` 40 tests, 0 fallas. Postman: carpetas `05` (44 pedidos, 98 aserciones) y `06 - Circuito completo (1 a 4)` (21 pedidos, 56 aserciones); newman 151 pedidos y 358 aserciones, 0 fallas. Concurrencia: pesaje final doble, activación contra cierre, activación doble y 50 lecturas con un cierre, sin 500 y sin estados inconsistentes.
+- **Auditoría final** del segundo parcial contra el PDF: Puntos 1 a 5 implementados y verificados; observaciones H-27 a H-29.
+- **Informe y guía:** `docs/fase-5-conciliacion.md` (16 preguntas con respuestas y qué debe explicar cada integrante).
 
 ## 6. Arquitectura y convenciones del código
 
