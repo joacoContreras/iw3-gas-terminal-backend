@@ -62,4 +62,11 @@ public interface IOrderBusiness {
 	 */
 	public Reconciliation registerFinalWeight(Integer orderNumber, double weight, String actor)
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException;
+
+	/**
+	 * Devuelve la conciliacion de una orden finalizada (punto 5): comprueba que la orden exista (404) y que
+	 * este en estado 4 (409) y la calcula con los datos guardados. No escribe nada ni bloquea la orden.
+	 */
+	public Reconciliation reconciliation(Integer orderNumber)
+			throws NotFoundException, ConflictException, BusinessException;
 }
