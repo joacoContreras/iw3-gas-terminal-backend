@@ -444,17 +444,21 @@ JSON
 
 | ID | Tema | Estado |
 |---|---|---|
-| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties`, `/demo/**` público, CORS abierto, `dev.info.enabled=true` (trazas en las respuestas de error) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
+| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), `/demo/**` público, CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. El chequeo del *workflow* de deploy llama a `/api/v1/products`, ruta retirada en la Fase 1 (pasa porque responde 401) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
-| H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Aceptado para el parcial (análogo a N-2 de Fase 1) |
+| H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Sigue aceptado para el parcial (análogo a N-2 de Fase 1; la Fase 5 solo cambió el chequeo del peso) |
 | H-14 | Una falla de base al confirmar la activación respondía 500 con el formato de Spring, no `StandartResponse` (`activate` usaba `save`) | Resuelto (27/10/2026): `saveAndFlush` en `OrderBusiness.activate` (`4ed54c8`), verificado |
-| H-15, H-16 | H-15 (lecturas simultáneas: deadlock y masa anterior vieja) **resuelto** con bloqueo pesimista de la orden (F-01); H-16 (activaciones simultáneas de la misma orden) sigue aceptado para el parcial | H-15 corregido; H-16 aceptado |
+| H-15, H-16 | H-15 (lecturas simultáneas: deadlock y masa anterior vieja) **resuelto** con bloqueo pesimista de la orden (F-01); H-16 (activaciones simultáneas de la misma orden) **resuelto** como efecto colateral de D14 (verificado: un solo `UPDATE` de `activation_date_time`) | Corregidos |
 | H-17, H-18 | Contraseña de 5 dígitos sin límite de intentos; token de 1 h en cargas largas | Pendiente (seguridad del final) |
 | H-19, H-20 | `timestamp` con `Z` / estampas mezcladas: **resueltos** al usar siempre la hora de recepción del servidor (F-13) | Corregidos |
 | H-21, H-22 | Jackson acepta números como texto; el 500 de `BusinessException` sale con `message: null` | Observación; no se cambia |
 | H-23 | Un `orderNumber` no numérico en la URL da 400 con el formato de Spring, no `StandartResponse` (todos los endpoints con `{orderNumber}`) | Observación; no se cambia |
 | H-24 | `loadForUpdate` duplicado en `OrderBusiness` y `OrderDetailBusiness` | Deuda menor; unificar con acuerdo del equipo |
-| H-25 | `activate` busca sin bloqueo: una primera activación simultánea con el cierre podría reescribir el estado 2 (solo posible por la decisión 30). Análisis de código, no reproducido | Aceptado para el parcial (como H-16); arreglo propuesto: bloqueo en `activate` (cambio de la Fase 3) |
+| H-25 | `activate` buscaba sin bloqueo: una primera activación simultánea con el cierre podía reescribir el estado 2 (solo posible por la decisión 30) | **Resuelto** (Fase 5, D14): `loadForUpdate` en `activate`; 20 de 20 activaciones simultáneas con el cierre terminaron en estado 3 |
+| H-26 | `POST …/tare` con `1e999` respondía 500 con el formato de Spring | **Resuelto** (Fase 5, D13): 400 «weight debe ser un número finito» |
+| H-27 | Swagger incompleto fuera de lo nuevo: login y `/demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 | Observación; arreglo de anotaciones a decidir por el equipo |
+| H-28 | `GET /demo/encodepass` (demo de la cátedra) no tiene pedido en Postman | Observación; retirarlo con H-5 o agregar un pedido |
+| H-29 | `registerTare` guarda con `save` y no con `saveAndFlush` (lección de H-14) | Deuda menor; fuera del alcance de D13 |
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
@@ -560,11 +564,12 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-3-carga-tiempo-real.md` | Informe de la Fase 3, auditoría final y guía de estudio |
 | `docs/fase-4-cierre-orden.md` | Informe de la Fase 4 y guía de estudio |
 | `docs/fase-4-guia-de-inicio.md` | Alcance, plan y prompt de la Fase 4 (Benjamín Alasino) |
-| `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
+| `docs/fase-5-conciliacion.md` | Informe de la Fase 5, auditoría final del segundo parcial y guía de estudio |
+| `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md`, `docs/fase-5-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
 | `docs/pdf/consigna-trabajo-integrador-2026.pdf` | **Consigna oficial del trabajo integrador** (referencia; no se regenera) |
-| `docs/postman/` | Colección Postman (carpetas 00 a 04) |
+| `docs/postman/` | Colección Postman (carpetas 00 a 06; la 06 es el circuito completo con *Tests*) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
 | `README.md` | Descripción general y base de datos |
 
