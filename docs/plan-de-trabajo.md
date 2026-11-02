@@ -127,8 +127,8 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 | 1 | `fase-1-recepcion-ordenes` | Retiro del código demo. Entidades, orden en estado 1, log de estados, `springdoc` y primera colección Postman. | Alta 201; duplicado 302; entidades sincronizadas por `externalCode`; log con un registro. **(Completada e integrada en main)** |
 | 2 | `fase-2-pesaje-inicial` | Tara, contraseña de 5 dígitos, estado 1→2. | Casos válidos y errores (orden inexistente, estado incorrecto 409, tara inválida 400). **(Completada e integrada en main, PR #6)** |
 | 3 | `fase-3-carga-tiempo-real` | Activación (devuelve preset), detalle con descarte, cabecera, `activationDateTime`, densidad `0 < d < 1`. | Registros inválidos descartados; cabecera con el último valor válido. **(Completada e integrada en main, PR #7; correcciones de la auditoría en el PR #9, 27/10/2026)** |
-| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Completada y verificada en su rama el 31/10/2026; espera PR a main. Informe: `docs/fase-4-cierre-orden.md`)** |
-| 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. | Circuito completo 1→4 verificado; consulta solo en estado 4. |
+| 4 | `fase-4-cierre-orden` | Cierre 2→3 y bloqueo de nuevos detalles. **Responsable único: Benjamín Alasino.** Plan detallado en la sección 6.1 y guía de inicio en `docs/fase-4-guia-de-inicio.md`. | Detalle posterior rechazado; transiciones inválidas rechazadas. **(Completada e integrada en main, PR #12, 31/10/2026. Informe: `docs/fase-4-cierre-orden.md`)** |
+| 5 | `fase-5-conciliacion` | Pesaje final 3→4, conciliación con promedios, Swagger completo, Postman consolidado con *Tests*. Plan detallado en la sección 6.2. | Circuito completo 1→4 verificado; consulta solo en estado 4. **(Completada y verificada en su rama el 02/11/2026; espera PR a main. Informe: `docs/fase-5-conciliacion.md`)** |
 
 ### 6.1 Fase 4 en detalle — Cierre de la orden (Punto 4)
 
@@ -166,6 +166,30 @@ Errores: 404 orden inexistente, 302 duplicado, 500 error de negocio, con el form
 6. Con lecturas y un cierre simultáneos no hay respuestas 500 y la cabecera coincide con el máximo de lo guardado.
 7. `./mvnw -B test` y la colección Postman completa pasan sin fallas (las fases anteriores intactas).
 8. Swagger documenta el endpoint con sus respuestas; existen el informe, la guía (≥ 10 preguntas) y los PDF.
+
+### 6.2 Fase 5 en detalle — Pesaje final y conciliación (Punto 5)
+
+**Responsables:** trabajo secuencial en dos partes, autorizado por Martín González el 02/11/2026 (`docs/fase-5-division-de-trabajo.md`): Parte 1, Tomás Calvo (negocio, endpoints y arreglos H-25 y H-26); Parte 2, Benjamín Alasino (Postman 05 y 06, concurrencia, auditoría final, documentación y PR).
+
+**Estado (02/11/2026): completada y verificada** en la rama `fase-5-conciliacion`. Los 21 criterios de la división se cumplen: `./mvnw -B test` 40 tests; newman 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04 sin cambios: 86 y 204); concurrencia sin respuestas 500 ni estados inconsistentes. La auditoría del segundo parcial contra el PDF deja los Puntos 1 a 5 implementados y verificados, con tres observaciones (H-27 a H-29). Detalle en `docs/fase-5-conciliacion.md`.
+
+**Objetivo.** La balanza envía el pesaje final; la orden pasa de 3 a 4, queda registrado el cambio y se devuelve la conciliación, que también se puede consultar solo en estado 4 (consigna, Punto 5).
+
+**Qué se hizo.**
+
+| # | Tarea | Parte |
+|---|---|---|
+| T1 | `Order.finalWeight` y `finalWeighingDateTime`; `OrderDetailRepository.averagesByOrder` y `ReadingAverages`; `Reconciliation` | 1 |
+| T2 | `registerFinalWeight` (404 → 400 → 409 → 409 → 400, con bloqueo, estado 4, fila 3→4) y `reconciliation` (solo estado 4) con una sola `buildReconciliation` | 1 |
+| T3 | `POST /integration/tms/orders/{orderNumber}/final-weight` y `GET /orders/{orderNumber}/reconciliation` con Swagger | 1 |
+| T4 | Arreglos D13 (tara infinita → 400) y D14 (`activate` con bloqueo) y 21 tests con Mockito | 1 |
+| T5 | Carpetas Postman 05 (Punto 5) y 06 (circuito 1 → 4 encadenado) | 2 |
+| T6 | Pruebas de concurrencia y regresión, auditoría final del segundo parcial | 2 |
+| T7 | Informe y guía, `CLAUDE.md`, este plan, guía de `src` y PDF | 2 |
+
+**Criterios de aceptación:** los 21 de la sección 6 de `docs/fase-5-division-de-trabajo.md`, verificados uno por uno en la sección 1 de `docs/fase-5-conciliacion.md`.
+
+**Fuera de alcance (D12).** Frecuencia de almacenamiento configurable (opcional del parcial), roles, alarma de temperatura, frontend y seguridad (examen final), listado de conciliaciones y reabrir órdenes.
 
 ## 7. Forma de trabajo
 
