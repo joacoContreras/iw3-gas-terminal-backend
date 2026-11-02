@@ -395,7 +395,7 @@ JSON
 |---|---|---|
 | 1 | Retirar el código demo de la cátedra | Aplicada (Fase 1) |
 | 2 | Mantener `anyRequest().authenticated()`; Postman hace login con un usuario de prueba; roles al final | Vigente |
-| 3 | Implementar los promedios (`AVG`) | Fase 5 |
+| 3 | Implementar los promedios (`AVG`) | Aplicada (Fase 5) |
 | 4 | Duplicado: `FoundException` → 302, como la cátedra | Aplicada |
 | 5 | Identificadores en inglés; comentarios y documentación en español | Vigente |
 | 6 | **No** alinear el `pom.xml` con la cátedra (Boot 4.1.1, java-jwt 4.6.1) | Vigente |
@@ -425,6 +425,20 @@ JSON
 | 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **a confirmar por el equipo** |
 | 31 | El cierre busca la orden con `findByOrderNumberForUpdate` (`PESSIMISTIC_WRITE`) para serializarse con las lecturas | Aplicada (Fase 4) |
 | 32 | Una fila 2→3 en `order_status_logs` (usuario del token, "Orden cerrada para carga") y 200 con la orden; sin campos nuevos ni cambios en fechas de carga o últimos valores | Aplicada (Fase 4) |
+| 33 | (D1) Pesaje final solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente | Aplicada (Fase 5) |
+| 34 | (D2) Orden 404 → 400 (peso ausente, no finito o ≤ 0) → 409 (estado) → 400 (menor que la tara); peso igual a la tara válido | Aplicada (Fase 5) |
+| 35 | (D3) Pesaje final con `findByOrderNumberForUpdate`, comprobaciones fuera del `try`, `rollbackFor` y `saveAndFlush`; el GET no bloquea | Aplicada (Fase 5) |
+| 36 | (D4) Se guardan solo `finalWeight` y `finalWeighingDateTime` (hora del servidor); la conciliación se calcula con una sola función | Aplicada (Fase 5) |
+| 37 | (D5) Producto cargado = última masa; neto = final − tara; diferencia = neto − producto; `AVG` simple; sin redondeo | Aplicada (Fase 5) |
+| 38 | (D6) Orden sin lecturas: producto cargado 0.0 y promedios `null`; no bloquea el pesaje final | Aplicada (Fase 5) |
+| 39 | (D7) El POST responde 200 con la conciliación; el GET solo en estado 4 (otros 409) | Aplicada (Fase 5) |
+| 40 | (D8) Una fila 3→4 con el usuario y "Pesaje final registrado"; el estado 4 es final | Aplicada (Fase 5) |
+| 41 | (D9) Lógica en `OrderBusiness` con `OrderDetailRepository` directo (evita la dependencia circular); POST en `OrderTmsRestController`, GET en `OrderRestController` | Aplicada (Fase 5) |
+| 42 | (D10) Mensajes con el estilo previo; Postman compara fragmentos | Aplicada (Fase 5) |
+| 43 | (D11) Carpetas Postman 05 y 06 con variables propias; las 00 a 04 no se tocan | Aplicada (Fase 5) |
+| 44 | (D12) Fuera de alcance: frecuencia de almacenamiento, roles, alarmas, frontend y seguridad | Vigente |
+| 45 | (D13) La tara rechaza un peso infinito con 400 (`requireValidWeight`, compartido con el pesaje final) | Aplicada (Fase 5; arreglo de la Fase 2, H-26) |
+| 46 | (D14) `activate` busca la orden con bloqueo de fila | Aplicada (Fase 5; arreglo de la Fase 3, H-25 y H-16) |
 
 ## 10. Hallazgos y deuda abierta
 
