@@ -132,4 +132,14 @@ public class Order {
 	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
 	@Column
 	private Double lastFlowRate;
+
+	/** Peso del camion cargado (kg), enviado por la balanza en el pesaje final (punto 5). Nulo hasta entonces. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private Double finalWeight;
+
+	/** Momento de recepcion del pesaje final (hora del servidor). Nulo hasta entonces. */
+	@Schema(accessMode = Schema.AccessMode.READ_ONLY)
+	@Column
+	private LocalDateTime finalWeighingDateTime;
 }
