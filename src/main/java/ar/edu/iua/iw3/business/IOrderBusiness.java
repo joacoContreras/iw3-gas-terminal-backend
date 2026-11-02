@@ -52,4 +52,14 @@ public interface IOrderBusiness {
 	 * Desde el estado 3 el sistema rechaza nuevas lecturas.
 	 */
 	public Order close(Integer orderNumber, String actor) throws NotFoundException, ConflictException, BusinessException;
+
+	/**
+	 * Registra el pesaje final enviado por la balanza (punto 5). Comprueba, en este orden: que la orden
+	 * exista (404), que el peso sea mayor que 0 y finito (400), que este en estado 3 (409), que tenga tara
+	 * (409) y que el peso no sea menor que la tara (400; un peso igual es valido). Guarda el peso y la hora
+	 * de recepcion, pasa la orden al estado 4 y registra el cambio en el historial con el actor recibido.
+	 * Busca la orden con bloqueo de fila. Devuelve la conciliacion calculada; no es idempotente.
+	 */
+	public Reconciliation registerFinalWeight(Integer orderNumber, double weight, String actor)
+			throws NotFoundException, BadRequestException, ConflictException, BusinessException;
 }
