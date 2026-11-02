@@ -5,7 +5,7 @@ Rama: `fase-5-conciliacion` · Implementación y pruebas: 02/11/2026 · Parte 1:
 Este archivo tiene dos partes:
 
 - **Parte 1:** informe técnico de lo implementado, lo verificado y la auditoría final del segundo parcial.
-- **Parte 2:** guía de estudio para la defensa oral (secciones A–J).
+- **Parte 2:** guía de estudio para la defensa oral (secciones A–J, más la K: qué debe poder explicar cada integrante).
 
 Convención de rutas: `SRC` = `src/main/java/ar/edu/iua/iw3`. La división del trabajo, el contrato (decisiones D1 a D14) y los registros de cada parte están en `docs/fase-5-division-de-trabajo.md`. La fuente de los requisitos es `docs/pdf/consigna-trabajo-integrador-2026.pdf`.
 
