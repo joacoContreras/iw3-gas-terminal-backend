@@ -16,10 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import ar.edu.iua.iw3.business.IOrderBusiness;
 import ar.edu.iua.iw3.business.IOrderDetailBusiness;
+import ar.edu.iua.iw3.business.Reconciliation;
 import ar.edu.iua.iw3.business.exception.BusinessException;
+import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -103,6 +107,28 @@ public class OrderRestController extends BaseRestController {
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		} catch (NotFoundException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
+		}
+	}
+
+	@Operation(summary = "Conciliación de una orden finalizada",
+			description = "Punto 5: pesaje inicial y final, producto cargado, neto por balanza, diferencia con el caudalímetro "
+					+ "y promedios de temperatura, densidad y caudal de las lecturas guardadas. Se calcula en cada consulta "
+					+ "(no se guarda) y solo está disponible para órdenes en estado 4.")
+	@ApiResponse(responseCode = "200", description = "Conciliación de la orden",
+			content = @Content(schema = @Schema(implementation = Reconciliation.class)))
+	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "409", description = "La orden no está en estado 4")
+	@GetMapping(value = "/{orderNumber}/reconciliation", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<?> reconciliation(@PathVariable Integer orderNumber) {
+		try {
+			return new ResponseEntity<>(orderBusiness.reconciliation(orderNumber), HttpStatus.OK);
+		} catch (NotFoundException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.NOT_FOUND, e, e.getMessage()), HttpStatus.NOT_FOUND);
+		} catch (ConflictException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.CONFLICT, e, e.getMessage()), HttpStatus.CONFLICT);
+		} catch (BusinessException e) {
+			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),
+					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 }
