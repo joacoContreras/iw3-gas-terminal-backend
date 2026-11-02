@@ -123,9 +123,7 @@ public class OrderBusiness implements IOrderBusiness {
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
 		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500
 		Order order = load(orderNumber);
-		if (!(weight > 0)) { // tambien rechaza NaN
-			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
-		}
+		requireValidWeight(weight);
 		if (order.getStatus() != OrderStatus.PENDING_INITIAL_WEIGHING) {
 			throw ConflictException.builder().message("La orden " + orderNumber
 					+ " no está pendiente de pesaje inicial (estado " + order.getStatus().getCode() + ")").build();
@@ -216,6 +214,19 @@ public class OrderBusiness implements IOrderBusiness {
 			throw NotFoundException.builder().message("No se encuentra la Orden numero=" + orderNumber).build();
 		}
 		return r.get();
+	}
+
+	/**
+	 * Valida el peso recibido de la balanza (tara y pesaje final): debe ser mayor que 0 (tambien rechaza
+	 * NaN) y finito. Un infinito (1e999) pasaria el primer control y MySQL lo rechazaria al guardar (H-26).
+	 */
+	private void requireValidWeight(double weight) throws BadRequestException {
+		if (!(weight > 0)) {
+			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
+		}
+		if (Double.isInfinite(weight)) {
+			throw BadRequestException.builder().message("weight debe ser un número finito").build();
+		}
 	}
 
 	/** Registra un cambio de estado en el log de auditoria de la orden. */
