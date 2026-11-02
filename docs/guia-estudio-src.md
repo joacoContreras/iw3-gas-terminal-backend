@@ -2,11 +2,11 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 31/10/2026, al cierre de la Fase 4 (cierre de la orden).
+**Última actualización:** 02/11/2026, al cierre de la Fase 5 (pesaje final y conciliación).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 · *F4* = creado o cambiado en la Fase 4.
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 · *F4* = creado o cambiado en la Fase 4 · *F5* = creado o cambiado en la Fase 5.
 
 ---
 
@@ -37,8 +37,8 @@ Los estados de la orden son secuenciales, nunca vuelven atrás:
 | 1 | **Punto 1:** SAP envía la orden y se crea en estado 1 | Hecha |
 | 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Hecha |
 | 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Hecha |
-| 4 | **Punto 4:** cerrar la orden (estado 2 → 3) y bloquear nuevas lecturas | Hecha (rama `fase-4-cierre-orden`) |
-| 5 | **Punto 5:** pesaje final, estado 4 y conciliación | Pendiente |
+| 4 | **Punto 4:** cerrar la orden (estado 2 → 3) y bloquear nuevas lecturas | Hecha (PR #12) |
+| 5 | **Punto 5:** pesaje final, estado 4 y conciliación (y los arreglos de la tara infinita y de la activación con bloqueo) | Hecha (rama `fase-5-conciliacion`) |
 
 ## 3. Para qué sirve cada carpeta (lo que hay que recordar)
 
@@ -69,7 +69,7 @@ Cada ficha es una clase que se convierte en una tabla de la base de datos.
 
 | Archivo | Tabla | Qué es y para qué sirve | Origen |
 |---|---|---|---|
-| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Desde la Fase 3 también guarda, todos opcionales: fecha de activación, inicio y fin de carga y los últimos valores válidos de masa, densidad, temperatura y caudal. No tiene lista de detalles. Se llama `orders` porque `ORDER` es palabra reservada de SQL Desde la Fase 5 guarda también el pesaje final (`finalWeight`) y su hora de recepción (`finalWeighingDateTime`), opcionales | F1 + F2 + F3 + F5 |
+| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Desde la Fase 3 también guarda, todos opcionales: fecha de activación, inicio y fin de carga y los últimos valores válidos de masa, densidad, temperatura y caudal. No tiene lista de detalles. Se llama `orders` porque `ORDER` es palabra reservada de SQL. Desde la Fase 5 guarda también el pesaje final (`finalWeight`) y su hora de recepción (`finalWeighingDateTime`), opcionales | F1 + F2 + F3 + F5 |
 | `OrderStatus.java` | — | Los 4 estados. En el JSON se publica el número (1 a 4) | F1 |
 | `OrderStatusConverter.java` | — | Traduce estado ↔ número para guardar 1 a 4 en la base, y no 0 a 3 | F1 |
 | `OrderStatusLog.java` | `order_status_logs` | Historial: estado anterior (`null` al crear), estado nuevo, fecha, quién lo hizo y observaciones | F1 |
@@ -297,6 +297,8 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `POST /api/v1/integration/loader/activation` | **Punto 3:** el sistema de carga se activa con `orderNumber` y `password`; devuelve el `preset`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{n}/details` | **Punto 3:** una lectura del caudalímetro. Responde `{ saved, reason }`: guardada o descartada, siempre 200 | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{n}/close` | **Punto 4:** cierra la orden (estado 2 → 3) y desde ahí se rechazan las lecturas. Sin cuerpo; registra el cambio en el historial con el usuario del token. Responde la orden | 200, 401, 404, 409, 500 |
+| `POST /api/v1/integration/tms/orders/{n}/final-weight` | **Punto 5:** la balanza envía el pesaje final `{ weight }`; la orden pasa de 3 a 4, se registra el cambio y responde la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
+| `GET /api/v1/orders/{n}/reconciliation` | **Punto 5:** la conciliación (tara, pesaje final, producto cargado, neto, diferencia y promedios), solo en estado 4. Se calcula, no se guarda | 200, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
 | `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
@@ -304,7 +306,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación | públicos |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, público; cerrar antes de desplegar) | 200 |
 
-Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente o peso ≤ 0 · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas) · **500** falla interna.
+Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente, peso ≤ 0 o infinito, o pesaje final menor que la tara · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas; o no está en estado 4, en la conciliación) · **500** falla interna.
 
 ## 12. Fuera de `src`
 
