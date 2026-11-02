@@ -37,7 +37,7 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 |---|---|---|---|
 | 1 | Código demo de la cátedra (Product, Category, cli1, cli2, ScanConfigs) | **Aplicada en la Fase 1.** Quedó en el historial de git. | Fase 1 |
 | 2 | Seguridad en el parcial | Se mantiene `anyRequest().authenticated()`. Postman hace login primero con un usuario de prueba sembrado. Roles quedan para el final. | Fases 1–5 |
-| 3 | Promedios | Se implementan (`AVG` sobre los detalles almacenados). | Fase 5 |
+| 3 | Promedios | Se implementan (`AVG` sobre los detalles almacenados). **Aplicada en la Fase 5.** | Fase 5 |
 | 4 | Duplicados | Convención de la cátedra: `FoundException` → HTTP 302. Se documenta en Swagger. | Fase 1 |
 | 5 | Idioma | Identificadores en inglés; comentarios y documentación en español. | Todas |
 | 6 | Entorno: alinear `pom.xml` a Boot 4.1.1 / java-jwt 4.6.1 y retirar actuator/h2 | **Resuelta: no se cambia.** El `pom.xml` queda como está. | — |
@@ -67,6 +67,20 @@ Los datos de detalle (Punto 3) llegan **mientras la orden está en estado 2**.
 | 30 | El cierre no exige activación ni lecturas previas | **Aplicada en la Fase 4; a confirmar por el equipo.** La consigna solo pide el "estado esperado"; una orden en estado 2 se puede cerrar aunque no se haya activado o no tenga lecturas. | Fase 4 |
 | 31 | Concurrencia del cierre | **Aplicada en la Fase 4** (verificada con 50 lecturas y un cierre simultáneos, sin respuestas 500). La orden se busca con `PESSIMISTIC_WRITE` (`findByOrderNumberForUpdate`, el mismo bloqueo de las lecturas) para que un cierre y una lectura en curso se serialicen y el cierre no pise la cabecera con valores viejos. | Fase 4 |
 | 32 | Qué guarda y qué responde el cierre | **Aplicada en la Fase 4.** Una fila en `order_status_logs` (2→3, usuario del token, observación) y respuesta 200 con la orden. No se agregan campos al modelo y `loadingEndDateTime` no se toca (es la estampa del último registro válido). | Fase 4 |
+| 33 | Estado de partida del pesaje final (D1) | **Aplicada en la Fase 5.** Solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente. | Fase 5 |
+| 34 | Validaciones del pesaje final (D2) | **Aplicada en la Fase 5.** 404 → 400 (peso ausente, no finito o ≤ 0) → 409 (estado) → 400 (menor que la tara). Peso igual a la tara válido. | Fase 5 |
+| 35 | Concurrencia y transacción (D3) | **Aplicada en la Fase 5.** `findByOrderNumberForUpdate`, comprobaciones fuera del `try`, `rollbackFor`, `saveAndFlush`; el GET no bloquea. | Fase 5 |
+| 36 | Qué se guarda (D4) | **Aplicada en la Fase 5.** Solo `finalWeight` y `finalWeighingDateTime` (hora del servidor). La conciliación se calcula con una sola función para el POST y el GET. | Fase 5 |
+| 37 | Cálculos (D5) | **Aplicada en la Fase 5.** Producto cargado = última masa; neto = final − tara; diferencia = neto − producto; `AVG` simple; sin redondeo. | Fase 5 |
+| 38 | Orden sin lecturas (D6) | **Aplicada en la Fase 5.** Producto cargado 0.0 y promedios `null`; no bloquea el pesaje final. | Fase 5 |
+| 39 | Respuestas (D7) | **Aplicada en la Fase 5.** POST 200 con la conciliación; GET solo en estado 4 (otros 409, inexistente 404). | Fase 5 |
+| 40 | Historial (D8) | **Aplicada en la Fase 5.** Una fila 3→4 con el usuario y "Pesaje final registrado"; el estado 4 es final. | Fase 5 |
+| 41 | Ubicación (D9) | **Aplicada en la Fase 5.** `OrderBusiness` con `OrderDetailRepository` directo; POST en `OrderTmsRestController`, GET en `OrderRestController`; `Constants` sin cambios. | Fase 5 |
+| 42 | Mensajes (D10) | **Aplicada en la Fase 5.** Estilo de las fases anteriores; Postman compara fragmentos. | Fase 5 |
+| 43 | Postman (D11) | **Aplicada en la Fase 5.** Carpetas 05 y 06 con variables propias; las 00 a 04 no cambian. | Fase 5 |
+| 44 | Fuera de alcance (D12) | Frecuencia de almacenamiento, roles, alarmas, frontend y seguridad. | Fase 5 |
+| 45 | Arreglo H-26 (D13) | **Aplicada en la Fase 5.** La tara rechaza el peso infinito con 400 (`requireValidWeight`). | Fase 5 (cambio en la Fase 2) |
+| 46 | Arreglo H-25 (D14) | **Aplicada en la Fase 5.** `activate` busca la orden con bloqueo; resuelve también H-16. | Fase 5 (cambio en la Fase 3) |
 
 Convención adicional: el *push* y el *merge* a `main` se hacen solo por pedido explícito.
 
