@@ -2,11 +2,11 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 31/10/2026, al cierre de la Fase 4 (cierre de la orden).
+**Última actualización:** 02/11/2026, al cierre de la Fase 5 (pesaje final y conciliación).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
-Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 · *F4* = creado o cambiado en la Fase 4.
+Columna **Origen**: *Cátedra* = ya venía del proyecto de clase · *F1* = creado o cambiado en la Fase 1 · *F2* = creado o cambiado en la Fase 2 · *F3* = creado o cambiado en la Fase 3 · *F4* = creado o cambiado en la Fase 4 · *F5* = creado o cambiado en la Fase 5.
 
 ---
 
@@ -37,8 +37,8 @@ Los estados de la orden son secuenciales, nunca vuelven atrás:
 | 1 | **Punto 1:** SAP envía la orden y se crea en estado 1 | Hecha |
 | 2 | **Punto 2:** la balanza envía la tara, se genera la contraseña de 5 dígitos y pasa a estado 2 | Hecha |
 | 3 | **Punto 3:** activación con contraseña y datos del caudalímetro en tiempo real | Hecha |
-| 4 | **Punto 4:** cerrar la orden (estado 2 → 3) y bloquear nuevas lecturas | Hecha (rama `fase-4-cierre-orden`) |
-| 5 | **Punto 5:** pesaje final, estado 4 y conciliación | Pendiente |
+| 4 | **Punto 4:** cerrar la orden (estado 2 → 3) y bloquear nuevas lecturas | Hecha (PR #12) |
+| 5 | **Punto 5:** pesaje final, estado 4 y conciliación (y los arreglos de la tara infinita y de la activación con bloqueo) | Hecha (rama `fase-5-conciliacion`) |
 
 ## 3. Para qué sirve cada carpeta (lo que hay que recordar)
 
@@ -69,7 +69,7 @@ Cada ficha es una clase que se convierte en una tabla de la base de datos.
 
 | Archivo | Tabla | Qué es y para qué sirve | Origen |
 |---|---|---|---|
-| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Desde la Fase 3 también guarda, todos opcionales: fecha de activación, inicio y fin de carga y los últimos valores válidos de masa, densidad, temperatura y caudal. No tiene lista de detalles. Se llama `orders` porque `ORDER` es palabra reservada de SQL | F1 + F2 + F3 |
+| `Order.java` | `orders` | La orden de carga. Une camión, chofer, cliente y producto. Guarda número (único), fecha prevista, preset, estado, fecha de recepción, tara, fecha de pesaje inicial y contraseña de activación (con `@JsonIgnore`). Desde la Fase 3 también guarda, todos opcionales: fecha de activación, inicio y fin de carga y los últimos valores válidos de masa, densidad, temperatura y caudal. No tiene lista de detalles. Se llama `orders` porque `ORDER` es palabra reservada de SQL. Desde la Fase 5 guarda también el pesaje final (`finalWeight`) y su hora de recepción (`finalWeighingDateTime`), opcionales | F1 + F2 + F3 + F5 |
 | `OrderStatus.java` | — | Los 4 estados. En el JSON se publica el número (1 a 4) | F1 |
 | `OrderStatusConverter.java` | — | Traduce estado ↔ número para guardar 1 a 4 en la base, y no 0 a 3 | F1 |
 | `OrderStatusLog.java` | `order_status_logs` | Historial: estado anterior (`null` al crear), estado nuevo, fecha, quién lo hizo y observaciones | F1 |
@@ -94,7 +94,8 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 | `DriverRepository.java` | Busca un chofer por código externo | F1 |
 | `CustomerRepository.java` | Busca un cliente por código externo | F1 |
 | `ProductRepository.java` | Busca un producto por código externo | F1 (reemplazó al del demo) |
-| `OrderDetailRepository.java` | Guarda y busca las lecturas del caudalímetro. `findByOrder(order, pageable)`: una página de lecturas por `id` ascendente | F3 |
+| `OrderDetailRepository.java` | Guarda y busca las lecturas del caudalímetro. `findByOrder(order, pageable)`: una página de lecturas por `id` ascendente. `averagesByOrder(order)`: promedios simples (`AVG`) de temperatura, densidad y caudal de la orden | F3 + F5 |
+| `ReadingAverages.java` | Proyección (interfaz) con los tres promedios que devuelve `averagesByOrder`; con cero lecturas los valores son `null` | F5 |
 
 ---
 
@@ -102,8 +103,9 @@ Cada uno busca y guarda un tipo de ficha. Son interfaces: Spring arma el código
 
 | Archivo | Qué es | Origen |
 |---|---|---|
-| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare`, `activate` y `close` | F1 + F2 + F3 + F4 |
-| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare`, `activate` y `close` | F1 + F2 + F3 + F4 |
+| `IOrderBusiness.java` | **La lista** de operaciones sobre órdenes (el "menú"). Incluye `registerTare`, `activate`, `close`, `registerFinalWeight` y `reconciliation` | F1 + F2 + F3 + F4 + F5 |
+| `OrderBusiness.java` | **Las reglas de verdad** (la "cocina"). Implementa `add`, `registerTare`, `activate`, `close`, `registerFinalWeight` y `reconciliation`, con los privados `requireValidWeight` (peso de la tara y del pesaje final) y `buildReconciliation` (la única función que arma la conciliación) | F1 + F2 + F3 + F4 + F5 |
+| `Reconciliation.java` | Respuesta de la conciliación (9 campos: tara, pesaje final, producto cargado, neto por balanza, diferencia y tres promedios). Se calcula cada vez; no se guarda | F5 |
 | `OrderDetailValidator.java` | Función pura que evalúa las condiciones de descarte del caudalímetro (caudal, masa, masa anterior y densidad) | F3 |
 | `DetailResult.java` | DTO interno del resultado de una lectura: booleano `saved` y motivo `reason` | F3 |
 | `IOrderDetailBusiness.java` | Interfaz de negocio de las lecturas del caudalímetro (`add` y `list`) | F3 |
@@ -154,6 +156,18 @@ Los controllers piden `IOrderBusiness` y Spring les entrega `OrderBusiness`. As�
 4. Dentro de `@Transactional(rollbackFor = Exception.class)`: recuerda el estado anterior (2), pasa a `CLOSED_FOR_LOADING` (3), guarda con `saveAndFlush` y escribe el historial con `logStatus` (de 2 a 3, usuario del token, "Orden cerrada para carga").
 5. **No toca** las fechas de carga, los últimos valores ni la contraseña. La fecha del cierre queda en `order_status_logs`.
 6. El bloqueo de lecturas no es código nuevo: `OrderDetailBusiness.add` ya rechaza con 409 todo lo que no esté en estado 2.
+
+### Qué hace `OrderBusiness.registerFinalWeight` (paso a paso) — F5
+
+1. Busca la orden **con bloqueo** (`loadForUpdate`); si no existe, 404.
+2. `requireValidWeight`: peso ≤ 0 o `NaN` → 400 ("weight debe ser mayor que 0 (kg)"); infinito → 400 ("weight debe ser un número finito").
+3. Si la orden no está en estado 3, 409. Si no tiene tara, 409.
+4. Si el peso es menor que la tara, 400 (un peso **igual** a la tara es válido: una orden cerrada sin lecturas no cargó nada).
+5. Las comprobaciones 1 a 4 van **fuera del try/catch**, en una transacción con `rollbackFor = Exception.class`.
+6. Dentro del `try`: guarda `finalWeight` y `finalWeighingDateTime` (hora del servidor), pasa la orden a estado 4 (`FINISHED`) con `saveAndFlush` y agrega **una** fila 3 → 4 al historial ("Pesaje final registrado", usuario del token).
+7. Devuelve `buildReconciliation(order)`: producto cargado = `lastAccumulatedMass` (0.0 si no hubo lecturas); neto por balanza = pesaje final − tara; diferencia = neto − producto cargado; promedios = `AVG` de `order_details` (`null` sin lecturas). Sin redondeo y sin guardar nada.
+
+`reconciliation(orderNumber)` (el GET) busca la orden sin bloqueo, exige el estado 4 (409 si no) y usa la **misma** `buildReconciliation`.
 
 ### Qué hace `OrderDetailBusiness.add` (paso a paso) — F3
 
@@ -207,7 +221,7 @@ No tienen reglas: reciben el pedido, llaman al negocio y devuelven el código.
 
 | Archivo | Qué hace | Origen |
 |---|---|---|
-| `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados y lecturas guardadas paginadas (`/{n}/details`) | F1 + F3 |
+| `OrderRestController.java` | Consultas: lista paginada, una orden por número, historial de estados, lecturas guardadas paginadas (`/{n}/details`) y conciliación (`/{n}/reconciliation`, solo estado 4) | F1 + F3 + F5 |
 | `BaseRestController.java` | Clase madre de los controllers. Tiene `getUserLogged()`: el usuario del token, de donde sale el "quién" del historial | Cátedra + F1 |
 | `Constants.java` | Todas las URLs en un solo lugar. Incluye `URL_INTEGRATION_TMS` y `URL_INTEGRATION_LOADER` | Cátedra + F1 + F2 + F3 |
 
@@ -220,7 +234,8 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `sap/controllers/OrderSapRestController.java` | La puerta de SAP. Recibe la orden, la pasa al negocio y responde 201 (con header `location`), 302, 400 o 500 | F1 |
 | `tms/model/TareRequest.java` | DTO del pesaje inicial con `double weight` (kg) | F2 |
 | `tms/model/TareResponse.java` | DTO de respuesta de la balanza con `Integer activationPassword` (5 dígitos) | F2 |
-| `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500) | F2 |
+| `tms/model/FinalWeightRequest.java` | DTO del pesaje final con `double weight` (kg); sin fecha: la estampa la pone el servidor | F5 |
+| `tms/controllers/OrderTmsRestController.java` | La puerta de la balanza (TMS). Recibe la tara en `POST /integration/tms/orders/{n}/tare`, llama a `registerTare` y devuelve la contraseña (200, 400, 404, 409 o 500). También recibe el pesaje final en `POST /integration/tms/orders/{n}/final-weight`, llama a `registerFinalWeight` y devuelve la conciliación (200, 400, 404, 409 o 500) | F2 + F5 |
 | `loader/model/ActivationRequest.java` | DTO del pedido de activación: `Integer orderNumber` y `Integer password` (`Integer` para distinguir un campo ausente, 400, de uno informado) | F3 |
 | `loader/model/ActivationResponse.java` | DTO de respuesta de la activación con `Double preset` (kg a cargar) | F3 |
 | `loader/model/DetailRequest.java` | DTO del pedido de lecturas: `Double` para los 4 campos numéricos (sin `timestamp`: la estampa la pone el servidor) | F3 |
@@ -266,6 +281,9 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `src/test/java/.../ActivationPasswordGeneratorTest.java` | Prueba unitaria del generador de contraseñas (rango 10000–99999 y entropía). Sin base de datos | F2 |
 | `src/test/java/.../OrderDetailValidatorTest.java` | Pruebas unitarias de las reglas de descarte del caudalímetro (válidas, masa igual, caudal, masa, densidad, NaN, motivos acumulados). Sin Spring Boot | F3 |
 | `src/test/java/.../OrderBusinessCloseTest.java` | Pruebas unitarias del cierre con Mockito (repositorios simulados): 404, 409 en los estados 1, 3 y 4, transición 2 → 3 con una fila de historial, actor `"sistema"` por defecto y cabecera sin cambios. Sin base de datos | F4 |
+| `src/test/java/.../OrderBusinessTareTest.java` | Pruebas de la validación del peso de la tara con Mockito: infinito → 400, el mensaje de ≤ 0 y NaN no cambia y una tara válida pasa al estado 2 (H-26) | F5 |
+| `src/test/java/.../OrderBusinessActivateTest.java` | Pruebas de la activación con Mockito: 400, 404, 409, 403 sin contraseñas en el mensaje, primera activación e idempotencia; verifica que busca con bloqueo (H-25) | F5 |
+| `src/test/java/.../OrderBusinessFinalWeightTest.java` | Pruebas del pesaje final y la conciliación con Mockito: 404, pesos inválidos, 409 por estado y por falta de tara, peso menor o igual a la tara, una sola fila 3 → 4, el ejemplo numérico, orden sin lecturas y la consulta en estado 4 | F5 |
 
 ---
 
@@ -279,6 +297,8 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `POST /api/v1/integration/loader/activation` | **Punto 3:** el sistema de carga se activa con `orderNumber` y `password`; devuelve el `preset`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{n}/details` | **Punto 3:** una lectura del caudalímetro. Responde `{ saved, reason }`: guardada o descartada, siempre 200 | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{n}/close` | **Punto 4:** cierra la orden (estado 2 → 3) y desde ahí se rechazan las lecturas. Sin cuerpo; registra el cambio en el historial con el usuario del token. Responde la orden | 200, 401, 404, 409, 500 |
+| `POST /api/v1/integration/tms/orders/{n}/final-weight` | **Punto 5:** la balanza envía el pesaje final `{ weight }`; la orden pasa de 3 a 4, se registra el cambio y responde la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
+| `GET /api/v1/orders/{n}/reconciliation` | **Punto 5:** la conciliación (tara, pesaje final, producto cargado, neto, diferencia y promedios), solo en estado 4. Se calcula, no se guarda | 200, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
 | `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
@@ -286,7 +306,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación | públicos |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, público; cerrar antes de desplegar) | 200 |
 
-Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente o peso ≤ 0 · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas) · **500** falla interna.
+Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente, peso ≤ 0 o infinito, o pesaje final menor que la tara · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas; o no está en estado 4, en la conciliación) · **500** falla interna.
 
 ## 12. Fuera de `src`
 
@@ -296,10 +316,12 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | `docker-compose.yml` | La base MySQL (contenedor `iw3-gas-mysql`, puerto 3306, base `iw3_db`) |
 | `CLAUDE.md` | Estado del proyecto y reglas del equipo |
 | `docs/plan-de-trabajo.md` | Plan completo y decisiones |
-| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md`, `docs/fase-4-cierre-orden.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
+| `docs/fase-0-auditoria.md`, `docs/fase-1-recepcion-ordenes.md`, `docs/fase-2-pesaje-inicial.md`, `docs/fase-3-carga-tiempo-real.md`, `docs/fase-4-cierre-orden.md`, `docs/fase-5-conciliacion.md` | Informe de cada fase y guía de estudio con preguntas del profesor |
 | `docs/fase-2-division-de-trabajo.md` | División del trabajo entre los 4 desarrolladores para la Fase 2 |
 | `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
-| `docs/postman/` | Colección Postman (86 pedidos, 204 verificaciones: carpetas 00 a 04) |
+| `docs/fase-5-division-de-trabajo.md` | División del trabajo para la Fase 5 (2 partes, trabajo secuencial: Calvo y Alasino), con las decisiones D1 a D14, los prompts y el registro de cada parte (F5) |
+| `docs/fase-5-conciliacion.md` | Informe de la Fase 5, **auditoría final del segundo parcial** (matriz de trazabilidad contra el PDF) y guía de estudio (F5) |
+| `docs/postman/` | Colección Postman: 151 pedidos y 358 verificaciones en las carpetas 00 a 06. La 05 prueba el pesaje final y la conciliación; la 06 simula el **circuito completo 1 → 4** con *Tests* encadenados y su propio login (F5) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 

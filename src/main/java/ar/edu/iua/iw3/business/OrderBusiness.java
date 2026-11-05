@@ -28,9 +28,11 @@ import ar.edu.iua.iw3.model.Truck;
 import ar.edu.iua.iw3.model.TruckTank;
 import ar.edu.iua.iw3.model.persistence.CustomerRepository;
 import ar.edu.iua.iw3.model.persistence.DriverRepository;
+import ar.edu.iua.iw3.model.persistence.OrderDetailRepository;
 import ar.edu.iua.iw3.model.persistence.OrderRepository;
 import ar.edu.iua.iw3.model.persistence.OrderStatusLogRepository;
 import ar.edu.iua.iw3.model.persistence.ProductRepository;
+import ar.edu.iua.iw3.model.persistence.ReadingAverages;
 import ar.edu.iua.iw3.model.persistence.TruckRepository;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,6 +45,10 @@ public class OrderBusiness implements IOrderBusiness {
 
 	@Autowired
 	private OrderStatusLogRepository statusLogDAO;
+
+	// Directo y no IOrderDetailBusiness: OrderDetailBusiness ya depende de IOrderBusiness (seria circular)
+	@Autowired
+	private OrderDetailRepository orderDetailDAO;
 
 	@Autowired
 	private TruckRepository truckDAO;
@@ -123,9 +129,7 @@ public class OrderBusiness implements IOrderBusiness {
 			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
 		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500
 		Order order = load(orderNumber);
-		if (!(weight > 0)) { // tambien rechaza NaN
-			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
-		}
+		requireValidWeight(weight);
 		if (order.getStatus() != OrderStatus.PENDING_INITIAL_WEIGHING) {
 			throw ConflictException.builder().message("La orden " + orderNumber
 					+ " no está pendiente de pesaje inicial (estado " + order.getStatus().getCode() + ")").build();
@@ -153,7 +157,8 @@ public class OrderBusiness implements IOrderBusiness {
 		if (orderNumber == null || password == null) {
 			throw BadRequestException.builder().message("orderNumber y password son obligatorios").build();
 		}
-		Order order = load(orderNumber);
+		// Con bloqueo de fila (H-25): una activacion no se cruza con un cierre ni con otra activacion
+		Order order = loadForUpdate(orderNumber);
 		if (order.getStatus() != OrderStatus.INITIAL_WEIGHING_REGISTERED) {
 			throw ConflictException.builder().message("La orden " + orderNumber
 					+ " no está lista para activar (estado " + order.getStatus().getCode() + ")").build();
@@ -199,6 +204,77 @@ public class OrderBusiness implements IOrderBusiness {
 		}
 	}
 
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public Reconciliation registerFinalWeight(Integer orderNumber, double weight, String actor)
+			throws NotFoundException, BadRequestException, ConflictException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500.
+		// Con bloqueo de fila: dos pesajes finales de la misma orden se serializan (el segundo da 409)
+		Order order = loadForUpdate(orderNumber);
+		requireValidWeight(weight);
+		if (order.getStatus() != OrderStatus.CLOSED_FOR_LOADING) {
+			throw ConflictException.builder().message("La orden " + orderNumber
+					+ " no admite pesaje final: debe estar en estado 3 (estado " + order.getStatus().getCode() + ")")
+					.build();
+		}
+		if (order.getTare() == null) {
+			throw ConflictException.builder().message("La orden " + orderNumber + " no tiene tara registrada").build();
+		}
+		// Un peso igual a la tara es valido (neto 0): una orden cerrada sin lecturas no cargo nada
+		if (weight < order.getTare()) {
+			throw BadRequestException.builder()
+					.message("weight (pesaje final) no puede ser menor que la tara (" + order.getTare() + " kg)").build();
+		}
+		try {
+			OrderStatus from = order.getStatus();
+			order.setFinalWeight(weight);
+			order.setFinalWeighingDateTime(LocalDateTime.now());
+			order.setStatus(OrderStatus.FINISHED);
+			// saveAndFlush: un error de base sale aca, dentro del try, y no al confirmar (H-14)
+			order = orderDAO.saveAndFlush(order);
+			logStatus(order, from, order.getStatus(), actor, "Pesaje final registrado");
+			return buildReconciliation(order);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	@Override
+	public Reconciliation reconciliation(Integer orderNumber)
+			throws NotFoundException, ConflictException, BusinessException {
+		// Las comprobaciones van fuera del try: si no, el catch las convertiria en 500. Sin bloqueo: solo lee
+		Order order = load(orderNumber);
+		if (order.getStatus() != OrderStatus.FINISHED) {
+			throw ConflictException.builder().message("La conciliación solo está disponible para órdenes en estado 4 (orden "
+					+ orderNumber + " en estado " + order.getStatus().getCode() + ")").build();
+		}
+		try {
+			return buildReconciliation(order);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	/**
+	 * Calcula la conciliacion de una orden con pesaje final. Es la unica funcion que la arma, para que el
+	 * POST del pesaje final y el GET de la consulta no puedan diferir. No redondea y no guarda nada.
+	 */
+	private Reconciliation buildReconciliation(Order order) {
+		Double tare = order.getTare();
+		Double finalWeight = order.getFinalWeight();
+		// Una orden cerrada sin lecturas no tiene masa acumulada: producto cargado 0.0
+		Double loadedProduct = order.getLastAccumulatedMass() != null ? order.getLastAccumulatedMass() : 0.0;
+		Double scaleNet = finalWeight - tare;
+		Double difference = scaleNet - loadedProduct;
+		// Promedio simple (AVG) de las lecturas guardadas; null si no hay lecturas
+		ReadingAverages avg = orderDetailDAO.averagesByOrder(order);
+		return new Reconciliation(order.getOrderNumber(), tare, finalWeight, loadedProduct, scaleNet, difference,
+				avg == null ? null : avg.getTemperature(), avg == null ? null : avg.getDensity(),
+				avg == null ? null : avg.getFlowRate());
+	}
+
 	/**
 	 * Busca la orden con bloqueo PESSIMISTIC_WRITE hasta el fin de la transaccion. Equivale al helper
 	 * de OrderDetailBusiness (se duplica a proposito para no refactorizar la Fase 3).
@@ -216,6 +292,19 @@ public class OrderBusiness implements IOrderBusiness {
 			throw NotFoundException.builder().message("No se encuentra la Orden numero=" + orderNumber).build();
 		}
 		return r.get();
+	}
+
+	/**
+	 * Valida el peso recibido de la balanza (tara y pesaje final): debe ser mayor que 0 (tambien rechaza
+	 * NaN) y finito. Un infinito (1e999) pasaria el primer control y MySQL lo rechazaria al guardar (H-26).
+	 */
+	private void requireValidWeight(double weight) throws BadRequestException {
+		if (!(weight > 0)) {
+			throw BadRequestException.builder().message("weight debe ser mayor que 0 (kg)").build();
+		}
+		if (Double.isInfinite(weight)) {
+			throw BadRequestException.builder().message("weight debe ser un número finito").build();
+		}
 	}
 
 	/** Registra un cambio de estado en el log de auditoria de la orden. */

@@ -738,8 +738,8 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 
 | Parte | Responsable | Estado | Último commit | Fecha |
 |---|---|---|---|---|
-| 1 | Tomás Calvo | Pendiente | — | — |
-| 2 | Benjamín Alasino | Pendiente | — | — |
+| 1 | Tomás Calvo | Completa y verificada (local, sin push) | `7408b07` (último commit de código) | 02/11/2026 |
+| 2 | Benjamín Alasino | Completa y verificada (local, sin push; PR pendiente) | `bcda1b3` (antes del bloque de estado) | 02/11/2026 |
 
 ## Modelo del bloque "Estado de la Parte N"
 
@@ -756,3 +756,145 @@ Cada responsable completa su fila al terminar y **agrega debajo su bloque "Estad
 
 **Para tener en cuenta** (lo que necesita saber el siguiente: limitaciones, decisiones, casos probados, mediciones).
 ```
+
+## Estado de la Parte 1 (02/11/2026)
+
+| Paso | Commit | Estado |
+|---|---|---|
+| Campos del pesaje final en `Order` | `4131c00` `feat(model): agrega a la orden los campos del pesaje final` | Local |
+| Consulta de promedios (`ReadingAverages`, `averagesByOrder`) | `ff05d96` `feat(model): agrega la consulta de promedios de las lecturas de una orden` | Local |
+| `Reconciliation` | `6742511` `feat(business): agrega Reconciliation, la respuesta de la conciliación` | Local |
+| Arreglo H-26 (D13) | `8ea3244` `fix(business): rechaza el peso infinito en la tara con 400 (H-26)` | Local |
+| Test de la tara | `6a1a558` `test(business): prueba la validación del peso de la tara (H-26)` | Local |
+| Arreglo H-25 (D14) | `59a79b9` `fix(business): busca la orden con bloqueo en la activación (H-25)` | Local |
+| Tests de la activación (2 commits) | `d4274f7`, `a5e76aa` | Local |
+| Interfaz + `registerFinalWeight` + `buildReconciliation` | `eb5a203` `feat(business): agrega el pesaje final y la función compartida de la conciliación` | Local |
+| `reconciliation` | `6a876a8` `feat(business): agrega la consulta de la conciliación para órdenes en estado 4` | Local |
+| Tests del pesaje final y la conciliación (4 commits) | `f57dc6c`, `7e1fab3`, `1bd80d0`, `736f027` | Local |
+| `FinalWeightRequest` | `867f4a9` `feat(integration): agrega el pedido del pesaje final de la balanza` | Local |
+| Endpoint del pesaje final | `6946d85` `feat(integration): agrega el endpoint del pesaje final de la balanza` | Local |
+| Endpoint de la conciliación | `7408b07` `feat(controllers): agrega el endpoint de la conciliación` | Local |
+| Filas de la guía de `src` (F5) | `f16930d` `docs(guia): agrega al mapa de código los archivos de la Parte 1 de la Fase 5` | Local |
+
+**No hay push todavía.** Todos los commits tienen 100 líneas o menos (el test de la activación se partió en dos después de medirlo: tenía 124). La interfaz de `IOrderBusiness` se partió por método y va junto con su implementación (un commit con solo la interfaz no compila). El test del pesaje final se partió en 4 commits para no pasar las 100 líneas. El PDF de este documento no se regeneró.
+
+**Qué quedó implementado** (rutas bajo `src/main/java/ar/edu/iua/iw3/`):
+
+- `model/Order.java`: `finalWeight` (`Double`) y `finalWeighingDateTime` (`LocalDateTime`), opcionales y `READ_ONLY`. No tiene lista de detalles.
+- `model/persistence/ReadingAverages.java` y `OrderDetailRepository.averagesByOrder`: `AVG` simple de temperatura, densidad y caudal de las lecturas de una orden.
+- `business/Reconciliation.java`: 9 campos con `@Schema`; es el cuerpo de la respuesta del POST y del GET.
+- `business/OrderBusiness.java`:
+  - `requireValidWeight` (H-26): `!(weight > 0)` → 400 con el texto de siempre; infinito → 400 "weight debe ser un número finito". `registerTare` lo usa; el resto de `registerTare` no cambió.
+  - `activate` (H-25): usa `loadForUpdate` después de comprobar los nulos; el orden 400 → 404 → 409 → 403, el 403 sin contraseñas y la idempotencia no cambiaron.
+  - `registerFinalWeight`: `loadForUpdate` (404) → `requireValidWeight` (400) → estado 3 (409) → tara nula (409) → peso < tara (400), todo fuera del `try`. Dentro: guarda el peso y la hora del servidor, estado 4, `saveAndFlush` y una fila 3 → 4.
+  - `reconciliation`: `load` (404) → estado 4 (409) → `buildReconciliation`. Sin bloqueo.
+  - `buildReconciliation` (privado): una sola función para el POST y el GET. Sin redondeo; no guarda nada. `OrderDetailRepository` va inyectado directo (no `IOrderDetailBusiness`, por la dependencia circular).
+- `integration/tms/model/FinalWeightRequest.java` (`double weight`) y `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` en `OrderTmsRestController`; `GET /api/v1/orders/{orderNumber}/reconciliation` en `OrderRestController`. Los métodos existentes no se tocaron.
+- Tests (Mockito): `OrderBusinessTareTest` (4), `OrderBusinessActivateTest` (6), `OrderBusinessFinalWeightTest` (11).
+
+**Verificado** (02/11/2026, MySQL real en el contenedor `iw3-gas-mysql`):
+
+| Verificación | Resultado |
+|---|---|
+| `./mvnw -B -q -DskipTests compile` tras cada commit de código | OK |
+| `./mvnw -B test` | **40 tests, 0 fallas** (los 19 previos + 4 + 6 + 11), `BUILD SUCCESS` |
+| Los tests detectan los defectos | Con el código anterior al arreglo, `OrderBusinessTareTest` falla 1 de 4 (`BusinessException` en lugar de `BadRequestException`) y `OrderBusinessActivateTest` falla 5 de 6 |
+| Esquema sobre una base con órdenes | Base descartable `iw3_scratch` clonada de `iw3_db` (1 orden y el usuario `admin`), sin las columnas nuevas. Al arrancar (`Started Iw3Application in 9.412 seconds`, 0 `ERROR`) Hibernate agregó `final_weight` (`double`) y `final_weighing_date_time` (`datetime`), ambas nulables. La orden previa quedó intacta |
+| Script de verificación contra la app en el puerto 8089 | **43 PASS, 0 FAIL** (casos abajo) |
+| Cruce con la base | Una sola fila 3 → 4 por orden finalizada (2 en toda la base). La orden con tara `1e999` sigue en estado 1 con tara nula y sin fila nueva. La orden cerrada sin lecturas tiene 0 filas en `order_details` |
+| `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json --env-var "baseUrl=http://localhost:8089"` | 86 pedidos, **204 aserciones, 0 fallas** |
+| `/v3/api-docs` | `final-weight` con 200/400/404/409 y `reconciliation` con 200/404/409; esquemas `Reconciliation` (9 campos) y `Order` con los dos campos nuevos |
+
+Casos comprobados con pedidos reales (orden con tara 14500 y lecturas 1000/0.5/20/3000 y 2000/0.5/22/3600, ya cerrada):
+
+- `{}`, peso 0 y negativo → 400 "weight debe ser mayor que 0 (kg)". Peso `1e999` → 400 "weight debe ser un número finito" con `StandartResponse`. Peso 14000 → 400 "weight (pesaje final) no puede ser menor que la tara (14500.0 kg)". La orden sigue en estado 3 con `finalWeight` nulo.
+- Orden inexistente → 404. Estado 1 y 2 → 409 "no admite pesaje final: debe estar en estado 3 (estado N)". Sin token → 401.
+- Peso 16490.0 → 200 con `loadedProduct` 2000, `scaleNet` 1990, `difference` -10, `averageTemperature` 21, `averageDensity` 0.5, `averageFlowRate` 3300. `GET /orders/{n}`: estado 4, `finalWeight` 16490 y `finalWeighingDateTime` del servidor. `/status-log`: 4 registros; el último 3 → 4, usuario `admin`, "Pesaje final registrado".
+- Segundo pesaje → 409. Con la orden en estado 4: lectura, activación, cierre y tara → 409.
+- `GET /reconciliation`: estado 4 → 200 con los mismos valores del POST; estados 1, 2 y 3 → 409 "solo está disponible para órdenes en estado 4"; inexistente → 404; sin token → 401.
+- Orden cerrada **sin lecturas** con peso 14500 (igual a la tara) → 200: `loadedProduct` 0.0, `scaleNet` 0.0, `difference` 0.0 y los tres promedios `null`; el GET devuelve lo mismo.
+- H-26: `POST .../tare` con `1e999` → 400; la orden queda en estado 1 con tara nula. Tara 0 → sigue el mensaje original.
+- Activación: `{}` y sin `password` → 400, inexistente → 404, estado 1 → 409, contraseña incorrecta → 403 sin contraseñas en el cuerpo, repetirla → 200 con el mismo preset y la misma `activationDateTime`.
+
+**Promedios con cero lecturas:** el `AVG` no lanza excepción. La base devuelve una fila con `NULL` y la app responde 200 con los tres promedios `null`. No distinguí si el repositorio devuelve una proyección con valores nulos o directamente `null`; `buildReconciliation` trata los dos casos igual.
+
+**No ejecutado o no verificado:**
+
+- **Concurrencia** (criterios 12 y 14): dos pesajes finales simultáneos y la activación simultánea con el cierre **no se probaron**; es trabajo de la Parte 2. Hoy solo hay evidencia de que `activate` y `registerFinalWeight` usan la consulta con bloqueo (tests de Mockito).
+- Swagger UI en el navegador (solo el JSON de `/v3/api-docs`) y el despliegue en la VM.
+- El PDF de este documento y del resto de la documentación (lo hace Alasino al cerrar).
+
+**Casos que Alasino debe pasar a Postman** (carpeta 05; la 06 es el circuito encadenado):
+
+1. Preparación: orden en estado 3 (crear, tara 14500, activar, lecturas 1000/0.5/20/3000 y 2000/0.5/22/3600, cerrar), una orden en estado 1 y una en estado 2.
+2. Pesaje final inválido (la orden sigue en estado 3): `{}`, peso 0, negativo, `1e999` (cuerpo crudo `{"weight": 1e999}`) y 14000. Después un `GET` que compruebe estado 3 y `finalWeight` nulo.
+3. 404 (inexistente), 409 (estado 1 y 2), 401 (sin token).
+4. Peso 16490.0 → 200 con los valores del ejemplo; `GET /orders/{n}` con estado 4, `finalWeight` y `finalWeighingDateTime`; `status-log` con 4 registros y el último 3 → 4; `GET /reconciliation` con los mismos valores; segundo pesaje → 409.
+5. `GET /reconciliation` en estados 1, 2 y 3 → 409, inexistente → 404, sin token → 401.
+6. Estado 4: lectura, activación, cierre y tara → 409.
+7. Orden cerrada sin lecturas con peso igual a la tara → 200, `loadedProduct` 0.0 y promedios `null`.
+8. H-26: tara `1e999` sobre una orden en estado 1 → 400 y la orden sigue en estado 1 con `tare` nula.
+9. Activación: sin campos, sin `password`, inexistente, estado 1, contraseña incorrecta, repetida (misma `activationDateTime`).
+
+**Para tener en cuenta (Alasino):**
+
+- **Mensajes exactos** (para los `include`): los de la sección 3.6; los verifiqué tal cual. En la carpeta 02 el mensaje de "≤ 0" no cambió.
+- **El orden de D2 tiene un 400 después del 409.** Un peso inválido (0, negativo, infinito) sobre una orden en estado 1 o 2 da **400**, no 409, porque el peso se valida antes que el estado. Está en el código y en los tests unitarios; **no lo probé con un pedido real**.
+- **Valores exactos.** Los ejemplos de la sección 3.5 son exactos en `double`; para otros valores usar `closeTo`. Los números salen sin redondeo.
+- **`finalWeighingDateTime`** es la hora del servidor: no se puede comparar con un valor fijo; verificar que sea un texto.
+- **Base `iw3_db`:** `contextLoads` corre contra ella y ya le agregó las dos columnas nuevas (nulables, inofensivas). Para repetir la prueba de esquema hace falta una base sin ellas.
+- **Docker en Windows:** el contenedor `iw3-gas-mysql` arrancó otra vez sin publicar el puerto 3306 al host (`docker ps` mostraba solo `3306/tcp`). Se arregló con `docker compose up -d --force-recreate`, que conserva los datos. Además estaba `Exited (128)` y había otro contenedor (`mysqliw3`, de la cátedra).
+- **newman contra otro puerto:** `--env-var "baseUrl=http://localhost:8089"` sobrescribe la variable de la colección.
+- **Hallazgos sin tocar:** H-12 (taras simultáneas) sigue aceptado; H-21 y H-23 (números como texto y rutas no numéricas) no cambian: un `weight` `"abc"` sigue saliendo con el formato por defecto de Spring.
+- **Atribución:** todos los commits de esta parte son de `tomas-calvo01`. De las fases anteriores solo se tocaron `registerTare` (D13) y `activate` (D14), con la autorización de Martín González.
+
+## Estado de la Parte 2 (02/11/2026)
+
+| Paso | Commit | Estado |
+|---|---|---|
+| Carpetas Postman 05 y 06 (solo el JSON; `git diff --numstat`: 3142 agregadas, 0 borradas) | `0622a20` `test(postman): agrega las carpetas 05 (pesaje final y conciliación) y 06 (circuito completo)` | Local |
+| Informe, auditoría final y guía de estudio | `1c281f0` `docs(fase-5): agrega el informe, la auditoría final y la guía de estudio de la Fase 5`, `1b2c049` (aclaración de la sección K) | Local |
+| `CLAUDE.md` secciones 2 y 5 | `0a643b7` | Local |
+| `CLAUDE.md` secciones 6 y 7 | `0cf47b7` | Local |
+| `CLAUDE.md` secciones 8.1 y 8.3 | `cfc5fa3` | Local |
+| `CLAUDE.md` sección 9 (decisiones 33 a 46) | `8f01997` | Local |
+| `CLAUDE.md` secciones 10 y 14 | `ecdd957` | Local |
+| Plan: decisiones 33 a 46 · filas de las Fases 4 y 5 y sección 6.2 | `b3082fa`, `6a0669f` | Local |
+| Guía de `src`: fecha, fases, endpoints y códigos · filas F5 de la Parte 2 | `014d87c`, `194f79f` | Local |
+| PDF de la Fase 5 y fila en el índice · PDF de la guía de `src` | `ac69aa4`, `bcda1b3` | Local |
+| Este bloque y el PDF de este documento | Commits `docs(fase-5)` y `docs(pdf)` siguientes | Local |
+
+Todos los commits tienen 100 líneas o menos, salvo las dos excepciones acordadas (el JSON de Postman y el informe nuevo completo, cada uno en su commit). Autor: `Benjamin Alasino`; ningún mensaje lleva `Co-Authored-By` ni "Generated with Claude Code". **No hay push**: se hace cuando Benjamín lo pida, después de `git pull --rebase`.
+
+**Punto de partida verificado.** `git fetch`, `git checkout fase-5-conciliacion` y `git pull --rebase`: la rama local coincidía con `origin/fase-5-conciliacion` (`9347a95`). La Parte 1 **sí estaba publicada** en `origin`, aunque su bloque diga "Local / sin push" (el bloque quedó escrito antes del push; no se modificó porque es de Calvo).
+
+**Qué quedó hecho.** Solo documentación y la colección Postman: la Parte 2 **no modificó** `src/main` ni `src/test`. El generador de las carpetas 05 y 06 y el script de concurrencia fueron descartables y quedaron fuera del repo.
+
+- **Carpeta 05** (44 pedidos, 98 aserciones; variables `orderNumberFinal`, `activationPasswordFinal`, `reconciliationFinal`, `orderNumberFinalPending`, `orderNumberFinalTared`, `orderNumberFinalBare`, `reconciliationFinalBare`, `orderNumberFinalTare`): preparación del ejemplo, 5 pesajes inválidos (400) con la orden intacta y sin fila nueva, 404, 401, pesaje final 16490.0 con `closeTo`, estado 4, historial de 4 filas, GET = POST, estado 4 final (5 × 409), conciliación en estados 1, 2 y 3 (409), pesaje final en estados 1 y 2 (409), **peso 0 sobre una orden en estado 1 (400: el peso se valida antes que el estado, D2)**, orden sin lecturas con peso igual a la tara y regresión H-26.
+- **Carpeta 06** (21 pedidos, 56 aserciones; login propio con `tokenCircuit` y auth Bearer a nivel de carpeta): Puntos 1 a 5 encadenados, 302 al reenviar, 4 lecturas válidas no enteras y una descartada, cabecera, lectura tardía 409, conciliación **recalculada en el test** con `closeTo`, GET = POST, historial exacto `null→1, 1→2, 2→3, 3→4` con el usuario, presencia en `GET /orders` (recorre páginas con `pm.sendRequest` si hace falta) y en `GET /orders/{n}/details`.
+
+**Verificado** (02/11/2026, base descartable `iw3_scratch` con la app en el puerto 8089; al terminar se bajó la app y se borró la base):
+
+| Verificación | Resultado |
+|---|---|
+| `npx newman@6 run docs/postman/IW3-Gas-Terminal.postman_collection.json --env-var "baseUrl=http://localhost:8089"` | **151 pedidos, 358 aserciones, 0 fallas**. Carpetas 00 a 04: **86 y 204** (sin cambios); 05: 44 y 98; 06: 21 y 56 |
+| Carpetas por separado | 00 + 05: 46 y 102, 0 fallas · 06 sola (sin la 00): 21 y 56, 0 fallas |
+| `./mvnw -B test` | **40 tests, 0 fallas**, `BUILD SUCCESS` |
+| (a) Dos pesajes finales simultáneos, 5 veces | Siempre un 200 y un 409; estado 4; 1 fila 3 → 4 |
+| (b) Activación y cierre simultáneos (orden en estado 2 sin activar), 20 veces | 18 × (200, 200) y 2 × (409, 200); **estado final 3 en las 20**; 1 fila 2 → 3 |
+| (c) Dos activaciones simultáneas, 5 veces | Ambas 200; *general log* de MySQL: **1** `UPDATE` con `activation_date_time` por orden |
+| (d) 50 lecturas y un cierre en paralelo, 2 corridas | 25 × 200 y 25 × 409, **0 × 500**; cierre 200; 1 fila 2 → 3; cabecera 550 = máximo 550; 0 lecturas posteriores al cierre |
+| Log de la app | 0 `ERROR`, ningún *deadlock*. **0 apariciones** de las contraseñas generadas |
+| `/v3/api-docs` contra la colección | 12 de 13 endpoints con pedidos; falta `GET /demo/encodepass` (H-28) |
+
+**Honestidad sobre la concurrencia:** la primera corrida del script tenía dos errores propios (el número de orden no avanzaba porque se calculaba en una *subshell*, y no se extraía la contraseña de la respuesta en varias líneas). Se descartó y se repitió completa con el script corregido; los números de arriba son de esa segunda corrida. Una pausa de ~1 min 47 s en (b) fue del proceso o del equipo (`HikariPool … clock leap detected`), no de la base.
+
+**Resultado de la auditoría** (detalle y matriz en `docs/fase-5-conciliacion.md`, sección 9): los **21 criterios** de la sección 6 se cumplen con evidencia. Los Puntos 1 a 5 contra el PDF y D1 a D14 contra el código coinciden. Las comprobaciones están fuera del `try`, la función de cálculo es una sola, no hay dependencias nuevas ni lista de detalles en `Order`, y los únicos cambios en las Fases 2 y 3 son los de D13 y D14. **Fase 5: completa. Requisitos obligatorios del segundo parcial para los Puntos 1 a 5: implementados y verificados.**
+
+**Defectos y pendientes** (ninguno bloquea; no se cambió código):
+
+- **H-27** (documentación): `POST /login` y `GET /demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 (tampoco `final-weight` ni `reconciliation`). Arreglo propuesto: anotaciones. Lo decide el equipo; corresponde a los autores de cada endpoint (para los de la Fase 5, Calvo).
+- **H-28** (Postman): `GET /demo/encodepass` (demo de la cátedra) sin pedido. Propuesta: retirarlo con H-5; si se conserva, agregar un pedido (Parte 2).
+- **H-29** (Fase 2): `registerTare` guarda con `save` y no con `saveAndFlush`. Deuda menor, fuera del alcance de D13.
+- Siguen: decisión 30 a confirmar, H-12 aceptado, H-21 y H-23 sin cambios.
+- **PR a `main`** como borrador: cuando Benjamín lo pida, sin `.postman/` ni `postman/` (no existen en esta copia).

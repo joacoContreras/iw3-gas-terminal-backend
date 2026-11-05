@@ -19,13 +19,13 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 31/10/2026, tras completar y verificar la Fase 4 en la rama `fase-4-cierre-orden`.
+**Última actualización:** 02/11/2026, tras completar y verificar la Fase 5 en la rama `fase-5-conciliacion`.
 
 | | |
 |---|---|
-| **Última fase completada** | **Fase 4 — Cierre de la orden (Punto 4): implementada y probada en `fase-4-cierre-orden`** (31/10/2026; responsable: Benjamín Alasino) |
-| **Qué sigue** | PR de la Fase 4 a `main` (decisión 14) y confirmar la decisión 30. Después, **Fase 5 — Pesaje final y conciliación (Punto 5): pendiente**, con autorización del usuario |
-| `main` | Contiene las Fases 0 a 3 (Fase 2 por el PR #6; Fase 3 por el PR #7 y sus correcciones de auditoría por el PR #9) y la guía de inicio de la Fase 4 (PR #11); recibirá la Fase 4 por PR |
+| **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada y auditada en `fase-5-conciliacion`** (02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial |
+| **Qué sigue** | PR de la Fase 5 a `main` como borrador (decisión 14) y **entrega del 10/11/2026**. Confirmar la decisión 30 y decidir H-27 a H-29. Después, el examen final |
+| `main` | Contiene las Fases 0 a 4 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026) y la guía de inicio de la Fase 4 (PR #11); recibirá la Fase 5 por PR |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
 | Despliegue | La VM se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`); funciona con la Fase 3 |
 
@@ -35,8 +35,8 @@
 | 1 | Recepción de órdenes (Punto 1) | `fase-1-recepcion-ordenes` | Completada e integrada en `main` (PR #2) |
 | 2 | Pesaje inicial y activación (Punto 2) | `fase-2-pesaje-inicial` | Completada e integrada en `main` (PR #6) |
 | 3 | Carga y datos en tiempo real (Punto 3) | `fase-3-carga-tiempo-real` | Completada e integrada en `main` (PR #7; correcciones en el PR #9) |
-| 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Completada y verificada (espera PR a `main`) |
-| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Pendiente |
+| 4 | Cierre de la orden (Punto 4) | `fase-4-cierre-orden` | Completada e integrada en `main` (PR #12) |
+| 5 | Pesaje final, conciliación y circuito completo (Punto 5) | `fase-5-conciliacion` | Completada y verificada (espera PR a `main`) |
 
 **No avanzar de fase sin autorización explícita del usuario.**
 
@@ -181,11 +181,11 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Activación:** `OrderBusiness.activate` (400 → 404 → 409 → 403, fuera del `try`), idempotente, no escribe historial; `ForbiddenException` → 403.
 - **Lecturas:** `IOrderDetailBusiness`/`OrderDetailBusiness.add` (404 → 400 → 409 → descarte); `OrderDetailValidator` descarta caudal ≤ 0, masa ≤ 0, masa menor que la última válida y densidad fuera de (0, 1); siempre 200 con `{ saved, reason }`; detalle y cabecera en una transacción con `saveAndFlush`.
 - **Histórico (decisión 11 = 28):** `GET /api/v1/orders/{orderNumber}/details` paginado (`OrderDetailBusiness.list`, `OrderDetailRepository.findByOrder`), orden fijo por `id`, tope de 100.
-- **Pruebas:** carpeta Postman `03 - Fase 3: carga (sistema de carga)` (44 pedidos, 114 aserciones); newman: 65 pedidos y 160 aserciones, 0 fallas. `./mvnw -B test`: 11 tests, 0 fallas. Auditoría con matriz de trazabilidad, simulación de estado 3 (409) y prueba de atomicidad.
+- **Pruebas:** carpeta Postman `03 - Fase 3: carga (sistema de carga)` (hoy 45 pedidos y 117 aserciones, tras las correcciones de la auditoría); newman al cerrar la fase: 65 pedidos y 160 aserciones, 0 fallas. `./mvnw -B test`: 11 tests, 0 fallas. Auditoría con matriz de trazabilidad, simulación de estado 3 (409) y prueba de atomicidad.
 - **Hallazgos:** H-14 (defecto menor: una falla de base al confirmar la activación no respondía con `StandartResponse`) **corregido** con `saveAndFlush` (`4ed54c8`); limitaciones H-15 a H-22.
 - **Informe y guía:** `docs/fase-3-carga-tiempo-real.md` (16 preguntas con respuestas y qué debe explicar cada integrante).
 
-### Fase 4 — Cierre de la orden (Punto 4, completada en rama `fase-4-cierre-orden`)
+### Fase 4 — Cierre de la orden (Punto 4, completada e integrada en `main` por el PR #12)
 
 - **Responsable único:** Benjamín Alasino (autorizada por Martín González el 27/10/2026). Decisiones 29 a 32.
 - **Negocio:** `IOrderBusiness.close`/`OrderBusiness.close`: 404 → 409 fuera del `try`; busca con `findByOrderNumberForUpdate` (helper privado `loadForUpdate`, duplicado del de `OrderDetailBusiness`); estado 2 → 3 con `saveAndFlush`; fila en `order_status_logs` ("Orden cerrada para carga", usuario del token). No toca fechas de carga ni últimos valores; no hay campos nuevos.
@@ -194,6 +194,16 @@ Los requisitos del examen final **no** se incorporan al alcance del parcial.
 - **Pruebas:** `OrderBusinessCloseTest` (7 tests con Mockito): `./mvnw -B test` 19 tests, 0 fallas. Carpeta Postman `04 - Fase 4: cierre (sistema de carga)` (20 pedidos, 41 aserciones): newman 86 pedidos y 204 aserciones, 0 fallas. Concurrencia: 50 lecturas + 1 cierre en paralelo (dos corridas) sin 500, una sola fila 2→3 y cabecera = máximo guardado; dos cierres simultáneos dan 200 y 409.
 - **Hallazgos:** H-23 a H-25 (observaciones y una limitación; ninguno bloquea).
 - **Informe y guía:** `docs/fase-4-cierre-orden.md` (15 preguntas con respuestas).
+
+### Fase 5 — Pesaje final y conciliación (Punto 5, completada en rama `fase-5-conciliacion`)
+
+- **Trabajo secuencial en 2 partes** (`docs/fase-5-division-de-trabajo.md`, autorizada por Martín González el 02/11/2026): Parte 1 (Tomás Calvo: negocio, endpoints y arreglos) y Parte 2 (Benjamín Alasino: Postman, concurrencia, auditoría y documentación). Decisiones D1 a D14 = decisiones 33 a 46.
+- **Modelo:** `Order` suma `finalWeight` y `finalWeighingDateTime` (opcionales). `OrderDetailRepository.averagesByOrder` (`AVG`) con la proyección `ReadingAverages`. La conciliación (`Reconciliation`) **no se guarda**.
+- **Negocio:** `registerFinalWeight` (404 → 400 → 409 → 409 → 400, fuera del `try`; con bloqueo; estado 3 → 4; fila "Pesaje final registrado") y `reconciliation` (solo estado 4); una sola función `buildReconciliation`. Arreglos: `requireValidWeight` en la tara (H-26) y `loadForUpdate` en `activate` (H-25, y con eso H-16).
+- **Endpoints:** `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` y `GET /api/v1/orders/{orderNumber}/reconciliation`.
+- **Pruebas:** `./mvnw -B test` 40 tests, 0 fallas. Postman: carpetas `05` (44 pedidos, 98 aserciones) y `06 - Circuito completo (1 a 4)` (21 pedidos, 56 aserciones); newman 151 pedidos y 358 aserciones, 0 fallas. Concurrencia: pesaje final doble, activación contra cierre, activación doble y 50 lecturas con un cierre, sin 500 y sin estados inconsistentes.
+- **Auditoría final** del segundo parcial contra el PDF: Puntos 1 a 5 implementados y verificados; observaciones H-27 a H-29.
+- **Informe y guía:** `docs/fase-5-conciliacion.md` (16 preguntas con respuestas y qué debe explicar cada integrante).
 
 ## 6. Arquitectura y convenciones del código
 
@@ -204,9 +214,9 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | Paquete (bajo `src/main/java/ar/edu/iua/iw3`) | Contenido |
 |---|---|
 | `controllers` | `BaseRestController` (`getUserLogged()`), `Constants` (URLs), `OrderRestController` |
-| `integration/<sistema>/controllers`, `integration/<sistema>/model` | Endpoints y DTO por sistema externo: `sap` (`OrderSapRestController`), `tms` (`OrderTmsRestController`, `TareRequest`, `TareResponse`) y `loader` (`OrderLoaderRestController`, `ActivationRequest`/`Response`, `DetailRequest`/`Response`) |
-| `business`, `business/exception` | `I*Business` + `*Business` (`IOrderBusiness`, `IOrderDetailBusiness`), `OrderValidator`, `OrderDetailValidator`, `DetailResult`, `ActivationPasswordGenerator`; excepciones de negocio |
-| `model`, `model/persistence` | Entidades JPA y repositorios Spring Data |
+| `integration/<sistema>/controllers`, `integration/<sistema>/model` | Endpoints y DTO por sistema externo: `sap` (`OrderSapRestController`), `tms` (`OrderTmsRestController`, `TareRequest`, `TareResponse`, `FinalWeightRequest`) y `loader` (`OrderLoaderRestController`, `ActivationRequest`/`Response`, `DetailRequest`/`Response`) |
+| `business`, `business/exception` | `I*Business` + `*Business` (`IOrderBusiness`, `IOrderDetailBusiness`), `OrderValidator`, `OrderDetailValidator`, `DetailResult`, `Reconciliation`, `ActivationPasswordGenerator`; excepciones de negocio |
+| `model`, `model/persistence` | Entidades JPA y repositorios Spring Data (más la proyección `ReadingAverages`) |
 | `auth`, `security` | Usuarios, roles, JWT y reglas de acceso (de la cátedra) |
 | `config` | `OpenApiConfig` (Swagger con esquema Bearer) |
 | `util` | `StandartResponse` y su servicio (respuesta de error estándar) |
@@ -248,6 +258,8 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | `POST /api/v1/integration/loader/activation` | **Punto 3**: activa la carga con `{ orderNumber, password }` y devuelve `{ preset }`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{orderNumber}/details` | **Punto 3**: una lectura del caudalímetro. Siempre 200 con `{ saved, reason }` (guardada o descartada) | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/orders/{orderNumber}/close` | **Punto 4**: cierra la orden (estado 2 → 3); desde ahí las lecturas dan 409. Sin cuerpo; registra el cambio con el usuario del token y responde la orden. No es idempotente | 200, 401, 404, 409, 500 |
+| `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` | **Punto 5**: registra el pesaje final (estado 3 → 4, fila "Pesaje final registrado") y devuelve la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
+| `GET /api/v1/orders/{orderNumber}/reconciliation` | **Punto 5**: conciliación, solo para órdenes en estado 4 (se calcula, no se guarda) | 200, 401, 404, 409, 500 |
 | `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200 |
 | `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 404 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 404 |
@@ -275,11 +287,21 @@ Respuesta 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason"
 
 `POST /integration/loader/orders/{orderNumber}/close` no lleva cuerpo; responde la orden (como `GET /orders/{n}`) con `"status": 3`.
 
-**Pruebas actuales:** `./mvnw -B test` → 19 tests; colección Postman → 86 pedidos y 204 aserciones (carpetas 00 a 04).
+Cuerpo de `POST /integration/tms/orders/{orderNumber}/final-weight`: `{ "weight": 16490.0 }`. Respuesta 200 (igual que `GET /orders/{n}/reconciliation`),
+con tara 14500 y lecturas de 1000 kg (20 °C, 0.5, 3000 kg/h) y 2000 kg (22 °C, 0.5, 3600 kg/h):
+
+```json
+{ "orderNumber": 90001, "tare": 14500.0, "finalWeight": 16490.0, "loadedProduct": 2000.0, "scaleNet": 1990.0,
+  "difference": -10.0, "averageTemperature": 21.0, "averageDensity": 0.5, "averageFlowRate": 3300.0 }
+```
+
+Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondean.
+
+**Pruebas actuales** (medidas el 02/11/2026): `./mvnw -B test` → 40 tests; colección Postman → 151 pedidos y 358 aserciones, 0 fallas (carpetas 00 a 04: 86 y 204; 05: 44 y 98; 06: 21 y 56).
 
 | Entidad (clase → tabla) | Notas |
 |---|---|
-| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime`, `tare`, `initialWeighingDateTime`, `activationPassword` (con `@JsonIgnore`), `activationDateTime`, `loadingStartDateTime`, `loadingEndDateTime`, `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`. Sin lista de detalles |
+| `Order` → `orders` | `orderNumber` único, camión/chofer/cliente/producto, `plannedLoadDateTime`, `preset`, `status`, `receptionDateTime`, `tare`, `initialWeighingDateTime`, `activationPassword` (con `@JsonIgnore`), `activationDateTime`, `loadingStartDateTime`, `loadingEndDateTime`, `lastAccumulatedMass`, `lastDensity`, `lastTemperature`, `lastFlowRate`, `finalWeight`, `finalWeighingDateTime`. Sin lista de detalles |
 | `OrderDetail` → `order_details` | Lecturas válidas del caudalímetro: `accumulatedMass`, `density`, `temperature`, `flowRate`, `timestamp` (columna `reading_timestamp`); `@ManyToOne LAZY` a `Order` con `@JsonIgnore` (columna `id_order`) |
 | `OrderStatusLog` → `order_status_logs` | Estado anterior (`null` al crear) y nuevo, fecha y hora, `actor`, observaciones |
 | `Truck`, `TruckTank` → `trucks`, `truck_tanks` | Camión con su cisternado (una fila por cisterna) |
@@ -312,13 +334,15 @@ Respuesta 200: `{ "saved": true, "reason": null }` o `{ "saved": false, "reason"
 
 **Fase 4 — Cierre de la orden (Punto 4)** · rama `fase-4-cierre-orden`
 
-- **Estado: COMPLETADA y verificada** en su rama (31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente: PR a `main`
-  con las aprobaciones acordadas y confirmación de la decisión 30 por el equipo.
+- **Estado: COMPLETADA e integrada en `main`** (PR #12, 31/10/2026; ver `docs/fase-4-cierre-orden.md`). Pendiente:
+  confirmación de la decisión 30 por el equipo.
 - `POST /api/v1/integration/loader/orders/{orderNumber}/close`: estado 2 → 3. Desde ahí se rechazan los
   detalles. Rechazar transiciones inválidas (cerrar dos veces, o desde el estado 1).
 
 **Fase 5 — Pesaje final, conciliación y circuito completo (Punto 5)** · rama `fase-5-conciliacion`
 
+- **Estado: COMPLETADA y verificada** en su rama (02/11/2026; ver `docs/fase-5-conciliacion.md`). Lista para el PR a `main`
+  (borrador, con las aprobaciones de Martín, Contreras y Calvo).
 - `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight`: estado 3 → 4 y devuelve la conciliación.
 - `GET /api/v1/orders/{orderNumber}/reconciliation`: solo para estado 4.
 - Promedios con `AVG` sobre los detalles almacenados (decisión 3).
@@ -335,8 +359,10 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 
 - ~~Revisión de la Fase 1 por el equipo~~ — hecha, sin observaciones (19/10/2026).
 - **Proteger `main`** (decisión 14): exigir Pull Request con la aprobación de 3 de los 4 integrantes. Solo el dueño
-  del repo (`joacoContreras`, único admin) puede configurarlo. Hoy hay **3 cuentas con permiso de escritura**: para
-  llegar a 3 aprobaciones hay que sumar al cuarto integrante. En GitHub el autor del PR **no** cuenta como aprobación.
+  del repo (`joacoContreras`, único admin) puede configurarlo. **Estado real (02/11/2026):** existe un *ruleset*
+  ("iw3 - Estandar de Repositorios") pero su *enforcement* está **deshabilitado**: GitHub no exige las aprobaciones y los PR
+  se mergean con las que haya (el PR #12 entró con una). El acuerdo de las 3 aprobaciones se cumple a mano. En GitHub el
+  autor del PR **no** cuenta como aprobación.
 - ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Se redespliega solo al mergear a `main`:
   hoy el workflow de GitHub Actions lo hace en cada push a `main`.
 
@@ -369,7 +395,7 @@ JSON
 |---|---|---|
 | 1 | Retirar el código demo de la cátedra | Aplicada (Fase 1) |
 | 2 | Mantener `anyRequest().authenticated()`; Postman hace login con un usuario de prueba; roles al final | Vigente |
-| 3 | Implementar los promedios (`AVG`) | Fase 5 |
+| 3 | Implementar los promedios (`AVG`) | Aplicada (Fase 5) |
 | 4 | Duplicado: `FoundException` → 302, como la cátedra | Aplicada |
 | 5 | Identificadores en inglés; comentarios y documentación en español | Vigente |
 | 6 | **No** alinear el `pom.xml` con la cátedra (Boot 4.1.1, java-jwt 4.6.1) | Vigente |
@@ -399,22 +425,40 @@ JSON
 | 30 | El cierre no exige activación ni lecturas previas: alcanza con el estado 2 | Aplicada (Fase 4); **a confirmar por el equipo** |
 | 31 | El cierre busca la orden con `findByOrderNumberForUpdate` (`PESSIMISTIC_WRITE`) para serializarse con las lecturas | Aplicada (Fase 4) |
 | 32 | Una fila 2→3 en `order_status_logs` (usuario del token, "Orden cerrada para carga") y 200 con la orden; sin campos nuevos ni cambios en fechas de carga o últimos valores | Aplicada (Fase 4) |
+| 33 | (D1) Pesaje final solo desde el estado 3; 1, 2 y 4 dan 409; no es idempotente | Aplicada (Fase 5) |
+| 34 | (D2) Orden 404 → 400 (peso ausente, no finito o ≤ 0) → 409 (estado) → 400 (menor que la tara); peso igual a la tara válido | Aplicada (Fase 5) |
+| 35 | (D3) Pesaje final con `findByOrderNumberForUpdate`, comprobaciones fuera del `try`, `rollbackFor` y `saveAndFlush`; el GET no bloquea | Aplicada (Fase 5) |
+| 36 | (D4) Se guardan solo `finalWeight` y `finalWeighingDateTime` (hora del servidor); la conciliación se calcula con una sola función | Aplicada (Fase 5) |
+| 37 | (D5) Producto cargado = última masa; neto = final − tara; diferencia = neto − producto; `AVG` simple; sin redondeo | Aplicada (Fase 5) |
+| 38 | (D6) Orden sin lecturas: producto cargado 0.0 y promedios `null`; no bloquea el pesaje final | Aplicada (Fase 5) |
+| 39 | (D7) El POST responde 200 con la conciliación; el GET solo en estado 4 (otros 409) | Aplicada (Fase 5) |
+| 40 | (D8) Una fila 3→4 con el usuario y "Pesaje final registrado"; el estado 4 es final | Aplicada (Fase 5) |
+| 41 | (D9) Lógica en `OrderBusiness` con `OrderDetailRepository` directo (evita la dependencia circular); POST en `OrderTmsRestController`, GET en `OrderRestController` | Aplicada (Fase 5) |
+| 42 | (D10) Mensajes con el estilo previo; Postman compara fragmentos | Aplicada (Fase 5) |
+| 43 | (D11) Carpetas Postman 05 y 06 con variables propias; las 00 a 04 no se tocan | Aplicada (Fase 5) |
+| 44 | (D12) Fuera de alcance: frecuencia de almacenamiento, roles, alarmas, frontend y seguridad | Vigente |
+| 45 | (D13) La tara rechaza un peso infinito con 400 (`requireValidWeight`, compartido con el pesaje final) | Aplicada (Fase 5; arreglo de la Fase 2, H-26) |
+| 46 | (D14) `activate` busca la orden con bloqueo de fila | Aplicada (Fase 5; arreglo de la Fase 3, H-25 y H-16) |
 
 ## 10. Hallazgos y deuda abierta
 
 | ID | Tema | Estado |
 |---|---|---|
-| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties`, `/demo/**` público, CORS abierto, `dev.info.enabled=true` (trazas en las respuestas de error) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
+| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), `/demo/**` público, CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. El chequeo del *workflow* de deploy llama a `/api/v1/products`, ruta retirada en la Fase 1 (pasa porque responde 401) | Abierto: cerrar en la etapa de seguridad y **antes de cualquier despliegue real** |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
-| H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Aceptado para el parcial (análogo a N-2 de Fase 1) |
+| H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Sigue aceptado para el parcial (análogo a N-2 de Fase 1; la Fase 5 solo cambió el chequeo del peso) |
 | H-14 | Una falla de base al confirmar la activación respondía 500 con el formato de Spring, no `StandartResponse` (`activate` usaba `save`) | Resuelto (27/10/2026): `saveAndFlush` en `OrderBusiness.activate` (`4ed54c8`), verificado |
-| H-15, H-16 | H-15 (lecturas simultáneas: deadlock y masa anterior vieja) **resuelto** con bloqueo pesimista de la orden (F-01); H-16 (activaciones simultáneas de la misma orden) sigue aceptado para el parcial | H-15 corregido; H-16 aceptado |
+| H-15, H-16 | H-15 (lecturas simultáneas: deadlock y masa anterior vieja) **resuelto** con bloqueo pesimista de la orden (F-01); H-16 (activaciones simultáneas de la misma orden) **resuelto** como efecto colateral de D14 (verificado: un solo `UPDATE` de `activation_date_time`) | Corregidos |
 | H-17, H-18 | Contraseña de 5 dígitos sin límite de intentos; token de 1 h en cargas largas | Pendiente (seguridad del final) |
 | H-19, H-20 | `timestamp` con `Z` / estampas mezcladas: **resueltos** al usar siempre la hora de recepción del servidor (F-13) | Corregidos |
 | H-21, H-22 | Jackson acepta números como texto; el 500 de `BusinessException` sale con `message: null` | Observación; no se cambia |
 | H-23 | Un `orderNumber` no numérico en la URL da 400 con el formato de Spring, no `StandartResponse` (todos los endpoints con `{orderNumber}`) | Observación; no se cambia |
 | H-24 | `loadForUpdate` duplicado en `OrderBusiness` y `OrderDetailBusiness` | Deuda menor; unificar con acuerdo del equipo |
-| H-25 | `activate` busca sin bloqueo: una primera activación simultánea con el cierre podría reescribir el estado 2 (solo posible por la decisión 30). Análisis de código, no reproducido | Aceptado para el parcial (como H-16); arreglo propuesto: bloqueo en `activate` (cambio de la Fase 3) |
+| H-25 | `activate` buscaba sin bloqueo: una primera activación simultánea con el cierre podía reescribir el estado 2 (solo posible por la decisión 30) | **Resuelto** (Fase 5, D14): `loadForUpdate` en `activate`; 20 de 20 activaciones simultáneas con el cierre terminaron en estado 3 |
+| H-26 | `POST …/tare` con `1e999` respondía 500 con el formato de Spring | **Resuelto** (Fase 5, D13): 400 «weight debe ser un número finito» |
+| H-27 | Swagger incompleto fuera de lo nuevo: login y `/demo/encodepass` sin `@Operation`; `GET /orders/{n}` y `/status-log` no declaran el 404; solo el cierre declara 401 y 500 | Observación; arreglo de anotaciones a decidir por el equipo |
+| H-28 | `GET /demo/encodepass` (demo de la cátedra) no tiene pedido en Postman | Observación; retirarlo con H-5 o agregar un pedido |
+| H-29 | `registerTare` guarda con `save` y no con `saveAndFlush` (lección de H-14) | Deuda menor; fuera del alcance de D13 |
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
@@ -520,11 +564,12 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-3-carga-tiempo-real.md` | Informe de la Fase 3, auditoría final y guía de estudio |
 | `docs/fase-4-cierre-orden.md` | Informe de la Fase 4 y guía de estudio |
 | `docs/fase-4-guia-de-inicio.md` | Alcance, plan y prompt de la Fase 4 (Benjamín Alasino) |
-| `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
+| `docs/fase-5-conciliacion.md` | Informe de la Fase 5, auditoría final del segundo parcial y guía de estudio |
+| `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md`, `docs/fase-5-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
 | `docs/pdf/consigna-trabajo-integrador-2026.pdf` | **Consigna oficial del trabajo integrador** (referencia; no se regenera) |
-| `docs/postman/` | Colección Postman (carpetas 00 a 04) |
+| `docs/postman/` | Colección Postman (carpetas 00 a 06; la 06 es el circuito completo con *Tests*) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
 | `README.md` | Descripción general y base de datos |
 
