@@ -41,6 +41,18 @@
 
 **No avanzar de fase sin autorización explícita del usuario.**
 
+**Examen final (desde el 12/11/2026).** El `main` queda como la entrega del parcial; el trabajo del final va en ramas
+`final-fase-N-<tema>` (plan y reglas en `CLAUDE.md` y `docs/plan-de-trabajo.md` del repo `iw3-gas-terminal-frontend`):
+
+| Fase del final | Contenido | Rama | Estado |
+|---|---|---|---|
+| 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Implementada y probada (12/11/2026), sin commit.** 138 tests y Postman 186 pedidos / 428 aserciones sin fallas. Informe: `docs/final-fase-1-roles.md` |
+| 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | Pendiente |
+| 3 | Filtro y orden del listado, CORS (H-30), H-5 y cierre del backend | `final-fase-3-cierre-backend` | Pendiente |
+
+**Aviso (12/11/2026):** `origin/main` fue reescrito (567 commits, 120 con trailers de Claude, sin el contenido del cierre del parcial). El `main` local es la versión entregada.
+Resolverlo antes de cualquier Pull Request del final.
+
 ## 3. Reglas de trabajo (acordadas con el equipo)
 
 1. **Una fase por vez.** Antes de empezar una fase se presenta: objetivo, archivos probables,
@@ -361,7 +373,7 @@ Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondea
 
 ### 8.2 Para el examen final
 
-Roles por endpoint (SAP, TMS, sistema de carga, operadores) · alarma de temperatura por e-mail con umbral y
+~~Roles por endpoint (SAP, TMS, sistema de carga, operadores)~~ (hecho en `final-fase-1-roles`) · alarma de temperatura por e-mail con umbral y
 destinatarios configurables y sin reenvío hasta que se acepte (usar las clases de la cátedra: eventos,
 `EmailBusiness`, `Scheduler`) · frontend completo · endurecimiento de seguridad (H-5) · despliegue.
 
@@ -479,7 +491,7 @@ JSON
 | N-2 | Dos altas simultáneas del mismo `orderNumber`: una responde 500 en lugar de 302 | Aceptado: se deja el 500 (decisión del usuario, 19/10/2026) |
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
-| Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | Pendiente (final) |
+| Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | **Resuelto** en `final-fase-1-roles` (12/11/2026): `@PreAuthorize` en los 12 endpoints protegidos y 403 con JSON estándar. Las autoridades viajan en el `Authentication`, no en el `User` |
 | Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` no están incorporados. Al copiarlos hay que cambiar `business.execption` por `business.exception` (el TP corrigió el nombre del paquete) | Pendiente (final) |
 
 ## 11. Cómo ponerlo en marcha en tu carpeta
@@ -584,12 +596,13 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-4-cierre-orden.md` | Informe de la Fase 4 y guía de estudio |
 | `docs/fase-4-guia-de-inicio.md` | Alcance, plan y prompt de la Fase 4 (Benjamín Alasino) |
 | `docs/fase-5-conciliacion.md` | Informe de la Fase 5, auditoría final del segundo parcial y guía de estudio |
+| `docs/final-fase-1-roles.md` | Examen final, Fase 1: roles, matriz por endpoint, pruebas y guía de defensa |
 | `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md`, `docs/fase-5-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
 | `docs/pdf/consigna-trabajo-integrador-2026.pdf` | **Consigna oficial del trabajo integrador** (referencia; no se regenera) |
 | `docs/postman/` | Colección Postman (carpetas 00 a 07; la 06 es el circuito completo con *Tests* y la 07 prueba el demo de la cátedra) |
-| `docs/sql/seed-dev-users.sql` | Usuario de prueba (solo desarrollo) |
+| `docs/sql/seed-dev-users.sql` | Usuarios de prueba, uno por rol (solo desarrollo; contraseña `<usuario>123`) |
 | `README.md` | Descripción general y base de datos |
 
 **Material de la cátedra** (fuera de este repo, solo lectura): `github.com/magm3333/iw3_2026`, con un commit por
