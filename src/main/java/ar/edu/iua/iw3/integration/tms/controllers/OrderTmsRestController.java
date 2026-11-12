@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,7 +50,11 @@ public class OrderTmsRestController extends BaseRestController {
 			content = @Content(schema = @Schema(implementation = TareResponse.class)))
 	@ApiResponse(responseCode = "400", description = "Tara inválida (debe ser mayor que 0)")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "409", description = "La orden no está pendiente de pesaje inicial")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TMS')")
 	@PostMapping(value = "/{orderNumber}/tare", consumes = MediaType.APPLICATION_JSON_VALUE,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> registerTare(@PathVariable Integer orderNumber, @RequestBody TareRequest body) {
@@ -79,7 +84,11 @@ public class OrderTmsRestController extends BaseRestController {
 			content = @Content(schema = @Schema(implementation = Reconciliation.class)))
 	@ApiResponse(responseCode = "400", description = "Peso inválido (≤ 0, infinito o menor que la tara)")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "409", description = "La orden no está en estado 3 (o no tiene tara)")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_TMS')")
 	@PostMapping(value = "/{orderNumber}/final-weight", consumes = MediaType.APPLICATION_JSON_VALUE,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> registerFinalWeight(@PathVariable Integer orderNumber,

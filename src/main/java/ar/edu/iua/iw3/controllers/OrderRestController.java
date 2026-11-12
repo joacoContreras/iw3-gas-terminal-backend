@@ -9,6 +9,7 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +21,7 @@ import ar.edu.iua.iw3.business.Reconciliation;
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
+import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -47,6 +49,11 @@ public class OrderRestController extends BaseRestController {
 	@Operation(summary = "Lista las órdenes paginadas, de la más reciente a la más antigua",
 			description = "Parámetros opcionales: page (desde 0, por defecto 0) y size (por defecto 20, máximo 100). "
 					+ "El orden es fijo por número de orden descendente.")
+	@ApiResponse(responseCode = "200", description = "Página de órdenes (content + page)")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> list(@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
 		try {
@@ -63,6 +70,13 @@ public class OrderRestController extends BaseRestController {
 	}
 
 	@Operation(summary = "Obtiene una orden por su número")
+	@ApiResponse(responseCode = "200", description = "La orden",
+			content = @Content(schema = @Schema(implementation = Order.class)))
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "/{orderNumber}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> load(@PathVariable Integer orderNumber) {
 		try {
@@ -76,6 +90,12 @@ public class OrderRestController extends BaseRestController {
 	}
 
 	@Operation(summary = "Historial de cambios de estado de una orden")
+	@ApiResponse(responseCode = "200", description = "Historial de la orden, del más antiguo al más reciente")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "/{orderNumber}/status-log", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> statusLog(@PathVariable Integer orderNumber) {
 		try {
@@ -92,7 +112,11 @@ public class OrderRestController extends BaseRestController {
 			description = "Parámetros opcionales: page (desde 0, por defecto 0) y size (por defecto 20, máximo 100). "
 					+ "El orden es fijo por id ascendente (de la lectura más antigua a la más reciente).")
 	@ApiResponse(responseCode = "200", description = "Página de lecturas (content + page)")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "/{orderNumber}/details", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> details(@PathVariable Integer orderNumber,
 			@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
@@ -116,8 +140,12 @@ public class OrderRestController extends BaseRestController {
 					+ "(no se guarda) y solo está disponible para órdenes en estado 4.")
 	@ApiResponse(responseCode = "200", description = "Conciliación de la orden",
 			content = @Content(schema = @Schema(implementation = Reconciliation.class)))
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
 	@ApiResponse(responseCode = "409", description = "La orden no está en estado 4")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "/{orderNumber}/reconciliation", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> reconciliation(@PathVariable Integer orderNumber) {
 		try {

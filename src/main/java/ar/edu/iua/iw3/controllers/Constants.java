@@ -13,5 +13,6 @@ public final class Constants {
     public static final String URL_INTEGRATION_LOADER = URL_INTEGRATION + "/loader";
 
     public static final String URL_ORDERS = URL_BASE + "/orders";
+    public static final String URL_ALARMS = URL_BASE + "/alarms";
 
 }

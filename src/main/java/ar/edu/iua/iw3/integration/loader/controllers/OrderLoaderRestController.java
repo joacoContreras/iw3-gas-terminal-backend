@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,7 +61,11 @@ public class OrderLoaderRestController extends BaseRestController {
 	@ApiResponse(responseCode = "400", description = "Falta orderNumber o password")
 	@ApiResponse(responseCode = "403", description = "La contraseña de activación es incorrecta")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "409", description = "La orden no está en estado 2")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LOADER')")
 	@PostMapping(value = "/activation", consumes = MediaType.APPLICATION_JSON_VALUE,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> activate(@RequestBody ActivationRequest body) {
@@ -90,7 +95,11 @@ public class OrderLoaderRestController extends BaseRestController {
 			content = @Content(schema = @Schema(implementation = DetailResponse.class)))
 	@ApiResponse(responseCode = "400", description = "Faltan campos obligatorios o formato inválido")
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "409", description = "La orden no está en estado 2 o no está activada")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_LOADER')")
 	@PostMapping(value = "/orders/{orderNumber}/details", consumes = MediaType.APPLICATION_JSON_VALUE,
 			produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> addDetail(@PathVariable Integer orderNumber, @RequestBody DetailRequest body) {
@@ -121,6 +130,8 @@ public class OrderLoaderRestController extends BaseRestController {
 	@ApiResponse(responseCode = "404", description = "La orden no existe")
 	@ApiResponse(responseCode = "409", description = "La orden no está en estado 2 (por ejemplo, ya está cerrada)")
 	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR', 'ROLE_LOADER')")
 	@PostMapping(value = "/orders/{orderNumber}/close", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> close(@PathVariable Integer orderNumber) {
 		try {

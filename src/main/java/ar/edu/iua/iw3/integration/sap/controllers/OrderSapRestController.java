@@ -5,6 +5,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -41,6 +42,10 @@ public class OrderSapRestController extends BaseRestController {
 	@ApiResponse(responseCode = "201", description = "Orden creada; el header location apunta a la orden")
 	@ApiResponse(responseCode = "302", description = "Ya existe una orden con ese número (convención de la cátedra)")
 	@ApiResponse(responseCode = "400", description = "Datos obligatorios ausentes o fuera de rango")
+	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
+	@ApiResponse(responseCode = "500", description = "Error interno")
+	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SAP')")
 	@PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<?> add(@RequestBody Order order) {
 		try {

@@ -44,6 +44,9 @@ public class SecurityConfiguration {
     @Autowired
     private IUserBusiness userBusiness;
 
+    @Autowired
+    private RestAccessDeniedHandler accessDeniedHandler;
+
     @Bean
     AuthenticationManager authenticationManager() {
         return new CustomAuthenticationManager(bCryptPasswordEncoder(), userBusiness);
@@ -59,9 +62,11 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.POST, Constants.URL_LOGIN).permitAll()
                 .requestMatchers("/error").permitAll().requestMatchers("/v3/api-docs/**").permitAll().requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll().requestMatchers("/ui/**").permitAll()
-                .requestMatchers("/demo/**").permitAll().anyRequest().authenticated());
+                .anyRequest().authenticated());
         http.httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        // 403 con el JSON estandar cuando el rol del usuario no alcanza (@PreAuthorize)
+        http.exceptionHandling(e -> e.accessDeniedHandler(accessDeniedHandler));
         http.addFilter(new JWTAuthorizationFilter(authenticationManager()));
         return http.build();
 
