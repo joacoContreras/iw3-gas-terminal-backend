@@ -1,9 +1,14 @@
 package ar.edu.iua.iw3.controllers;
 
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
@@ -13,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ar.edu.iua.iw3.business.IOrderBusiness;
@@ -22,8 +28,10 @@ import ar.edu.iua.iw3.business.exception.BusinessException;
 import ar.edu.iua.iw3.business.exception.ConflictException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Order;
+import ar.edu.iua.iw3.model.OrderStatus;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,6 +45,10 @@ public class OrderRestController extends BaseRestController {
 
 	private static final int MAX_PAGE_SIZE = 100;
 
+	/** Campos por los que se puede ordenar el listado: lista cerrada, el cliente no elige columnas arbitrarias. */
+	static final Set<String> SORTABLE = Set.of("orderNumber", "plannedLoadDateTime", "receptionDateTime", "status",
+			"preset");
+
 	@Autowired
 	private IOrderBusiness orderBusiness;
 
@@ -46,22 +58,47 @@ public class OrderRestController extends BaseRestController {
 	@Autowired
 	private IStandartResponseBusiness response;
 
-	@Operation(summary = "Lista las órdenes paginadas, de la más reciente a la más antigua",
-			description = "Parámetros opcionales: page (desde 0, por defecto 0) y size (por defecto 20, máximo 100). "
-					+ "El orden es fijo por número de orden descendente.")
+	@Operation(summary = "Lista las órdenes paginadas, con filtro por estado y orden elegible",
+			description = "Parámetros opcionales: status (1 a 4), page (desde 0, por defecto 0), size (por defecto 20, máximo 100) y "
+					+ "sort con el formato campo,dirección (por ejemplo sort=plannedLoadDateTime,desc). Campos permitidos: orderNumber, "
+					+ "plannedLoadDateTime, receptionDateTime, status y preset. Sin sort: número de orden descendente (la más reciente primero). "
+					+ "Si se ordena por otro campo, el número de orden descendente desempata para que la paginación sea estable.")
 	@ApiResponse(responseCode = "200", description = "Página de órdenes (content + page)")
+	@ApiResponse(responseCode = "400", description = "status fuera de 1 a 4 o sort por un campo no permitido")
 	@ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
 	@ApiResponse(responseCode = "500", description = "Error interno")
 	@ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
 	@PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_SUPERVISOR', 'ROLE_OPERADOR')")
 	@GetMapping(value = "", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<?> list(@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+	public ResponseEntity<?> list(
+			@Parameter(description = "Filtra por estado de la orden (1 a 4)") @RequestParam(required = false) String status,
+			@ParameterObject @PageableDefault(size = 20) Pageable pageable) {
+		// Validaciones fuera del try: si no, el 400 saldria como 500
+		OrderStatus filter = null;
+		if (status != null && !status.isBlank()) {
+			try {
+				filter = OrderStatus.fromCode(Integer.parseInt(status.trim()));
+			} catch (IllegalArgumentException e) {
+				return new ResponseEntity<>(response.build(HttpStatus.BAD_REQUEST, e, "status debe ser un número de 1 a 4"),
+						HttpStatus.BAD_REQUEST);
+			}
+		}
+		List<String> invalid = pageable.getSort().stream().map(Sort.Order::getProperty)
+				.filter(p -> !SORTABLE.contains(p)).toList();
+		if (!invalid.isEmpty()) {
+			return new ResponseEntity<>(response.build(HttpStatus.BAD_REQUEST, null,
+					"sort inválido: " + invalid + ". Campos permitidos: " + new TreeSet<>(SORTABLE)), HttpStatus.BAD_REQUEST);
+		}
 		try {
-			// Se descarta el sort del cliente (el orden lo fija el repositorio) y se acota el tamaño
+			// Se acota el tamaño; sin sort, la orden mas reciente primero; con sort, el numero de orden desempata
 			int size = Math.min(pageable.getPageSize(), MAX_PAGE_SIZE);
+			Sort sort = pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Direction.DESC, "orderNumber");
+			if (sort.getOrderFor("orderNumber") == null) {
+				sort = sort.and(Sort.by(Sort.Direction.DESC, "orderNumber"));
+			}
 			// PagedModel fija la estructura del JSON: content + page (size, number, totalElements, totalPages)
 			return new ResponseEntity<>(
-					new PagedModel<>(orderBusiness.list(PageRequest.of(pageable.getPageNumber(), size))),
+					new PagedModel<>(orderBusiness.list(filter, PageRequest.of(pageable.getPageNumber(), size, sort))),
 					HttpStatus.OK);
 		} catch (BusinessException e) {
 			return new ResponseEntity<>(response.build(HttpStatus.INTERNAL_SERVER_ERROR, e, e.getMessage()),

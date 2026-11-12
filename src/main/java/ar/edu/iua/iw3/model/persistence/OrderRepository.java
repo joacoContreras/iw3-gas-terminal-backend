@@ -7,11 +7,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
 
 import ar.edu.iua.iw3.model.Order;
+import ar.edu.iua.iw3.model.OrderStatus;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
@@ -26,6 +28,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 	@Query("select o from Order o where o.orderNumber = ?1")
 	Optional<Order> findByOrderNumberForUpdate(Integer orderNumber);
 
-	/** Una pagina de ordenes, de la mas reciente a la mas antigua. */
-	Page<Order> findAllByOrderByOrderNumberDesc(Pageable pageable);
+	/**
+	 * Una pagina de ordenes; si status es nulo no se filtra por estado. El orden lo trae el Pageable (el controller lo
+	 * valida contra una lista cerrada de campos).
+	 */
+	@Query("select o from Order o where (:status is null or o.status = :status)")
+	Page<Order> search(@Param("status") OrderStatus status, Pageable pageable);
 }

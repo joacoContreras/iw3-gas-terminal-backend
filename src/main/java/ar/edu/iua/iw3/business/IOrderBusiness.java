@@ -12,10 +12,12 @@ import ar.edu.iua.iw3.business.exception.FoundException;
 import ar.edu.iua.iw3.business.exception.ForbiddenException;
 import ar.edu.iua.iw3.business.exception.NotFoundException;
 import ar.edu.iua.iw3.model.Order;
+import ar.edu.iua.iw3.model.OrderStatus;
 import ar.edu.iua.iw3.model.OrderStatusLog;
 
 public interface IOrderBusiness {
-	public Page<Order> list(Pageable pageable) throws BusinessException;
+	/** Una pagina de ordenes; status es un filtro opcional (nulo = todos) y el orden lo trae el Pageable. */
+	public Page<Order> list(OrderStatus status, Pageable pageable) throws BusinessException;
 
 	public Order load(Integer orderNumber) throws NotFoundException, BusinessException;
 
