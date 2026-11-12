@@ -25,6 +25,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import ar.edu.iua.iw3.auth.User;
 import ar.edu.iua.iw3.auth.custom.CustomAuthenticationManager;
 import ar.edu.iua.iw3.auth.filters.AuthConstants;
+import ar.edu.iua.iw3.auth.filters.JwtSecret;
 import ar.edu.iua.iw3.controllers.BaseRestController;
 import ar.edu.iua.iw3.controllers.Constants;
 import ar.edu.iua.iw3.util.IStandartResponseBusiness;
@@ -74,7 +75,7 @@ public class AuthRestController extends BaseRestController {
                 .withClaim("email", user.getEmail())
                 .withClaim("version", "1.0.0")
                 .withExpiresAt(new Date(System.currentTimeMillis() + AuthConstants.EXPIRATION_TIME))
-                .sign(Algorithm.HMAC512(AuthConstants.SECRET.getBytes()));
+                .sign(Algorithm.HMAC512(jwtSecret.bytes()));
 
         // applicationEventPublisher.publishEvent(new UserEvent(user, request,
         // UserEvent.TypeEvent.LOGIN));
@@ -84,6 +85,9 @@ public class AuthRestController extends BaseRestController {
 
     @Autowired
     private PasswordEncoder pEncoder;
+
+    @Autowired
+    private JwtSecret jwtSecret;
 
     @Operation(summary = "Codifica una contraseña con BCrypt (demo de la cátedra)",
             description = "Devuelve el hash BCrypt de la contraseña recibida. Sirve para generar el hash que se guarda en la tabla users. "

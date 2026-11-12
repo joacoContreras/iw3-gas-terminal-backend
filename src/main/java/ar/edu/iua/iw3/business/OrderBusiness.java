@@ -63,9 +63,9 @@ public class OrderBusiness implements IOrderBusiness {
 	private ProductRepository productDAO;
 
 	@Override
-	public Page<Order> list(Pageable pageable) throws BusinessException {
+	public Page<Order> list(OrderStatus status, Pageable pageable) throws BusinessException {
 		try {
-			return orderDAO.findAllByOrderByOrderNumberDesc(pageable);
+			return orderDAO.search(status, pageable);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();

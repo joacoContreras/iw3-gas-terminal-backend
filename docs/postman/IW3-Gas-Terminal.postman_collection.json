@@ -218,6 +218,18 @@
     {
       "key": "alarmIdAlarm",
       "value": ""
+    },
+    {
+      "key": "tokenF3",
+      "value": ""
+    },
+    {
+      "key": "orderNumberF3A",
+      "value": ""
+    },
+    {
+      "key": "orderNumberF3B",
+      "value": ""
     }
   ],
   "item": [
@@ -11085,6 +11097,1423 @@
                   }
                 },
                 "description": "Deja el umbral en 30 y sin correos, para no enviar avisos reales en otras corridas."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Cierre del backend: CORS, 401 y filtros (examen final)",
+      "item": [
+        {
+          "name": "Login",
+          "item": [
+            {
+              "name": "Login admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenF3', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "{{username}}"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{password}}"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de admin en tokenF3."
+              }
+            }
+          ]
+        },
+        {
+          "name": "CORS (preflight del navegador)",
+          "item": [
+            {
+              "name": "Preflight del frontend (GET /orders)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: el preflight no exige token', () => pm.response.to.have.status(200));",
+                      "pm.test('permite el origen del frontend', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.be.oneOf(['*', 'http://localhost:3000']));",
+                      "pm.test('permite GET', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Methods')).to.include('GET'));",
+                      "pm.test('permite los headers Authorization y Content-Type', () => {",
+                      "  const h = pm.response.headers.get('Access-Control-Allow-Headers').toLowerCase();",
+                      "  pm.expect(h).to.include('authorization');",
+                      "  pm.expect(h).to.include('content-type');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "OPTIONS",
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "http://localhost:3000"
+                  },
+                  {
+                    "key": "Access-Control-Request-Method",
+                    "value": "GET"
+                  },
+                  {
+                    "key": "Access-Control-Request-Headers",
+                    "value": "authorization,content-type"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Antes de la Fase 3 respondía 401 y el navegador bloqueaba toda llamada del frontend."
+              }
+            },
+            {
+              "name": "Preflight del login (POST)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: el login también admite el preflight', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "OPTIONS",
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "http://localhost:3000"
+                  },
+                  {
+                    "key": "Access-Control-Request-Method",
+                    "value": "POST"
+                  },
+                  {
+                    "key": "Access-Control-Request-Headers",
+                    "value": "content-type"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "El formulario de login del frontend hace un preflight."
+              }
+            },
+            {
+              "name": "Preflight de una escritura (PUT config)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: PUT permitido', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "OPTIONS",
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "http://localhost:3000"
+                  },
+                  {
+                    "key": "Access-Control-Request-Method",
+                    "value": "PUT"
+                  },
+                  {
+                    "key": "Access-Control-Request-Headers",
+                    "value": "authorization,content-type"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "PUT, POST y DELETE están permitidos."
+              }
+            },
+            {
+              "name": "Preflight con un método que la API no usa",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: PATCH no está permitido', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "OPTIONS",
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "http://localhost:3000"
+                  },
+                  {
+                    "key": "Access-Control-Request-Method",
+                    "value": "PATCH"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "La lista de métodos es cerrada."
+              }
+            },
+            {
+              "name": "Un GET con Origin recibe las cabeceras CORS",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado', () => pm.response.to.have.status(200));",
+                      "pm.test('la respuesta lleva Access-Control-Allow-Origin', () => pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Origin",
+                    "value": "http://localhost:3000"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Sin esa cabecera el navegador no deja leer la respuesta."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Errores 401 sin WWW-Authenticate",
+          "item": [
+            {
+              "name": "Sin token: 401 estándar y sin WWW-Authenticate",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('401: falta el token', () => pm.response.to.have.status(401));",
+                      "pm.test('NO pide credenciales Basic (evita el diálogo del navegador)', () => pm.expect(pm.response.headers.has('WWW-Authenticate')).to.eql(false));",
+                      "pm.test('responde el JSON estándar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(401);",
+                      "  pm.expect(j.message).to.eql('Falta el token o es inválido');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Antes traía WWW-Authenticate: Basic y el navegador abría su diálogo cuando el token vencía."
+              }
+            },
+            {
+              "name": "Token inválido: igual",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('401: token inválido', () => pm.response.to.have.status(401));",
+                      "pm.test('sin WWW-Authenticate', () => pm.expect(pm.response.headers.has('WWW-Authenticate')).to.eql(false));",
+                      "pm.test('JSON estándar', () => pm.expect(pm.response.json().code).to.eql(401));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer esto.no.es-un-token-valido"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Un token mal formado o firmado con otra clave."
+              }
+            },
+            {
+              "name": "HTTP Basic ya no autentica",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('401: usuario y contraseña por Basic no sirven', () => pm.response.to.have.status(401));",
+                      "pm.test('sin WWW-Authenticate', () => pm.expect(pm.response.headers.has('WWW-Authenticate')).to.eql(false));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Basic YWRtaW46YWRtaW4xMjM="
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "La API solo acepta JWT. Credenciales admin:admin123 en Basic."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listado de órdenes: filtro y orden",
+          "item": [
+            {
+              "name": "Preparar: orden A (estado 1, fecha 09:00)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const n = Math.floor(Date.now() / 1000);",
+                      "pm.collectionVariables.set('orderNumberF3A', n);",
+                      "pm.collectionVariables.set('orderNumberF3B', n + 1);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201: orden A creada', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":{{orderNumberF3A}},\"plannedLoadDateTime\":\"2026-12-01T09:00:00\",\"preset\":15000,\"truck\":{\"externalCode\":\"F3-TRK\",\"plate\":\"F3123AA\",\"tanks\":[{\"number\":1,\"capacityLiters\":10000}]},\"driver\":{\"externalCode\":\"F3-DRV\",\"name\":\"Ana\",\"lastName\":\"Filtro\"},\"customer\":{\"externalCode\":\"F3-CUS\",\"companyName\":\"Gas Filtro SA\"},\"product\":{\"externalCode\":\"F3-PRD\",\"name\":\"GLP\"}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Orden en estado 1 con una fecha de carga posterior a la de B."
+              }
+            },
+            {
+              "name": "Preparar: orden B (estado 1, fecha 07:00)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201: orden B creada', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":{{orderNumberF3B}},\"plannedLoadDateTime\":\"2026-12-01T07:00:00\",\"preset\":8000,\"truck\":{\"externalCode\":\"F3-TRK\",\"plate\":\"F3123AA\",\"tanks\":[{\"number\":1,\"capacityLiters\":10000}]},\"driver\":{\"externalCode\":\"F3-DRV\",\"name\":\"Ana\",\"lastName\":\"Filtro\"},\"customer\":{\"externalCode\":\"F3-CUS\",\"companyName\":\"Gas Filtro SA\"},\"product\":{\"externalCode\":\"F3-PRD\",\"name\":\"GLP\"}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Fecha de carga anterior a la de A."
+              }
+            },
+            {
+              "name": "Sin parámetros: la más reciente primero (como antes)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado', () => pm.response.to.have.status(200));",
+                      "pm.test('ordenado por número de orden descendente', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  for (let i = 1; i < n.length; i++) pm.expect(n[i - 1]).to.be.above(n[i]);",
+                      "});",
+                      "pm.test('B (la más nueva) va antes que A', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  pm.expect(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3B')))).to.be.below(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3A'))));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Compatibilidad: sin sort el orden no cambió."
+              }
+            },
+            {
+              "name": "Filtro status=1",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado filtrado', () => pm.response.to.have.status(200));",
+                      "pm.test('todas las órdenes están en estado 1', () => pm.response.json().content.forEach(o => pm.expect(o.status).to.eql(1)));",
+                      "pm.test('incluye A y B', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  pm.expect(n).to.include(Number(pm.collectionVariables.get('orderNumberF3A')));",
+                      "  pm.expect(n).to.include(Number(pm.collectionVariables.get('orderNumberF3B')));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=1&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "1"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "El frontend filtra por estado."
+              }
+            },
+            {
+              "name": "Orden por fecha de carga ascendente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado ordenado', () => pm.response.to.have.status(200));",
+                      "pm.test('las fechas no decrecen', () => {",
+                      "  const d = pm.response.json().content.map(o => o.plannedLoadDateTime);",
+                      "  for (let i = 1; i < d.length; i++) pm.expect(d[i - 1] <= d[i]).to.eql(true);",
+                      "});",
+                      "pm.test('B (07:00) va antes que A (09:00)', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  pm.expect(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3B')))).to.be.below(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3A'))));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=1&sort=plannedLoadDateTime,asc&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "1"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "plannedLoadDateTime,asc"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Orden elegible por campo y dirección."
+              }
+            },
+            {
+              "name": "Orden por fecha de carga descendente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado ordenado', () => pm.response.to.have.status(200));",
+                      "pm.test('A (09:00) va antes que B (07:00)', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  pm.expect(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3A')))).to.be.below(n.indexOf(Number(pm.collectionVariables.get('orderNumberF3B'))));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=1&sort=plannedLoadDateTime,desc&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "1"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "plannedLoadDateTime,desc"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Dirección descendente."
+              }
+            },
+            {
+              "name": "Orden por número de orden ascendente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado', () => pm.response.to.have.status(200));",
+                      "pm.test('ordenado por número ascendente', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  for (let i = 1; i < n.length; i++) pm.expect(n[i - 1]).to.be.below(n[i]);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?sort=orderNumber,asc&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "sort",
+                      "value": "orderNumber,asc"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Las más antiguas primero."
+              }
+            },
+            {
+              "name": "Pasar B a estado 2 (tara)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: tara registrada', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberF3B}}/tare",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberF3B}}",
+                    "tare"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":14500}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Mueve la orden B al estado 2."
+              }
+            },
+            {
+              "name": "Filtro status=2 incluye a B y no a A",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado filtrado', () => pm.response.to.have.status(200));",
+                      "pm.test('todas en estado 2', () => pm.response.json().content.forEach(o => pm.expect(o.status).to.eql(2)));",
+                      "pm.test('B sí, A no', () => {",
+                      "  const n = pm.response.json().content.map(o => o.orderNumber);",
+                      "  pm.expect(n).to.include(Number(pm.collectionVariables.get('orderNumberF3B')));",
+                      "  pm.expect(n).to.not.include(Number(pm.collectionVariables.get('orderNumberF3A')));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=2&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "2"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "El filtro sigue el estado real de la orden."
+              }
+            },
+            {
+              "name": "El total refleja el filtro",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: página', () => pm.response.to.have.status(200));",
+                      "pm.test('totalElements y totalPages coherentes con size=1', () => {",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.content).to.have.lengthOf(1);",
+                      "  pm.expect(j.page.size).to.eql(1);",
+                      "  pm.expect(j.page.totalElements).to.be.at.least(1);",
+                      "  pm.expect(j.page.totalPages).to.eql(j.page.totalElements);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=1&size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "1"
+                    },
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "El frontend necesita el total del filtro para paginar."
+              }
+            },
+            {
+              "name": "size mayor al tope se acota a 100",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado', () => pm.response.to.have.status(200));",
+                      "pm.test('page.size = 100', () => pm.expect(pm.response.json().page.size).to.eql(100));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=500",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "500"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Tope de 100 por página."
+              }
+            },
+            {
+              "name": "Combinación de filtro y orden",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado', () => pm.response.to.have.status(200));",
+                      "pm.test('presets no crecientes', () => {",
+                      "  const p = pm.response.json().content.map(o => o.preset);",
+                      "  for (let i = 1; i < p.length; i++) pm.expect(p[i - 1] >= p[i]).to.eql(true);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=1&sort=preset,desc&size=100",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "1"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "preset,desc"
+                    },
+                    {
+                      "key": "size",
+                      "value": "100"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Filtro por estado más orden por preset."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Parámetros inválidos (400)",
+          "item": [
+            {
+              "name": "Filtro inválido: status=0",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: status inválido', () => pm.response.to.have.status(400));",
+                      "pm.test('el mensaje explica el rango', () => pm.expect(pm.response.json().message).to.include('status debe ser un número de 1 a 4'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=0",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "0"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Solo se aceptan los estados 1 a 4."
+              }
+            },
+            {
+              "name": "Filtro inválido: status=5",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: status inválido', () => pm.response.to.have.status(400));",
+                      "pm.test('el mensaje explica el rango', () => pm.expect(pm.response.json().message).to.include('status debe ser un número de 1 a 4'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=5",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Solo se aceptan los estados 1 a 4."
+              }
+            },
+            {
+              "name": "Filtro inválido: status=abc",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: status inválido', () => pm.response.to.have.status(400));",
+                      "pm.test('el mensaje explica el rango', () => pm.expect(pm.response.json().message).to.include('status debe ser un número de 1 a 4'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?status=abc",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "abc"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Solo se aceptan los estados 1 a 4."
+              }
+            },
+            {
+              "name": "Orden inválido: sort=activationPassword",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: campo no permitido', () => pm.response.to.have.status(400));",
+                      "pm.test('lista los campos permitidos', () => {",
+                      "  const m = pm.response.json().message;",
+                      "  pm.expect(m).to.include('sort inválido');",
+                      "  pm.expect(m).to.include('plannedLoadDateTime');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?sort=activationPassword",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "sort",
+                      "value": "activationPassword"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Lista cerrada de campos: no se puede ordenar por columnas internas como la contraseña de activación."
+              }
+            },
+            {
+              "name": "Orden inválido: sort=truck.plate",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: campo no permitido', () => pm.response.to.have.status(400));",
+                      "pm.test('lista los campos permitidos', () => {",
+                      "  const m = pm.response.json().message;",
+                      "  pm.expect(m).to.include('sort inválido');",
+                      "  pm.expect(m).to.include('plannedLoadDateTime');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?sort=truck.plate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "sort",
+                      "value": "truck.plate"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Lista cerrada de campos: no se puede ordenar por columnas internas como la contraseña de activación."
+              }
+            },
+            {
+              "name": "Orden inválido: sort=id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: campo no permitido', () => pm.response.to.have.status(400));",
+                      "pm.test('lista los campos permitidos', () => {",
+                      "  const m = pm.response.json().message;",
+                      "  pm.expect(m).to.include('sort inválido');",
+                      "  pm.expect(m).to.include('plannedLoadDateTime');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?sort=id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "sort",
+                      "value": "id"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenF3}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Lista cerrada de campos: no se puede ordenar por columnas internas como la contraseña de activación."
               }
             }
           ]

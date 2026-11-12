@@ -19,12 +19,12 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 12/11/2026, tras integrar en `main` las Fases 1 y 2 del examen final (PR #18) y restituir el cierre del segundo parcial.
+**Última actualización:** 12/11/2026, tras implementar la Fase 3 del examen final (rama `final-fase-3-cierre-backend`, sin integrar todavía); las Fases 1 y 2 ya están en `main` (PR #18).
 
 | | |
 |---|---|
 | **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada, auditada e integrada en `main`** (PR #14, 02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial. Después, en la rama `cierre-segundo-parcial` (sin PR todavía): `/demo/**` cerrado, chequeo del deploy corregido, Swagger completo y carpeta Postman 07 (sección 5) |
-| **Qué sigue** | Examen final: **Fase 3 del backend** (filtros y orden del listado, CORS H-30, `WWW-Authenticate: Basic` del 401, H-5), prueba del correo con una cuenta SMTP real, usuarios por rol en la VM y luego el frontend (repo `iw3-gas-terminal-frontend`). El plan está en `docs/plan-de-trabajo.md` de ese repo |
+| **Qué sigue** | Integrar la Fase 3 a `main`; después el **frontend** (repo `iw3-gas-terminal-frontend`, Fases 4 a 10 de su `docs/plan-de-trabajo.md`), que se conecta al contrato congelado en `docs/contrato-api.md`. Pendientes de la VM (no hechos): definir `JWT_SECRET` y `CORS_ALLOWED_ORIGINS`, usuarios por rol y cuenta SMTP real |
 | `main` | Contiene las Fases 0 a 5 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026; Fase 5 por el PR #14, 02/11/2026) y la guía de inicio de la Fase 4 (PR #11). **El 02/11/2026 se reescribió la historia de `main`** con un push forzado (respaldo temporal ya borrado): se quitaron los commits duplicados y los trailers `Co-Authored-By: Claude` y quedaron 286 commits con el mismo contenido. Si alguien tiene un `main` anterior, debe correr `git fetch` y `git reset --hard origin/main` |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
 | Despliegue | La VM (`jc755.duckdns.org`) se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`). Verificado el 02/11/2026: corre la Fase 5 y el circuito completo 1 → 4 funcionó con el usuario `martin`. El chequeo del workflow sondea `/v3/api-docs` y exige 200 (decisión 48). Detalles en la sección 13 |
@@ -48,7 +48,7 @@
 |---|---|---|---|
 | 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Completada e integrada en `main` (12/11/2026, PR #18)** y desplegada. 138 tests y Postman 186 pedidos / 428 aserciones sin fallas al cerrarla. Informe: `docs/final-fase-1-roles.md` |
 | 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | **Completada e integrada en `main` (12/11/2026, PR #18)** y desplegada (chequeo de salud en verde; las 4 rutas de alarmas figuran en `/v3/api-docs` de la VM). 215 tests, Postman 219 pedidos / 483 aserciones y escenario real con SMTP de mentira (42 verificaciones) sin fallas. Informe: `docs/final-fase-2-alarmas.md`. **Falta probar con una cuenta SMTP real** (variables `SMTP_USER` y `SMTP_PASS`) |
-| 3 | Filtro y orden del listado, CORS (H-30), H-5 y cierre del backend | `final-fase-3-cierre-backend` | Pendiente |
+| 3 | Filtro y orden del listado, CORS (H-30), 401 sin `WWW-Authenticate`, H-5 y contrato de la API | `final-fase-3-cierre-backend` | **Implementada y probada (12/11/2026), sin integrar**: 248 tests, Postman 246 pedidos / 539 aserciones, escenario real (26 + 8 verificaciones) y prueba con Chrome real desde `localhost:3000`. Informe: `docs/final-fase-3-cierre-backend.md`; contrato: `docs/contrato-api.md` |
 
 **Dónde va cada cosa (aclarado el 12/11/2026):** los cambios de **backend** (Fases 1 a 3 del final) van a este repo, en ramas `final-fase-N-<tema>`;
 los cambios de **frontend** y el plan de trabajo van a `iw3-gas-terminal-frontend`. Los dos repos se comunican solo por HTTP.
@@ -271,7 +271,7 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
   hora de Argentina.
 - Tablas: `orders` (ORDER es reservada) y `gas_products` (la tabla `products` del demo existe en bases
   viejas con otro esquema). `ddl-auto=update`: crea y agrega, **nunca borra ni renombra**.
-- Seguridad: todo exige JWT salvo `POST /api/v1/login`, `/error` y la documentación (desde el 02/11/2026 `/demo/**` también exige token). El token
+- Seguridad: el CORS está dentro de la cadena de seguridad (preflight sin token; orígenes por `CORS_ALLOWED_ORIGINS`, por defecto `*`); el 401 y el 403 llevan el JSON estándar y **no** hay `httpBasic` ni `WWW-Authenticate`; la clave JWT sale de `JWT_SECRET` (sin definirla rige la de `AuthConstants`). Todo exige JWT salvo `POST /api/v1/login`, `/error` y la documentación (desde el 02/11/2026 `/demo/**` también exige token). El token
   es HS512, vence en 1 h y viaja en `Authorization: Bearer <jwt>` (o `?authtoken=`).
 - Perfiles de Spring: `mysqldev` y `mysqlprod` (properties). Se activan con
   `-Dspring-boot.run.profiles=<perfil>` o `SPRING_PROFILES_ACTIVE`; el `-P` de Maven **no** los activa (H-3).
@@ -288,7 +288,7 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | `POST /api/v1/integration/loader/orders/{orderNumber}/close` | **Punto 4**: cierra la orden (estado 2 → 3); desde ahí las lecturas dan 409. Sin cuerpo; registra el cambio con el usuario del token y responde la orden. No es idempotente | 200, 401, 404, 409, 500 |
 | `POST /api/v1/integration/tms/orders/{orderNumber}/final-weight` | **Punto 5**: registra el pesaje final (estado 3 → 4, fila "Pesaje final registrado") y devuelve la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders/{orderNumber}/reconciliation` | **Punto 5**: conciliación, solo para órdenes en estado 4 (se calcula, no se guarda) | 200, 401, 404, 409, 500 |
-| `GET /api/v1/orders?page=&size=` | Lista paginada de órdenes (más reciente primero). `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200, 401, 500 |
+| `GET /api/v1/orders?status=&sort=&page=&size=` | Lista paginada de órdenes. `status` (1 a 4) filtra por estado; `sort=campo,dirección` ordena por `orderNumber`, `plannedLoadDateTime`, `receptionDateTime`, `status` o `preset` (otro campo → 400); sin `sort`, la más reciente primero, y el número de orden desempata. `page` desde 0; `size` por defecto 20, máximo 100. Responde `{ content, page: { size, number, totalElements, totalPages } }` | 200, 400, 401, 403, 500 |
 | `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 401, 404, 500 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 401, 404, 500 |
 | `GET /api/v1/orders/{orderNumber}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100; se ignora `sort`). Responde `{ content, page }` | 200, 401, 404, 500 |
@@ -481,7 +481,7 @@ JSON
 
 | ID | Tema | Estado |
 |---|---|---|
-| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. Resueltos el 02/11/2026: `/demo/**` público (decisión 47) y el chequeo del *workflow* de deploy sobre `/api/v1/products` (decisión 48) | Abierto: cerrar el resto en la etapa de seguridad y **antes de cualquier despliegue real** |
+| H-5 | Seguridad heredada: clave JWT fija en `AuthConstants`, credenciales de base por defecto en los `.properties` (incluso `mysqlprod` trae una contraseña por defecto escrita en el archivo), CORS abierto. `dev.info.enabled` (trazas en las respuestas de error) es `true` en el perfil por defecto y en `mysqldev`, y `false` en `mysqlprod`. Resueltos el 02/11/2026: `/demo/**` público (decisión 47) y el chequeo del *workflow* de deploy sobre `/api/v1/products` (decisión 48) | **Parcialmente resuelto en la Fase 3 (12/11/2026):** la clave JWT y los orígenes CORS salen de `JWT_SECRET` y `CORS_ALLOWED_ORIGINS`. **Abierto:** definir esas variables en la VM (hasta entonces rigen el valor del repositorio y CORS abierto), y las credenciales de base por defecto de los `.properties` |
 | H-9 | `pom.xml` desalineado con la cátedra; `actuator` y `h2` sin uso | Decisión 6: no se cambia |
 | H-12 | Concurrencia en taras simultáneas sobre la misma orden: dos peticiones concurrentes podrían pasar la comprobación de estado | Sigue aceptado para el parcial (análogo a N-2 de Fase 1; la Fase 5 solo cambió el chequeo del peso) |
 | H-14 | Una falla de base al confirmar la activación respondía 500 con el formato de Spring, no `StandartResponse` (`activate` usaba `save`) | Resuelto (27/10/2026): `saveAndFlush` en `OrderBusiness.activate` (`4ed54c8`), verificado |
@@ -606,6 +606,8 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-5-conciliacion.md` | Informe de la Fase 5, auditoría final del segundo parcial y guía de estudio |
 | `docs/final-fase-1-roles.md` | Examen final, Fase 1: roles, matriz por endpoint, pruebas y guía de defensa |
 | `docs/final-fase-2-alarmas.md` | Examen final, Fase 2: alarma de temperatura por e-mail, decisiones, pruebas, defectos hallados y guía de defensa |
+| `docs/final-fase-3-cierre-backend.md` | Examen final, Fase 3: CORS (H-30), 401 sin `WWW-Authenticate`, filtros y orden del listado, H-5, pruebas con Chrome real y guía de defensa |
+| `docs/contrato-api.md` | **Contrato de la API congelado** (generado desde `/v3/api-docs` y respuestas reales; para el frontend) |
 | `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md`, `docs/fase-5-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
