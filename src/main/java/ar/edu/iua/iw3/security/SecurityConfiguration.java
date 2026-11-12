@@ -44,6 +44,9 @@ public class SecurityConfiguration {
     @Autowired
     private IUserBusiness userBusiness;
 
+    @Autowired
+    private RestAccessDeniedHandler accessDeniedHandler;
+
     @Bean
     AuthenticationManager authenticationManager() {
         return new CustomAuthenticationManager(bCryptPasswordEncoder(), userBusiness);
@@ -62,6 +65,8 @@ public class SecurityConfiguration {
                 .anyRequest().authenticated());
         http.httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        // 403 con el JSON estandar cuando el rol del usuario no alcanza (@PreAuthorize)
+        http.exceptionHandling(e -> e.accessDeniedHandler(accessDeniedHandler));
         http.addFilter(new JWTAuthorizationFilter(authenticationManager()));
         return http.build();
 
