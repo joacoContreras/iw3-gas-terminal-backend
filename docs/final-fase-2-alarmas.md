@@ -1,6 +1,6 @@
 # Examen final — Fase 2: alarma de temperatura por e-mail
 
-**Rama:** `final-fase-2-alarmas` (encadenada sobre `final-fase-1-roles`) · **Fecha:** 12/11/2026 · **Estado:** implementada y probada
+**Rama:** `final-fase-2-alarmas` (reaplicada como `merge/final-fase-2-alarmas`) · **Fecha:** 12/11/2026 · **Estado:** implementada, probada, **integrada en `main` (PR #18, 12/11/2026)** y desplegada
 **Consigna (PDF, «Requisitos para el examen final», punto 3):** en el punto 3 (carga en tiempo real) añadir una alarma configurable que envíe un correo
 cuando la temperatura registrada supere un umbral; el umbral y los correos de destino deben ser configurables; una vez enviada, no debe enviarse de nuevo
 hasta que la acepte un usuario autorizado.
@@ -81,6 +81,7 @@ Orden fijo: la más reciente primero, tope de 100 por página. La respuesta de `
 | Concurrencia: 40 lecturas calientes simultáneas sobre una orden | **1 alarma** y **exactamente 2 correos** (uno por destinatario) |
 | SMTP caído | La lectura se guarda (`saved=true`), la alarma se crea con `emailSentAt` vacío y el log registra el error; la lectura siguiente también se guarda |
 | Postman con newman, colección completa | **219 pedidos, 483 aserciones, 0 fallas** (línea base de la Fase 1: 186 y 428; la carpeta 09 agrega 33 y 55) |
+| Despliegue en la VM tras el merge (workflow de GitHub Actions) | **Éxito**: el chequeo de salud pasó a HTTP 200 al cabo de ~1 minuto de arranque; `/v3/api-docs` de la VM publica las 4 rutas de alarmas (GET `/alarms`, POST `/alarms/{id}/acknowledge`, GET y PUT `/alarms/config`); `/demo/encodepass` sin token da 401 |
 
 El correo real recibido por el servidor de mentira (asunto `[IW3] Alarma de temperatura: orden …`) trae orden, camión, cliente, producto, temperatura, umbral, fecha y hora y la aclaración de que no se reenvía hasta aceptar.
 

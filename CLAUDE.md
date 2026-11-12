@@ -19,12 +19,12 @@
 
 ## 2. Dónde estamos hoy
 
-**Última actualización:** 02/11/2026, tras integrar la Fase 5 en `main` y cerrar el segundo parcial en la rama `cierre-segundo-parcial`.
+**Última actualización:** 12/11/2026, tras integrar en `main` las Fases 1 y 2 del examen final (PR #18) y restituir el cierre del segundo parcial.
 
 | | |
 |---|---|
 | **Última fase completada** | **Fase 5 — Pesaje final y conciliación (Punto 5): implementada, probada, auditada e integrada en `main`** (PR #14, 02/11/2026; Parte 1: Tomás Calvo, Parte 2: Benjamín Alasino). Con ella quedan los Puntos 1 a 5 del segundo parcial. Después, en la rama `cierre-segundo-parcial` (sin PR todavía): `/demo/**` cerrado, chequeo del deploy corregido, Swagger completo y carpeta Postman 07 (sección 5) |
-| **Qué sigue** | PR de `cierre-segundo-parcial` a `main` (decisión 14) y **entrega del 10/11/2026**. Decidir H-29. Después, el examen final |
+| **Qué sigue** | Examen final: **Fase 3 del backend** (filtros y orden del listado, CORS H-30, `WWW-Authenticate: Basic` del 401, H-5), prueba del correo con una cuenta SMTP real, usuarios por rol en la VM y luego el frontend (repo `iw3-gas-terminal-frontend`). El plan está en `docs/plan-de-trabajo.md` de ese repo |
 | `main` | Contiene las Fases 0 a 5 (Fase 2 por el PR #6; Fase 3 por los PR #7 y #9; Fase 4 por el PR #12, 31/10/2026; Fase 5 por el PR #14, 02/11/2026) y la guía de inicio de la Fase 4 (PR #11). **El 02/11/2026 se reescribió la historia de `main`** con un push forzado (respaldo temporal ya borrado): se quitaron los commits duplicados y los trailers `Co-Authored-By: Claude` y quedaron 286 commits con el mismo contenido. Si alguien tiene un `main` anterior, debe correr `git fetch` y `git reset --hard origin/main` |
 | Revisión de la Fase 1 | El PR #2 se mergeó sin revisiones registradas en GitHub, pero el equipo **revisó después el código integrado en `main` y está todo bien** (informado por el usuario, 19/10/2026) |
 | Despliegue | La VM (`jc755.duckdns.org`) se redespliega sola en cada push a `main` (`.github/workflows/deploy.yml`). Verificado el 02/11/2026: corre la Fase 5 y el circuito completo 1 → 4 funcionó con el usuario `martin`. El chequeo del workflow sondea `/v3/api-docs` y exige 200 (decisión 48). Detalles en la sección 13 |
@@ -46,17 +46,17 @@
 
 | Fase del final | Contenido | Rama | Estado |
 |---|---|---|---|
-| 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Implementada, probada y pusheada (12/11/2026)**, 7 commits, sin Pull Request. 138 tests y Postman 186 pedidos / 428 aserciones sin fallas. Informe: `docs/final-fase-1-roles.md` |
-| 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | **Implementada y probada (12/11/2026)**: 215 tests, Postman 219 pedidos / 483 aserciones sin fallas y escenario real con SMTP de mentira (42 verificaciones). Informe: `docs/final-fase-2-alarmas.md`. **Falta probar con una cuenta SMTP real** (variables `SMTP_USER` y `SMTP_PASS`) |
+| 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Completada e integrada en `main` (12/11/2026, PR #18)** y desplegada. 138 tests y Postman 186 pedidos / 428 aserciones sin fallas al cerrarla. Informe: `docs/final-fase-1-roles.md` |
+| 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | **Completada e integrada en `main` (12/11/2026, PR #18)** y desplegada (chequeo de salud en verde; las 4 rutas de alarmas figuran en `/v3/api-docs` de la VM). 215 tests, Postman 219 pedidos / 483 aserciones y escenario real con SMTP de mentira (42 verificaciones) sin fallas. Informe: `docs/final-fase-2-alarmas.md`. **Falta probar con una cuenta SMTP real** (variables `SMTP_USER` y `SMTP_PASS`) |
 | 3 | Filtro y orden del listado, CORS (H-30), H-5 y cierre del backend | `final-fase-3-cierre-backend` | Pendiente |
 
 **Dónde va cada cosa (aclarado el 12/11/2026):** los cambios de **backend** (Fases 1 a 3 del final) van a este repo, en ramas `final-fase-N-<tema>`;
 los cambios de **frontend** y el plan de trabajo van a `iw3-gas-terminal-frontend`. Los dos repos se comunican solo por HTTP.
 
-**Aviso (12/11/2026): `origin/main` perdió el cierre del segundo parcial.** El PR #16 («Fase 5 conciliación», de Benjamín Alasino) se mergeó el 05/11 desde una rama con la
-historia anterior a la limpieza: `origin/main` quedó en `0fa3f1c` (567 commits, 120 con `Co-Authored-By: Claude`) y **sin** `/demo` cerrado, Swagger completo, carpeta Postman 07 ni el chequeo
-del deploy corregido. El workflow de deploy corrió en verde sobre ese commit, así que **la VM pudo quedar con esa versión**. El `main` local (`afc514f`, 317 commits) es la versión entregada.
-Reparación no destructiva preparada: rama `restaurar-cierre-parcial` (un commit sobre `origin/main` que restituye los 12 archivos). `main` no tiene protección de rama. No hacer `push --force` sin acuerdo del equipo.
+**`origin/main` y el cierre del parcial (resuelto el 12/11/2026).** El PR #16 («Fase 5 conciliación», 05/11) se mergeó desde una rama con la historia anterior a la limpieza y dejó `main` sin el cierre del
+segundo parcial; el workflow de deploy corrió en verde sobre ese commit. El PR #18 restituyó ese contenido y sumó las Fases 1 y 2: `main` quedó con un árbol **idéntico** al probado (`merge/final-fase-2-alarmas`), y el deploy
+terminó en verde. **Lección:** las ramas deben partir de `origin/main` actualizado; una rama con historia reescrita da conflictos al mergearla (el PR #17, abierto desde la rama original, tenía 162 commits y 10 archivos en conflicto).
+**Pendiente de decisión del equipo:** `origin/main` conserva 120 commits con `Co-Authored-By: Claude` (de la rama vieja del PR #16); quitarlos exige un `push --force` y que todos reseteen sus copias y borren sus ramas viejas, o vuelve a pasar lo mismo.
 
 ## 3. Reglas de trabajo (acordadas con el equipo)
 
@@ -396,7 +396,7 @@ destinatarios configurables y sin reenvío hasta que se acepte (usar las clases 
 - ~~Desplegar el backend del TP en la VM~~ — hecho (19/10/2026; ver sección 13). Se redespliega solo al mergear a `main`:
   hoy el workflow de GitHub Actions lo hace en cada push a `main`.
 
-- **Cierre del segundo parcial:** abrir el PR de `cierre-segundo-parcial` a `main` (con las aprobaciones de Martín, Contreras y Calvo), vigilar que el *workflow* de deploy termine en verde con el chequeo nuevo y entregar el 10/11/2026 la colección Postman (`docs/postman/IW3-Gas-Terminal.postman_collection.json`, 8 carpetas, 154 pedidos).
+- ~~**Cierre del segundo parcial:** abrir el PR de `cierre-segundo-parcial` a `main`~~ — hecho (PR #15, 02/11/2026). El PR #16 lo pisó el 05/11 y el PR #18 lo restituyó el 12/11/2026 (ver la sección 2). La colección Postman actual (`docs/postman/IW3-Gas-Terminal.postman_collection.json`) tiene 10 carpetas (00 a 09) y 219 pedidos.
 - **Decisión 30:** confirmada el 02/11/2026 (se deja como está; el enunciado no define condiciones para el cierre).
 
 ### 8.4 Cómo proteger `main` (lo hace el dueño del repo, `joacoContreras`)
