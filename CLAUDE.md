@@ -47,7 +47,7 @@
 | Fase del final | Contenido | Rama | Estado |
 |---|---|---|---|
 | 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Implementada, probada y pusheada (12/11/2026)**, 7 commits, sin Pull Request. 138 tests y Postman 186 pedidos / 428 aserciones sin fallas. Informe: `docs/final-fase-1-roles.md` |
-| 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | Pendiente |
+| 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | **Implementada y probada (12/11/2026)**: 215 tests, Postman 219 pedidos / 483 aserciones sin fallas y escenario real con SMTP de mentira (42 verificaciones). Informe: `docs/final-fase-2-alarmas.md`. **Falta probar con una cuenta SMTP real** (variables `SMTP_USER` y `SMTP_PASS`) |
 | 3 | Filtro y orden del listado, CORS (H-30), H-5 y cierre del backend | `final-fase-3-cierre-backend` | Pendiente |
 
 **Dónde va cada cosa (aclarado el 12/11/2026):** los cambios de **backend** (Fases 1 a 3 del final) van a este repo, en ramas `final-fase-N-<tema>`;
@@ -292,6 +292,9 @@ Sistema externo ── HTTP + JWT ──▶ Controller ──▶ Business (I*Bus
 | `GET /api/v1/orders/{orderNumber}` | Una orden (no expone `activationPassword`) | 200, 401, 404, 500 |
 | `GET /api/v1/orders/{orderNumber}/status-log` | Historial de estados | 200, 401, 404, 500 |
 | `GET /api/v1/orders/{orderNumber}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100; se ignora `sort`). Responde `{ content, page }` | 200, 401, 404, 500 |
+| `GET /api/v1/alarms?status=&orderNumber=&page=&size=` | **Final, Fase 2**: alarmas de temperatura, la más reciente primero. Roles: ADMIN, SUPERVISOR, OPERADOR | 200 `{ content, page }`, 400, 401, 403, 500 |
+| `POST /api/v1/alarms/{id}/acknowledge` | **Final, Fase 2**: acepta una alarma pendiente (cuerpo opcional `{ observation }`; el usuario sale del token). Roles: ADMIN, SUPERVISOR | 200, 400, 401, 403, 404, 409, 500 |
+| `GET /api/v1/alarms/config` y `PUT /api/v1/alarms/config` | **Final, Fase 2**: umbral (°C) y correos de destino. GET: ADMIN y SUPERVISOR; PUT: solo ADMIN | 200, 400, 401, 403, 500 |
 | `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra). **Exige token** desde el 02/11/2026 (decisión 47) | 200, 401, 500 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación OpenAPI | públicos |
 
@@ -380,7 +383,7 @@ Sin lecturas: `loadedProduct` 0.0 y promedios `null`. Los valores no se redondea
 
 ~~Roles por endpoint (SAP, TMS, sistema de carga, operadores)~~ (hecho en `final-fase-1-roles`) · alarma de temperatura por e-mail con umbral y
 destinatarios configurables y sin reenvío hasta que se acepte (usar las clases de la cátedra: eventos,
-`EmailBusiness`, `Scheduler`) · frontend completo · endurecimiento de seguridad (H-5) · despliegue.
+`EmailBusiness`, `Scheduler`) · frontend completo · endurecimiento de seguridad (H-5) · despliegue. **Hecho en `final-fase-2-alarmas` (12/11/2026):** alarma por e-mail con eventos de Spring y `EmailBusiness` (sin reintentos; el `Scheduler` quedó sin usar).
 
 ### 8.3 Pendientes transversales
 
@@ -497,7 +500,7 @@ JSON
 | N-3 | `GET /orders` sin paginación | Resuelto (19/10/2026): `page` y `size`, respuesta con `PagedModel` |
 | N-4 | Las tablas del demo siguen en las bases ya creadas | Inofensivo |
 | Roles | Sin autorización por rol; el `User` que arma el filtro JWT no trae roles | **Resuelto** en `final-fase-1-roles` (12/11/2026): `@PreAuthorize` en los 12 endpoints protegidos y 403 con JSON estándar. Las autoridades viajan en el `Authentication`, no en el `User` |
-| Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` no están incorporados. Al copiarlos hay que cambiar `business.execption` por `business.exception` (el TP corrigió el nombre del paquete) | Pendiente (final) |
+| Clase 9 | Eventos, `EmailBusiness`, `Scheduler` y `@PreAuthorize` | **Incorporados** eventos, `EmailBusiness` (con el paquete corregido a `business.exception`) y `@PreAuthorize` (Fases 1 y 2 del final). Sin usar: `Scheduler` (solo haría falta para reintentar correos). No se adoptó el multicaster asíncrono global de la cátedra: rompe `@TransactionalEventListener` |
 
 ## 11. Cómo ponerlo en marcha en tu carpeta
 
@@ -602,6 +605,7 @@ SET FOREIGN_KEY_CHECKS=1;
 | `docs/fase-4-guia-de-inicio.md` | Alcance, plan y prompt de la Fase 4 (Benjamín Alasino) |
 | `docs/fase-5-conciliacion.md` | Informe de la Fase 5, auditoría final del segundo parcial y guía de estudio |
 | `docs/final-fase-1-roles.md` | Examen final, Fase 1: roles, matriz por endpoint, pruebas y guía de defensa |
+| `docs/final-fase-2-alarmas.md` | Examen final, Fase 2: alarma de temperatura por e-mail, decisiones, pruebas, defectos hallados y guía de defensa |
 | `docs/fase-2-division-de-trabajo.md`, `docs/fase-3-division-de-trabajo.md`, `docs/fase-5-division-de-trabajo.md` | División del trabajo, prompts y registro de cada parte |
 | `docs/guia-estudio-src.md` | Mapa y ayuda memoria del código de `src` (se actualiza en cada fase) |
 | `docs/pdf/` | PDF de las fases y script para regenerarlos |
