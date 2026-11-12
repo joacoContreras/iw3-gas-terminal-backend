@@ -154,6 +154,34 @@
     {
       "key": "tokenDemo",
       "value": ""
+    },
+    {
+      "key": "tokenRolAdmin",
+      "value": ""
+    },
+    {
+      "key": "tokenRolSupervisor",
+      "value": ""
+    },
+    {
+      "key": "tokenRolOperador",
+      "value": ""
+    },
+    {
+      "key": "tokenRolSap",
+      "value": ""
+    },
+    {
+      "key": "tokenRolTms",
+      "value": ""
+    },
+    {
+      "key": "tokenRolLoader",
+      "value": ""
+    },
+    {
+      "key": "orderNumberRoles",
+      "value": "990000001"
     }
   ],
   "item": [
@@ -7503,6 +7531,1730 @@
             },
             "description": "Endpoint de demo de la cátedra: devuelve el hash BCrypt de la contraseña recibida (sirve para cargar usuarios en la tabla users)."
           }
+        }
+      ]
+    },
+    {
+      "name": "08 - Roles (examen final)",
+      "item": [
+        {
+          "name": "Logins por rol",
+          "item": [
+            {
+              "name": "Login admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_ADMIN');",
+                      "  pm.collectionVariables.set('tokenRolAdmin', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "{{username}}"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{password}}"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_ADMIN en tokenRolAdmin. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            },
+            {
+              "name": "Login supervisor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_SUPERVISOR');",
+                      "  pm.collectionVariables.set('tokenRolSupervisor', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "supervisor"
+                    },
+                    {
+                      "key": "password",
+                      "value": "supervisor123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_SUPERVISOR en tokenRolSupervisor. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            },
+            {
+              "name": "Login operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_OPERADOR');",
+                      "  pm.collectionVariables.set('tokenRolOperador', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "operador"
+                    },
+                    {
+                      "key": "password",
+                      "value": "operador123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_OPERADOR en tokenRolOperador. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            },
+            {
+              "name": "Login sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_SAP');",
+                      "  pm.collectionVariables.set('tokenRolSap', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "sap"
+                    },
+                    {
+                      "key": "password",
+                      "value": "sap123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_SAP en tokenRolSap. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            },
+            {
+              "name": "Login tms",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_TMS');",
+                      "  pm.collectionVariables.set('tokenRolTms', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "tms"
+                    },
+                    {
+                      "key": "password",
+                      "value": "tms123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_TMS en tokenRolTms. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            },
+            {
+              "name": "Login loader",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT con el rol esperado', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  const payload = JSON.parse(require('atob')(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));",
+                      "  pm.expect(payload.roles).to.include('ROLE_LOADER');",
+                      "  pm.collectionVariables.set('tokenRolLoader', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "loader"
+                    },
+                    {
+                      "key": "password",
+                      "value": "loader123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token del rol ROLE_LOADER en tokenRolLoader. Usuarios de prueba: docs/sql/seed-dev-users.sql (solo desarrollo)."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Denegados (403)",
+          "item": [
+            {
+              "name": "SAP: orden - operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"preset\":1}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_OPERADOR el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "TMS: tara - loader",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberRoles}}/tare",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "tare"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":100}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_LOADER el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "TMS: pesaje final - sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberRoles}}/final-weight",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "final-weight"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":100}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_SAP el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Carga: activación - tms",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "activation"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":990000001,\"password\":12345}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_TMS el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Carga: lectura - operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":1,\"density\":0.5,\"temperature\":10,\"flowRate\":1}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_OPERADOR el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Carga: cierre - sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/close",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "close"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SAP el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Consulta: listado - sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SAP el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Consulta: orden - tms",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_TMS el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Consulta: historial de estados - loader",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}/status-log",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "status-log"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_LOADER el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Consulta: lecturas - sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}/details?size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "details"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SAP el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Consulta: conciliación - tms",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}/reconciliation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "reconciliation"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_TMS el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            },
+            {
+              "name": "Demo: encodepass - supervisor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el rol no permite este endpoint', () => pm.response.to.have.status(403));",
+                      "pm.test('responde el JSON estandar', () => {",
+                      "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.code).to.eql(403);",
+                      "  pm.expect(j.message).to.be.a('string').and.not.empty;",
+                      "  pm.expect(j.message).to.not.include('ROLE_');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/demo/encodepass?password=x",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "demo",
+                    "encodepass"
+                  ],
+                  "query": [
+                    {
+                      "key": "password",
+                      "value": "x"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SUPERVISOR el endpoint debe responder 403 (matriz de roles del examen final)."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Permitidos (pasan la seguridad)",
+          "item": [
+            {
+              "name": "Admin: listado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 200 listado', () => pm.response.to.have.status(200));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_ADMIN el pedido llega al negocio y responde 200 (listado). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Admin: encodepass",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 200 hash BCrypt', () => pm.response.to.have.status(200));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/demo/encodepass?password=x",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "demo",
+                    "encodepass"
+                  ],
+                  "query": [
+                    {
+                      "key": "password",
+                      "value": "x"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_ADMIN el pedido llega al negocio y responde 200 (hash BCrypt). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Admin: SAP con cuerpo incompleto",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 400 validación del negocio', () => pm.response.to.have.status(400));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"preset\":0}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_ADMIN el pedido llega al negocio y responde 400 (validación del negocio). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Supervisor: orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SUPERVISOR el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Supervisor: cierre de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/close",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "close"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_SUPERVISOR el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Operador: listado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 200 listado', () => pm.response.to.have.status(200));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?size=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "size",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_OPERADOR el pedido llega al negocio y responde 200 (listado). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Operador: conciliación de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{orderNumberRoles}}/reconciliation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "reconciliation"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_OPERADOR el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Operador: cierre de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/close",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "close"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_OPERADOR el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "SAP: orden con cuerpo incompleto",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 400 validación del negocio', () => pm.response.to.have.status(400));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"preset\":0}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_SAP el pedido llega al negocio y responde 400 (validación del negocio). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "TMS: tara de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberRoles}}/tare",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "tare"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":100}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_TMS el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "TMS: pesaje final de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberRoles}}/final-weight",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "final-weight"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":100}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_TMS el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Carga: activación de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "activation"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":990000001,\"password\":12345}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_LOADER el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Carga: lectura de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":1,\"density\":0.5,\"temperature\":10,\"flowRate\":1}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Con ROLE_LOADER el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            },
+            {
+              "name": "Carga: cierre de orden inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('pasa la seguridad: 404 orden inexistente', () => pm.response.to.have.status(404));",
+                      "pm.test('no es 401 ni 403', () => pm.expect(pm.response.code).to.not.be.oneOf([401, 403]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberRoles}}/close",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberRoles}}",
+                    "close"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenRolLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Con ROLE_LOADER el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            }
+          ]
         }
       ]
     }
