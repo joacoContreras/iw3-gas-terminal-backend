@@ -30,6 +30,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.controller.AuthRestController;
 import ar.edu.iua.iw3.auth.filters.AuthConstants;
+import ar.edu.iua.iw3.auth.filters.JwtSecret;
 import ar.edu.iua.iw3.business.IAlarmBusiness;
 import ar.edu.iua.iw3.business.IAlarmConfigBusiness;
 import ar.edu.iua.iw3.business.IOrderBusiness;
@@ -52,7 +53,8 @@ import jakarta.servlet.ServletException;
  */
 @WebMvcTest(controllers = { OrderRestController.class, OrderSapRestController.class, OrderTmsRestController.class,
 		OrderLoaderRestController.class, AuthRestController.class, AlarmRestController.class })
-@Import({ SecurityConfiguration.class, RestAccessDeniedHandler.class, StandartResponseBusiness.class })
+@Import({ SecurityConfiguration.class, RestAccessDeniedHandler.class, RestAuthenticationEntryPoint.class, JwtSecret.class,
+		StandartResponseBusiness.class })
 class RolesAccessTest {
 
 	private static final String ADMIN = "ROLE_ADMIN";
