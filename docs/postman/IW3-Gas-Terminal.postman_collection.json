@@ -150,6 +150,10 @@
     {
       "key": "reconciliationCircuit",
       "value": ""
+    },
+    {
+      "key": "tokenDemo",
+      "value": ""
     }
   ],
   "item": [
@@ -7353,6 +7357,151 @@
               ]
             },
             "description": "El histórico tiene las lecturas válidas (sin la descartada ni la tardía)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Demo de la cátedra (encodepass)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{tokenDemo}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Login de la utilidad",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login responde: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve un JWT de tres partes', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                  "  pm.collectionVariables.set('tokenDemo', t);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
+              ]
+            },
+            "description": "Login propio de la carpeta (el token dura 1 hora): guarda el JWT en tokenDemo, que usan los demás pedidos de la carpeta."
+          }
+        },
+        {
+          "name": "Codificar contraseña sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sin token: 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/demo/encodepass?password=demo-clave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "encodepass"
+              ],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "demo-clave"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Desde el 02/11/2026 /demo/** ya no es público: sin token responde 401."
+          }
+        },
+        {
+          "name": "Codificar contraseña con token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('con token: 200', () => pm.response.to.have.status(200));",
+                  "pm.test('devuelve un hash BCrypt de 60 caracteres', () => {",
+                  "  const t = pm.response.text();",
+                  "  pm.expect(t).to.match(/^\\$2[aby]\\$\\d{2}\\$.{53}$/);",
+                  "  pm.expect(t).to.have.lengthOf(60);",
+                  "});",
+                  "pm.test('el hash no repite la contraseña enviada', () => pm.expect(pm.response.text()).to.not.include('demo-clave'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/demo/encodepass?password=demo-clave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "demo",
+                "encodepass"
+              ],
+              "query": [
+                {
+                  "key": "password",
+                  "value": "demo-clave"
+                }
+              ]
+            },
+            "description": "Endpoint de demo de la cátedra: devuelve el hash BCrypt de la contraseña recibida (sirve para cargar usuarios en la tabla users)."
           }
         }
       ]

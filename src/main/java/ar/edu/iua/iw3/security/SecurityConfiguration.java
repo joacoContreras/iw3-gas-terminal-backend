@@ -59,7 +59,7 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.POST, Constants.URL_LOGIN).permitAll()
                 .requestMatchers("/error").permitAll().requestMatchers("/v3/api-docs/**").permitAll().requestMatchers("/swagger-ui.html").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll().requestMatchers("/ui/**").permitAll()
-                .requestMatchers("/demo/**").permitAll().anyRequest().authenticated());
+                .anyRequest().authenticated());
         http.httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.addFilter(new JWTAuthorizationFilter(authenticationManager()));

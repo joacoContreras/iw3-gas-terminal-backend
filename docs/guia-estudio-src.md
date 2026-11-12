@@ -2,7 +2,7 @@
 
 Documento vivo: **se actualiza al cerrar cada fase**. Sirve para buscar rápido qué hay en cada carpeta y en cada archivo, y para qué sirve.
 
-**Última actualización:** 02/11/2026, al cierre de la Fase 5 (pesaje final y conciliación).
+**Última actualización:** 02/11/2026, al cierre de la Fase 5 (pesaje final y conciliación) y del segundo parcial (Swagger completo, carpeta Postman 07 y `/demo/**` cerrado).
 
 Convención de rutas: todo está bajo `src/main/java/ar/edu/iua/iw3/`, salvo que se diga otra cosa.
 
@@ -248,7 +248,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 
 | Archivo | Qué hace | Origen |
 |---|---|---|
-| `security/SecurityConfiguration.java` | Rutas públicas y reglas. Todo exige token salvo login, `/error`, Swagger y `/demo/**`. Define la encriptación BCrypt y la sesión sin estado. Se le permitió `/error` para que los errores de formato no salgan como 401 mudos | Cátedra + F1 |
+| `security/SecurityConfiguration.java` | Rutas públicas y reglas. Todo exige token salvo login, `/error` y Swagger (`/demo/**` también exige token desde el cierre del parcial). Define la encriptación BCrypt y la sesión sin estado. Se le permitió `/error` para que los errores de formato no salgan como 401 mudos | Cátedra + F1 |
 | `auth/User.java` | Usuario (`users`). Valida cuenta vencida, bloqueada o deshabilitada. Tiene sus roles | Cátedra |
 | `auth/Role.java` | Rol (`roles`) | Cátedra |
 | `auth/UserRepository.java` | Busca un usuario por nombre o email | Cátedra |
@@ -256,7 +256,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `auth/IUserBusiness.java` y `UserBusiness.java` | Cargar usuario, cambiar contraseña, habilitar/deshabilitar, listar | Cátedra |
 | `auth/BadPasswordException.java` | Error de contraseña incorrecta | Cátedra |
 | `auth/custom/CustomAuthenticationManager.java` | Valida usuario, estado de cuenta y contraseña (BCrypt) | Cátedra |
-| `auth/controller/AuthRestController.java` | `POST /api/v1/login`: emite el token. También tiene `GET /demo/encodepass` (devuelve el hash BCrypt de una contraseña; sirve para crear usuarios de prueba). Se le quitó el `produces=text/plain` para que el login fallido devuelva su mensaje | Cátedra + F1 |
+| `auth/controller/AuthRestController.java` | `POST /api/v1/login`: emite el token. También tiene `GET /demo/encodepass` (devuelve el hash BCrypt de una contraseña; sirve para crear usuarios de prueba; exige token). Tiene `@Operation` y `@ApiResponse` en los dos endpoints, y el login figura sin candado en Swagger (`@SecurityRequirements`). Se le quitó el `produces=text/plain` para que el login fallido devuelva su mensaje | Cátedra + F1 |
 | `auth/filters/AuthConstants.java` | Constantes del token: clave, vencimiento (1 h), nombre del header y del parámetro | Cátedra |
 | `auth/filters/JWTAuthorizationFilter.java` | En cada pedido lee el token (header `Bearer` o `?authtoken=`) y deja al usuario identificado | Cátedra |
 
@@ -291,7 +291,7 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 
 | Método y ruta | Qué hace | Respuestas |
 |---|---|---|
-| `POST /api/v1/login` | Usuario y contraseña (formulario); devuelve el token en texto | 200, 401 |
+| `POST /api/v1/login` | Usuario y contraseña (formulario); devuelve el token en texto | 200, 401, 500 |
 | `POST /api/v1/integration/sap/orders` | **Punto 1:** SAP envía la orden | 201 + `location`, 302, 400, 401, 500 |
 | `POST /api/v1/integration/tms/orders/{n}/tare` | **Punto 2:** la balanza envía la tara; devuelve la contraseña de activación de 5 dígitos | 200, 400, 401, 404, 409, 500 |
 | `POST /api/v1/integration/loader/activation` | **Punto 3:** el sistema de carga se activa con `orderNumber` y `password`; devuelve el `preset`. Idempotente; la orden sigue en estado 2 | 200, 400, 401, 403, 404, 409, 500 |
@@ -299,12 +299,12 @@ Hoy SAP, TMS (balanza) y loader (sistema de carga).
 | `POST /api/v1/integration/loader/orders/{n}/close` | **Punto 4:** cierra la orden (estado 2 → 3) y desde ahí se rechazan las lecturas. Sin cuerpo; registra el cambio en el historial con el usuario del token. Responde la orden | 200, 401, 404, 409, 500 |
 | `POST /api/v1/integration/tms/orders/{n}/final-weight` | **Punto 5:** la balanza envía el pesaje final `{ weight }`; la orden pasa de 3 a 4, se registra el cambio y responde la conciliación. No es idempotente; peso igual a la tara válido, menor 400 | 200, 400, 401, 404, 409, 500 |
 | `GET /api/v1/orders/{n}/reconciliation` | **Punto 5:** la conciliación (tara, pesaje final, producto cargado, neto, diferencia y promedios), solo en estado 4. Se calcula, no se guarda | 200, 401, 404, 409, 500 |
-| `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200 |
-| `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 404 |
-| `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 404 |
-| `GET /api/v1/orders/{n}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100) | 200, 404 |
+| `GET /api/v1/orders?page=&size=` | Lista paginada (`size` 20 por defecto, máximo 100). Responde `content` y `page` | 200, 401, 500 |
+| `GET /api/v1/orders/{n}` | Una orden (no muestra `activationPassword`) | 200, 401, 404, 500 |
+| `GET /api/v1/orders/{n}/status-log` | Historial de estados | 200, 401, 404, 500 |
+| `GET /api/v1/orders/{n}/details?page=&size=` | Lecturas guardadas de la orden, paginadas por `id` ascendente (`size` 20 por defecto, máximo 100) | 200, 401, 404, 500 |
 | `/swagger-ui.html`, `/v3/api-docs` | Documentación | públicos |
-| `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra, público; cerrar antes de desplegar) | 200 |
+| `GET /demo/encodepass?password=` | Hash BCrypt (demo de la cátedra). Exige token | 200, 401, 500 |
 
 Códigos: **200** éxito (en las lecturas, también una lectura descartada: `saved: false`) · **201** creada · **302** ya existe (convención de la cátedra) · **400** datos inválidos, campo ausente, peso ≤ 0 o infinito, o pesaje final menor que la tara · **401** sin token o inválido · **403** contraseña de activación incorrecta · **404** no existe · **409** la orden no está en el estado que pide la operación (o no está activada, en las lecturas; o no está en estado 4, en la conciliación) · **500** falla interna.
 
@@ -321,7 +321,7 @@ Códigos: **200** éxito (en las lecturas, también una lectura descartada: `sav
 | `docs/fase-3-division-de-trabajo.md` | División del trabajo para la Fase 3 (3 partes, trabajo secuencial), con los prompts y el registro de cada parte |
 | `docs/fase-5-division-de-trabajo.md` | División del trabajo para la Fase 5 (2 partes, trabajo secuencial: Calvo y Alasino), con las decisiones D1 a D14, los prompts y el registro de cada parte (F5) |
 | `docs/fase-5-conciliacion.md` | Informe de la Fase 5, **auditoría final del segundo parcial** (matriz de trazabilidad contra el PDF) y guía de estudio (F5) |
-| `docs/postman/` | Colección Postman: 151 pedidos y 358 verificaciones en las carpetas 00 a 06. La 05 prueba el pesaje final y la conciliación; la 06 simula el **circuito completo 1 → 4** con *Tests* encadenados y su propio login (F5) |
+| `docs/postman/` | Colección Postman: 154 pedidos y 364 verificaciones en las carpetas 00 a 07. La 05 prueba el pesaje final y la conciliación; la 06 simula el **circuito completo 1 → 4** con *Tests* encadenados y su propio login (F5); la 07 prueba `/demo/encodepass` (sin token 401, con token 200) |
 | `docs/sql/seed-dev-users.sql` | Usuario de prueba `admin` (solo desarrollo) |
 | `docs/pdf/` | PDF de los informes y de esta guía |
 
