@@ -16,6 +16,7 @@ La fuente de verdad son los Markdown de `docs/`: **si cambian, hay que regenerar
 | [fase-5-division-de-trabajo.pdf](fase-5-division-de-trabajo.pdf) | [docs/fase-5-division-de-trabajo.md](../fase-5-division-de-trabajo.md) (guía y prompts de las 2 partes, trabajo secuencial: Calvo y Alasino) |
 | [final-fase-1-roles.pdf](final-fase-1-roles.pdf) | [docs/final-fase-1-roles.md](../final-fase-1-roles.md) (examen final, Fase 1: roles, matriz por endpoint y guía de defensa) |
 | [final-fase-2-alarmas.pdf](final-fase-2-alarmas.pdf) | [docs/final-fase-2-alarmas.md](../final-fase-2-alarmas.md) (examen final, Fase 2: alarma por correo, defectos hallados y guía de defensa) |
+| [final-fase-3-cierre-backend.pdf](final-fase-3-cierre-backend.pdf) | [docs/final-fase-3-cierre-backend.md](../final-fase-3-cierre-backend.md) (examen final, Fase 3: CORS, 401, filtros del listado, H-5 y guía de defensa) |
 | [guia-estudio-src.pdf](guia-estudio-src.pdf) | [docs/guia-estudio-src.md](../guia-estudio-src.md) (se actualiza en cada fase) |
 | [Guia_Inicio_Fase_4.pdf](Guia_Inicio_Fase_4.pdf) | [docs/fase-4-guia-de-inicio.md](../fase-4-guia-de-inicio.md) (alcance, plan, checklist y prompt de la Fase 4; responsable: Benjamín Alasino) |
 
@@ -41,6 +42,7 @@ node docs/pdf/md2pdf.js docs/fase-5-conciliacion.md docs/pdf/fase-5-conciliacion
 node docs/pdf/md2pdf.js docs/fase-5-division-de-trabajo.md docs/pdf/fase-5-division-de-trabajo.pdf "Fase 5 · División del trabajo"
 node docs/pdf/md2pdf.js docs/final-fase-1-roles.md docs/pdf/final-fase-1-roles.pdf "Final · Fase 1 · Roles"
 node docs/pdf/md2pdf.js docs/final-fase-2-alarmas.md docs/pdf/final-fase-2-alarmas.pdf "Final · Fase 2 · Alarma de temperatura"
+node docs/pdf/md2pdf.js docs/final-fase-3-cierre-backend.md docs/pdf/final-fase-3-cierre-backend.pdf "Final · Fase 3 · Cierre del backend"
 node docs/pdf/md2pdf.js docs/guia-estudio-src.md docs/pdf/guia-estudio-src.pdf "Guía de estudio del código"
 node docs/pdf/md2pdf.js docs/fase-4-guia-de-inicio.md docs/pdf/Guia_Inicio_Fase_4.pdf "Fase 4 · Guía de inicio (Benjamín Alasino)"
 ```
