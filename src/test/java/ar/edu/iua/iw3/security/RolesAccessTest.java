@@ -30,8 +30,11 @@ import com.auth0.jwt.algorithms.Algorithm;
 import ar.edu.iua.iw3.auth.IUserBusiness;
 import ar.edu.iua.iw3.auth.controller.AuthRestController;
 import ar.edu.iua.iw3.auth.filters.AuthConstants;
+import ar.edu.iua.iw3.business.IAlarmBusiness;
+import ar.edu.iua.iw3.business.IAlarmConfigBusiness;
 import ar.edu.iua.iw3.business.IOrderBusiness;
 import ar.edu.iua.iw3.business.IOrderDetailBusiness;
+import ar.edu.iua.iw3.controllers.AlarmRestController;
 import ar.edu.iua.iw3.controllers.OrderRestController;
 import ar.edu.iua.iw3.integration.loader.controllers.OrderLoaderRestController;
 import ar.edu.iua.iw3.integration.sap.controllers.OrderSapRestController;
@@ -48,7 +51,7 @@ import jakarta.servlet.ServletException;
  * simulado no devuelva nada util, no puede ser 401 ni 403.
  */
 @WebMvcTest(controllers = { OrderRestController.class, OrderSapRestController.class, OrderTmsRestController.class,
-		OrderLoaderRestController.class, AuthRestController.class })
+		OrderLoaderRestController.class, AuthRestController.class, AlarmRestController.class })
 @Import({ SecurityConfiguration.class, RestAccessDeniedHandler.class, StandartResponseBusiness.class })
 class RolesAccessTest {
 
@@ -95,7 +98,14 @@ class RolesAccessTest {
 			new Endpoint("GET orders/{n}/status-log", HttpMethod.GET, "/api/v1/orders/1/status-log", READERS),
 			new Endpoint("GET orders/{n}/details", HttpMethod.GET, "/api/v1/orders/1/details", READERS),
 			new Endpoint("GET orders/{n}/reconciliation", HttpMethod.GET, "/api/v1/orders/1/reconciliation", READERS),
-			new Endpoint("GET demo/encodepass", HttpMethod.GET, "/demo/encodepass?password=x", Set.of(ADMIN)));
+			new Endpoint("GET demo/encodepass", HttpMethod.GET, "/demo/encodepass?password=x", Set.of(ADMIN)),
+			// Alarmas de temperatura (examen final, Fase 2): ver la matriz en docs/final-fase-1-roles.md
+			new Endpoint("GET alarms", HttpMethod.GET, "/api/v1/alarms", READERS),
+			new Endpoint("POST alarms/{id}/acknowledge", HttpMethod.POST, "/api/v1/alarms/1/acknowledge",
+					Set.of(ADMIN, SUPERVISOR)),
+			new Endpoint("GET alarms/config", HttpMethod.GET, "/api/v1/alarms/config", Set.of(ADMIN, SUPERVISOR)),
+			new Endpoint("PUT alarms/config", HttpMethod.PUT, "/api/v1/alarms/config",
+					"{\"temperatureThreshold\":30,\"recipientEmails\":[]}", Set.of(ADMIN)));
 
 	@Autowired
 	private MockMvc mvc;
@@ -106,6 +116,10 @@ class RolesAccessTest {
 	private IOrderBusiness orderBusiness;
 	@MockitoBean
 	private IOrderDetailBusiness orderDetailBusiness;
+	@MockitoBean
+	private IAlarmBusiness alarmBusiness;
+	@MockitoBean
+	private IAlarmConfigBusiness alarmConfigBusiness;
 
 	/** Token igual al que emite el login: sujeto, roles, email y vencimiento a 1 hora. */
 	private static String token(String role) {
