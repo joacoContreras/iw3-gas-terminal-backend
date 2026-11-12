@@ -38,6 +38,9 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 	@Autowired
 	private OrderDetailRepository orderDetailDAO;
 
+	@Autowired
+	private IAlarmBusiness alarmBusiness;
+
 	@Override
 	@Transactional(rollbackFor = Exception.class)
 	public DetailResult add(Integer orderNumber, Double accumulatedMass, Double density, Double temperature,
@@ -84,10 +87,24 @@ public class OrderDetailBusiness implements IOrderDetailBusiness {
 			order.setLoadingEndDateTime(estampa);
 			orderDAO.saveAndFlush(order);
 
+			raiseAlarmIfNeeded(order, temperature);
 			return DetailResult.saved();
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
+		}
+	}
+
+	/**
+	 * Alarma de temperatura (examen final): se evalua con la lectura ya guardada, dentro de la misma transaccion y
+	 * con la orden bloqueada. Un fallo de la alarma se registra pero NUNCA impide guardar la lectura.
+	 */
+	private void raiseAlarmIfNeeded(Order order, double temperature) {
+		try {
+			alarmBusiness.evaluate(order, temperature);
+		} catch (Exception e) {
+			log.error("No se pudo evaluar la alarma de temperatura de la orden {}: {}", order.getOrderNumber(),
+					e.getMessage(), e);
 		}
 	}
 
