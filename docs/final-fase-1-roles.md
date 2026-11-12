@@ -1,6 +1,6 @@
 # Examen final — Fase 1: roles que regulan el consumo de las APIs
 
-**Rama:** `final-fase-1-roles` (desde el `main` local, 317 commits; ver la nota de la sección 8) · **Fecha:** 12/11/2026 · **Estado:** implementada y probada; **sin commit** (se hace cuando el usuario lo pida)
+**Rama:** `final-fase-1-roles` (desde el `main` local, 317 commits; ver la nota de la sección 8) · **Fecha:** 12/11/2026 · **Estado:** implementada, probada y pusheada (7 commits, sin Pull Request)
 **Consigna (PDF, «Requisitos para el examen final», punto 2):** *«Definir e implementar roles de usuario que regulen el consumo de las APIs»*.
 
 ## 1. Qué se hizo
@@ -99,9 +99,10 @@ Usuarios de prueba (**solo desarrollo**, contraseña `<usuario>123`): `admin`, `
 
 ## 8. Nota sobre el repositorio
 
-Al empezar la fase, `git fetch` mostró que **`origin/main` fue reescrito**: tiene 567 commits (120 con `Co-Authored-By: Claude`) y no contiene el contenido del cierre del parcial
-(`/demo` cerrado, Swagger completo, chequeo del deploy). El `main` local (317 commits, sin trailers) es la versión entregada y es la base de esta rama. No se hizo `pull`,
-`push` ni `reset`. Hay que resolver cuál es la historia correcta **antes** de abrir cualquier Pull Request.
+Al empezar la fase, `git fetch` mostró que `origin/main` cambió: el PR #16 («Fase 5 conciliación», de Benjamín Alasino) se mergeó el 05/11 desde una rama con la historia anterior a la limpieza.
+`origin/main` quedó con 567 commits (120 con `Co-Authored-By: Claude`) y **sin** el contenido del cierre del parcial (`/demo` cerrado, Swagger completo, Postman 07, chequeo del deploy).
+El workflow de deploy corrió en verde sobre ese commit (`0fa3f1c`), así que la VM pudo quedar con esa versión. El `main` local (317 commits, sin trailers) es la versión entregada y es la base de esta rama.
+Se preparó la rama `restaurar-cierre-parcial` (un commit sobre `origin/main` que restituye el contenido). Esta rama se rebasa sobre `main` cuando se resuelva. No se hizo `pull`, `reset` ni `push --force`.
 
 ## 9. Guía de defensa
 

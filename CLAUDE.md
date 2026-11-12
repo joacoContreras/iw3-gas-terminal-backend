@@ -46,12 +46,17 @@
 
 | Fase del final | Contenido | Rama | Estado |
 |---|---|---|---|
-| 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Implementada y probada (12/11/2026), sin commit.** 138 tests y Postman 186 pedidos / 428 aserciones sin fallas. Informe: `docs/final-fase-1-roles.md` |
+| 1 | Roles que regulan el consumo de las APIs | `final-fase-1-roles` | **Implementada, probada y pusheada (12/11/2026)**, 7 commits, sin Pull Request. 138 tests y Postman 186 pedidos / 428 aserciones sin fallas. Informe: `docs/final-fase-1-roles.md` |
 | 2 | Alarma de temperatura por e-mail | `final-fase-2-alarmas` | Pendiente |
 | 3 | Filtro y orden del listado, CORS (H-30), H-5 y cierre del backend | `final-fase-3-cierre-backend` | Pendiente |
 
-**Aviso (12/11/2026):** `origin/main` fue reescrito (567 commits, 120 con trailers de Claude, sin el contenido del cierre del parcial). El `main` local es la versión entregada.
-Resolverlo antes de cualquier Pull Request del final.
+**Dónde va cada cosa (aclarado el 12/11/2026):** los cambios de **backend** (Fases 1 a 3 del final) van a este repo, en ramas `final-fase-N-<tema>`;
+los cambios de **frontend** y el plan de trabajo van a `iw3-gas-terminal-frontend`. Los dos repos se comunican solo por HTTP.
+
+**Aviso (12/11/2026): `origin/main` perdió el cierre del segundo parcial.** El PR #16 («Fase 5 conciliación», de Benjamín Alasino) se mergeó el 05/11 desde una rama con la
+historia anterior a la limpieza: `origin/main` quedó en `0fa3f1c` (567 commits, 120 con `Co-Authored-By: Claude`) y **sin** `/demo` cerrado, Swagger completo, carpeta Postman 07 ni el chequeo
+del deploy corregido. El workflow de deploy corrió en verde sobre ese commit, así que **la VM pudo quedar con esa versión**. El `main` local (`afc514f`, 317 commits) es la versión entregada.
+Reparación no destructiva preparada: rama `restaurar-cierre-parcial` (un commit sobre `origin/main` que restituye los 12 archivos). `main` no tiene protección de rama. No hacer `push --force` sin acuerdo del equipo.
 
 ## 3. Reglas de trabajo (acordadas con el equipo)
 
