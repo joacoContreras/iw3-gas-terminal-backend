@@ -182,6 +182,42 @@
     {
       "key": "orderNumberRoles",
       "value": "990000001"
+    },
+    {
+      "key": "tokenAlAdmin",
+      "value": ""
+    },
+    {
+      "key": "tokenAlSupervisor",
+      "value": ""
+    },
+    {
+      "key": "tokenAlOperador",
+      "value": ""
+    },
+    {
+      "key": "tokenAlSap",
+      "value": ""
+    },
+    {
+      "key": "tokenAlTms",
+      "value": ""
+    },
+    {
+      "key": "tokenAlLoader",
+      "value": ""
+    },
+    {
+      "key": "orderNumberAlarm",
+      "value": ""
+    },
+    {
+      "key": "activationPasswordAlarm",
+      "value": ""
+    },
+    {
+      "key": "alarmIdAlarm",
+      "value": ""
     }
   ],
   "item": [
@@ -9252,6 +9288,1803 @@
                   ]
                 },
                 "description": "Con ROLE_LOADER el pedido llega al negocio y responde 404 (orden inexistente). Usa una orden inexistente: no modifica datos."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 - Alarmas de temperatura (examen final)",
+      "item": [
+        {
+          "name": "Logins por rol",
+          "item": [
+            {
+              "name": "Login admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlAdmin', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "{{username}}"
+                    },
+                    {
+                      "key": "password",
+                      "value": "{{password}}"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_ADMIN en tokenAlAdmin."
+              }
+            },
+            {
+              "name": "Login supervisor",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlSupervisor', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "supervisor"
+                    },
+                    {
+                      "key": "password",
+                      "value": "supervisor123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_SUPERVISOR en tokenAlSupervisor."
+              }
+            },
+            {
+              "name": "Login operador",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlOperador', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "operador"
+                    },
+                    {
+                      "key": "password",
+                      "value": "operador123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_OPERADOR en tokenAlOperador."
+              }
+            },
+            {
+              "name": "Login sap",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlSap', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "sap"
+                    },
+                    {
+                      "key": "password",
+                      "value": "sap123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_SAP en tokenAlSap."
+              }
+            },
+            {
+              "name": "Login tms",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlTms', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "tms"
+                    },
+                    {
+                      "key": "password",
+                      "value": "tms123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_TMS en tokenAlTms."
+              }
+            },
+            {
+              "name": "Login loader",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('login responde 200', () => pm.response.to.have.status(200));",
+                      "pm.test('devuelve un JWT', () => {",
+                      "  const t = pm.response.text();",
+                      "  pm.expect(t.split('.')).to.have.lengthOf(3);",
+                      "  pm.collectionVariables.set('tokenAlLoader', t);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "login"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "urlencoded",
+                  "urlencoded": [
+                    {
+                      "key": "username",
+                      "value": "loader"
+                    },
+                    {
+                      "key": "password",
+                      "value": "loader123"
+                    }
+                  ]
+                },
+                "description": "Guarda el token de ROLE_LOADER en tokenAlLoader."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Configuración (umbral y correos)",
+          "item": [
+            {
+              "name": "Configuración inicial (supervisor)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: el supervisor puede ver la configuración', () => pm.response.to.have.status(200));",
+                      "pm.test('trae umbral numérico y lista de correos', () => {",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.temperatureThreshold).to.be.a('number');",
+                      "  pm.expect(j.recipientEmails).to.be.an('array');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Sin configuración guardada rige el umbral por defecto y no hay destinatarios."
+              }
+            },
+            {
+              "name": "Configuración (operador) - denegado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el operador no ve la configuración', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "La matriz de roles solo permite ADMIN y SUPERVISOR."
+              }
+            },
+            {
+              "name": "Configurar (supervisor) - denegado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: solo el administrador configura', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"temperatureThreshold\":25,\"recipientEmails\":[]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Solo ADMIN modifica el umbral y los correos."
+              }
+            },
+            {
+              "name": "Configurar con correo inválido",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: correo con formato inválido', () => pm.response.to.have.status(400));",
+                      "pm.test('el mensaje nombra el correo inválido', () => pm.expect(pm.response.json().message).to.include('correo inválido'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"temperatureThreshold\":25,\"recipientEmails\":[\"sin-arroba\"]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Valida el formato de cada correo."
+              }
+            },
+            {
+              "name": "Configurar sin umbral",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: el umbral es obligatorio', () => pm.response.to.have.status(400));",
+                      "pm.test('el mensaje nombra el campo', () => pm.expect(pm.response.json().message).to.include('temperatureThreshold'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"recipientEmails\":[]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "temperatureThreshold es obligatorio."
+              }
+            },
+            {
+              "name": "Configurar sin lista de correos",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: recipientEmails es obligatorio (puede ser vacío)', () => pm.response.to.have.status(400));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"temperatureThreshold\":25}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "La lista puede estar vacía pero no ausente."
+              }
+            },
+            {
+              "name": "Configurar umbral 25 y un destinatario",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: configuración guardada', () => pm.response.to.have.status(200));",
+                      "pm.test('se guarda recortada y sin repetidos', () => {",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.temperatureThreshold).to.eql(25);",
+                      "  pm.expect(j.recipientEmails).to.eql(['alarmas.test@iw3.invalid']);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"temperatureThreshold\":25,\"recipientEmails\":[\"  alarmas.test@iw3.invalid \",\"ALARMAS.TEST@iw3.invalid\"]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "El dominio .invalid está reservado (RFC 2606): nunca entrega correo. Aunque haya SMTP configurado, no llega a nadie."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Circuito de la alarma",
+          "item": [
+            {
+              "name": "Preparar: orden nueva (SAP)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('orderNumberAlarm', Math.floor(Date.now() / 1000));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('201: orden creada', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/sap/orders",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "sap",
+                    "orders"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlSap}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":{{orderNumberAlarm}},\"plannedLoadDateTime\":\"2026-12-01T08:00:00\",\"preset\":15000,\"truck\":{\"externalCode\":\"ALM-TRK\",\"plate\":\"AL123RM\",\"tanks\":[{\"number\":1,\"capacityLiters\":10000}]},\"driver\":{\"externalCode\":\"ALM-DRV\",\"name\":\"Ana\",\"lastName\":\"Prueba\"},\"customer\":{\"externalCode\":\"ALM-CUS\",\"companyName\":\"Gas de Prueba SA\"},\"product\":{\"externalCode\":\"ALM-PRD\",\"name\":\"GLP\"}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Crea una orden con número único para esta corrida."
+              }
+            },
+            {
+              "name": "Preparar: tara (TMS)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: tara registrada', () => pm.response.to.have.status(200));",
+                      "pm.collectionVariables.set('activationPasswordAlarm', pm.response.json().activationPassword);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/tms/orders/{{orderNumberAlarm}}/tare",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "tms",
+                    "orders",
+                    "{{orderNumberAlarm}}",
+                    "tare"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlTms}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"weight\":14500}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Pasa la orden a estado 2 y devuelve la contraseña de activación."
+              }
+            },
+            {
+              "name": "Preparar: activar la carga",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: carga activada', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/activation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "activation"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"orderNumber\":{{orderNumberAlarm}},\"password\":{{activationPasswordAlarm}}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Activa la orden con la contraseña de la tara."
+              }
+            },
+            {
+              "name": "Lectura a 20 °C (bajo el umbral)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: la lectura se procesa', () => pm.response.to.have.status(200));",
+                      "pm.test('la lectura se guarda (saved=true)', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberAlarm}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberAlarm}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":100,\"density\":0.5,\"temperature\":20,\"flowRate\":3000}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Temperatura bajo el umbral de 25: no hay alarma."
+              }
+            },
+            {
+              "name": "Sin alarma todavía",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado de alarmas', () => pm.response.to.have.status(200));",
+                      "pm.test('la orden no tiene alarmas', () => pm.expect(pm.response.json().content).to.have.lengthOf(0));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?orderNumber={{orderNumberAlarm}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderNumber",
+                      "value": "{{orderNumberAlarm}}"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "El operador puede consultar las alarmas."
+              }
+            },
+            {
+              "name": "Lectura a 26 °C (sobre el umbral)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: la lectura se procesa', () => pm.response.to.have.status(200));",
+                      "pm.test('la lectura se guarda (saved=true)', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberAlarm}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberAlarm}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":200,\"density\":0.5,\"temperature\":26,\"flowRate\":3000}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Supera el umbral: se crea una alarma pendiente."
+              }
+            },
+            {
+              "name": "Una alarma PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado de alarmas', () => pm.response.to.have.status(200));",
+                      "pm.test('hay exactamente una alarma pendiente con los datos de la lectura', () => {",
+                      "  const c = pm.response.json().content;",
+                      "  pm.expect(c).to.have.lengthOf(1);",
+                      "  pm.expect(c[0].status).to.eql('PENDING');",
+                      "  pm.expect(c[0].temperature).to.eql(26);",
+                      "  pm.expect(c[0].threshold).to.eql(25);",
+                      "  pm.expect(c[0].orderNumber).to.eql(Number(pm.collectionVariables.get('orderNumberAlarm')));",
+                      "  pm.expect(c[0].triggeredAt).to.be.a('string');",
+                      "  pm.expect(c[0].acknowledgedBy).to.eql(null);",
+                      "  pm.collectionVariables.set('alarmIdAlarm', c[0].id);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?orderNumber={{orderNumberAlarm}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderNumber",
+                      "value": "{{orderNumberAlarm}}"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Queda registrada con temperatura, umbral y fecha de disparo."
+              }
+            },
+            {
+              "name": "Lectura a 30 °C (alarma ya pendiente)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: la lectura se procesa', () => pm.response.to.have.status(200));",
+                      "pm.test('la lectura se guarda (saved=true)', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberAlarm}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberAlarm}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":300,\"density\":0.5,\"temperature\":30,\"flowRate\":3000}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Sigue sobre el umbral pero la orden ya tiene una alarma pendiente."
+              }
+            },
+            {
+              "name": "No se crea otra alarma (no reenvío)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado de alarmas', () => pm.response.to.have.status(200));",
+                      "pm.test('sigue habiendo una sola alarma', () => pm.expect(pm.response.json().content).to.have.lengthOf(1));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?orderNumber={{orderNumberAlarm}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderNumber",
+                      "value": "{{orderNumberAlarm}}"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Regla del final: no se vuelve a avisar hasta que un usuario autorizado la acepte."
+              }
+            },
+            {
+              "name": "Aceptar (operador) - denegado",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('403: el operador no puede aceptar', () => pm.response.to.have.status(403));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/{{alarmIdAlarm}}/acknowledge",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "{{alarmIdAlarm}}",
+                    "acknowledge"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Solo ADMIN y SUPERVISOR son usuarios autorizados."
+              }
+            },
+            {
+              "name": "Aceptar (supervisor) con observación",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: alarma aceptada', () => pm.response.to.have.status(200));",
+                      "pm.test('queda usuario, fecha y observación', () => {",
+                      "  const j = pm.response.json();",
+                      "  pm.expect(j.status).to.eql('ACKNOWLEDGED');",
+                      "  pm.expect(j.acknowledgedBy).to.eql('supervisor');",
+                      "  pm.expect(j.acknowledgedAt).to.be.a('string');",
+                      "  pm.expect(j.observation).to.eql('Se revisó el sensor');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/{{alarmIdAlarm}}/acknowledge",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "{{alarmIdAlarm}}",
+                    "acknowledge"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlSupervisor}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"observation\":\"  Se revisó el sensor \",\"acknowledgedBy\":\"otro-usuario\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "El usuario sale del token. Aunque el cuerpo traiga otro nombre, no se usa."
+              }
+            },
+            {
+              "name": "Aceptar de nuevo",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('409: ya estaba aceptada', () => pm.response.to.have.status(409));",
+                      "pm.test('el mensaje dice quién la aceptó', () => pm.expect(pm.response.json().message).to.include('supervisor'));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/{{alarmIdAlarm}}/acknowledge",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "{{alarmIdAlarm}}",
+                    "acknowledge"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "No se puede aceptar dos veces ni pisar los datos de la primera aceptación."
+              }
+            },
+            {
+              "name": "Aceptar una alarma inexistente",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('404: no existe', () => pm.response.to.have.status(404));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/999999999/acknowledge",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "999999999",
+                    "acknowledge"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Alarma inexistente."
+              }
+            },
+            {
+              "name": "Aceptar con observación de 501 caracteres",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: observación demasiado larga', () => pm.response.to.have.status(400));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/{{alarmIdAlarm}}/acknowledge",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "{{alarmIdAlarm}}",
+                    "acknowledge"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"observation\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Máximo 500 caracteres."
+              }
+            },
+            {
+              "name": "Lectura a 31 °C (alarma aceptada)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: la lectura se procesa', () => pm.response.to.have.status(200));",
+                      "pm.test('la lectura se guarda (saved=true)', () => pm.expect(pm.response.json().saved).to.eql(true));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/integration/loader/orders/{{orderNumberAlarm}}/details",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "integration",
+                    "loader",
+                    "orders",
+                    "{{orderNumberAlarm}}",
+                    "details"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlLoader}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"accumulatedMass\":400,\"density\":0.5,\"temperature\":31,\"flowRate\":3000}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Aceptada la anterior, una nueva superación vuelve a alarmar."
+              }
+            },
+            {
+              "name": "Ahora hay dos alarmas",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado de alarmas', () => pm.response.to.have.status(200));",
+                      "pm.test('hay dos alarmas: la nueva pendiente y la anterior aceptada', () => {",
+                      "  const c = pm.response.json().content;",
+                      "  pm.expect(c).to.have.lengthOf(2);",
+                      "  pm.expect(c[0].status).to.eql('PENDING');",
+                      "  pm.expect(c[1].status).to.eql('ACKNOWLEDGED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?orderNumber={{orderNumberAlarm}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderNumber",
+                      "value": "{{orderNumberAlarm}}"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Orden de la más reciente a la más antigua."
+              }
+            },
+            {
+              "name": "Filtro status=PENDING",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: listado de alarmas', () => pm.response.to.have.status(200));",
+                      "pm.test('solo trae la pendiente', () => {",
+                      "  const c = pm.response.json().content;",
+                      "  pm.expect(c).to.have.lengthOf(1);",
+                      "  pm.expect(c[0].status).to.eql('PENDING');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?orderNumber={{orderNumberAlarm}}&status=PENDING",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "orderNumber",
+                      "value": "{{orderNumberAlarm}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "PENDING"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Filtro por estado (el frontend lo usa para el banner)."
+              }
+            },
+            {
+              "name": "Filtro con status inválido",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('400: status inválido', () => pm.response.to.have.status(400));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms?status=XX",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "XX"
+                    }
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlOperador}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "description": "Solo PENDING o ACKNOWLEDGED."
+              }
+            },
+            {
+              "name": "Sin token",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('401: falta el token', () => pm.response.to.have.status(401));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms"
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                },
+                "description": "Sin Authorization responde 401."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpieza",
+          "item": [
+            {
+              "name": "Restaurar configuración por defecto",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('200: configuración restaurada', () => pm.response.to.have.status(200));",
+                      "pm.test('queda sin destinatarios', () => pm.expect(pm.response.json().recipientEmails).to.have.lengthOf(0));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/alarms/config",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "alarms",
+                    "config"
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{tokenAlAdmin}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"temperatureThreshold\":30,\"recipientEmails\":[]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Deja el umbral en 30 y sin correos, para no enviar avisos reales en otras corridas."
               }
             }
           ]
