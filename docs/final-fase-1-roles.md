@@ -1,6 +1,6 @@
 # Examen final — Fase 1: roles que regulan el consumo de las APIs
 
-**Rama:** `final-fase-1-roles` (desde el `main` local, 317 commits; ver la nota de la sección 8) · **Fecha:** 12/11/2026 · **Estado:** implementada, probada y pusheada (7 commits, sin Pull Request)
+**Rama:** `final-fase-1-roles` (reaplicada como `merge/final-fase-1-roles` sobre `origin/main`; ver la sección 8) · **Fecha:** 12/11/2026 · **Estado:** implementada, probada, **integrada en `main` (PR #18, 12/11/2026)** y desplegada
 **Consigna (PDF, «Requisitos para el examen final», punto 2):** *«Definir e implementar roles de usuario que regulen el consumo de las APIs»*.
 
 ## 1. Qué se hizo
@@ -99,10 +99,12 @@ Usuarios de prueba (**solo desarrollo**, contraseña `<usuario>123`): `admin`, `
 
 ## 8. Nota sobre el repositorio
 
-Al empezar la fase, `git fetch` mostró que `origin/main` cambió: el PR #16 («Fase 5 conciliación», de Benjamín Alasino) se mergeó el 05/11 desde una rama con la historia anterior a la limpieza.
-`origin/main` quedó con 567 commits (120 con `Co-Authored-By: Claude`) y **sin** el contenido del cierre del parcial (`/demo` cerrado, Swagger completo, Postman 07, chequeo del deploy).
-El workflow de deploy corrió en verde sobre ese commit (`0fa3f1c`), así que la VM pudo quedar con esa versión. El `main` local (317 commits, sin trailers) es la versión entregada y es la base de esta rama.
-Se preparó la rama `restaurar-cierre-parcial` (un commit sobre `origin/main` que restituye el contenido). Esta rama se rebasa sobre `main` cuando se resuelva. No se hizo `pull`, `reset` ni `push --force`.
+Al empezar la fase, `git fetch` mostró que `origin/main` había cambiado: el PR #16 («Fase 5 conciliación», de Benjamín Alasino, 05/11) se había mergeado desde una rama con la historia anterior a la limpieza.
+`origin/main` quedó con 567 commits (120 con `Co-Authored-By: Claude`) y **sin** el contenido del cierre del parcial (`/demo` cerrado, Swagger completo, Postman 07, chequeo del deploy), y el workflow de deploy corrió en verde sobre ese commit.
+
+Esta rama partió del `main` local (317 commits, sin trailers), que es la versión entregada. Como su historia es distinta de la de `origin/main`, un PR directo daba **conflictos en 7 a 10 archivos**. Se resolvió sin reescribir nada:
+`restaurar-cierre-parcial` (un commit que restituye los 12 archivos) y `merge/final-fase-1-roles` / `merge/final-fase-2-alarmas`, que reaplican los commits sobre `origin/main` con **el mismo árbol** (verificado) y sin conflictos.
+Todo entró en `main` con el PR #18 (12/11/2026). Las ramas originales se borraron. Queda abierta la cuestión de los 120 commits con trailers (ver `CLAUDE.md`, sección 2).
 
 ## 9. Guía de defensa
 
