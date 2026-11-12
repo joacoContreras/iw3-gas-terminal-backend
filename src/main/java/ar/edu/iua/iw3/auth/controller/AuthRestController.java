@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -90,6 +91,8 @@ public class AuthRestController extends BaseRestController {
     @ApiResponse(responseCode = "200", description = "Hash BCrypt (texto)")
     @ApiResponse(responseCode = "401", description = "Falta el token o es inválido")
     @ApiResponse(responseCode = "500", description = "Error interno")
+    @ApiResponse(responseCode = "403", description = "El rol del usuario no permite este endpoint")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @GetMapping(value = "/demo/encodepass")
     public ResponseEntity<?> encodepass(@RequestParam String password) {
         try {
