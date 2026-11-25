@@ -1,13 +1,17 @@
 package ar.edu.iua.iw3.util;
 
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 import ar.edu.iua.iw3.business.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.mail.internet.MimeMessage;
 
 /**
  * Envio de correos por SMTP (clase 9 de la catedra). Cambios respecto del original: el remitente sale de la
@@ -37,6 +41,24 @@ public class EmailBusiness {
 			message.setTo(to);
 			message.setSubject(subject);
 			message.setText(text);
+			emailSender.send(message);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+			throw BusinessException.builder().ex(e).message(e.getMessage()).build();
+		}
+	}
+
+	/** UTF-8 multipart/alternative: readers can choose plain text or the branded HTML version. */
+	public void sendHtmlMessage(String to, String subject, String text, String html) throws BusinessException {
+		log.trace("Enviando mail HTML subject={} a: {}", subject, to);
+		try {
+			MimeMessage message = emailSender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+			helper.setFrom(username != null && !username.isBlank() ? username : defaultFrom,
+					"AetherLoad · Alertas operativas");
+			helper.setTo(to);
+			helper.setSubject(subject);
+			helper.setText(text, html);
 			emailSender.send(message);
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);

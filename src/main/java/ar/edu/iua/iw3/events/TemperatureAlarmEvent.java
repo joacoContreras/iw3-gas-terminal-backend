@@ -20,12 +20,15 @@ public class TemperatureAlarmEvent extends ApplicationEvent {
 	private final List<String> recipients;
 	private final String subject;
 	private final String text;
+	private final String html;
 
-	public TemperatureAlarmEvent(Object source, Long alarmId, List<String> recipients, String subject, String text) {
+	public TemperatureAlarmEvent(Object source, Long alarmId, List<String> recipients, String subject, String text,
+			String html) {
 		super(source);
 		this.alarmId = alarmId;
 		this.recipients = recipients;
 		this.subject = subject;
 		this.text = text;
+		this.html = html;
 	}
 }
