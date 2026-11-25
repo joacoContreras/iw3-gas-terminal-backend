@@ -126,6 +126,9 @@ class AlarmBusinessTest {
 		String text = ev.getValue().getText();
 		assertTrue(text.contains("AB123CD") && text.contains("Gas del Sur SA") && text.contains("GLP"), text);
 		assertTrue(text.contains("35,2") && text.contains("30,0"), text);
+		assertTrue(ev.getValue().getSubject().startsWith("[AetherLoad]"));
+		assertTrue(ev.getValue().getHtml().contains("Alerta en la orden #5001"));
+		assertTrue(ev.getValue().getHtml().contains("35,2 °C"));
 	}
 
 	@Test

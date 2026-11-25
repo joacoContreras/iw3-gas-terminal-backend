@@ -37,7 +37,7 @@ public class TemperatureAlarmEventListener {
 		int sent = 0;
 		for (String to : event.getRecipients()) {
 			try {
-				emailBusiness.sendSimpleMessage(to, event.getSubject(), event.getText());
+				emailBusiness.sendHtmlMessage(to, event.getSubject(), event.getText(), event.getHtml());
 				sent++;
 			} catch (Exception e) {
 				log.error("No se pudo enviar la alarma {} a {}: {}", event.getAlarmId(), to, e.getMessage());

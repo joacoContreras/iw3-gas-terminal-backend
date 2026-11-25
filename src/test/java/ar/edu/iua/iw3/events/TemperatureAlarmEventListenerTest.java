@@ -25,8 +25,9 @@ import ar.edu.iua.iw3.util.EmailBusiness;
 @ExtendWith(MockitoExtension.class)
 class TemperatureAlarmEventListenerTest {
 
-	private static final String SUBJECT = "[IW3] Alarma de temperatura: orden 5001";
+	private static final String SUBJECT = "[AetherLoad] Alerta de temperatura | Orden #5001";
 	private static final String TEXT = "texto";
+	private static final String HTML = "<p>Alerta</p>";
 
 	@Mock
 	private EmailBusiness emailBusiness;
@@ -38,43 +39,43 @@ class TemperatureAlarmEventListenerTest {
 	private TemperatureAlarmEventListener listener;
 
 	private static TemperatureAlarmEvent event(String... to) {
-		return new TemperatureAlarmEvent("test", 7L, List.of(to), SUBJECT, TEXT);
+		return new TemperatureAlarmEvent("test", 7L, List.of(to), SUBJECT, TEXT, HTML);
 	}
 
 	@Test
 	void envia_un_correo_a_cada_destinatario_y_registra_el_envio() throws Exception {
 		listener.onTemperatureAlarm(event("a@x.com", "b@x.com"));
 
-		verify(emailBusiness).sendSimpleMessage("a@x.com", SUBJECT, TEXT);
-		verify(emailBusiness).sendSimpleMessage("b@x.com", SUBJECT, TEXT);
+		verify(emailBusiness).sendHtmlMessage("a@x.com", SUBJECT, TEXT, HTML);
+		verify(emailBusiness).sendHtmlMessage("b@x.com", SUBJECT, TEXT, HTML);
 		verify(alarmBusiness).markEmailSent(7L);
 	}
 
 	@Test
 	void si_un_destinatario_falla_se_avisa_a_los_demas_y_igual_se_registra_el_envio() throws Exception {
 		doThrow(BusinessException.builder().message("rechazado").build()).when(emailBusiness)
-				.sendSimpleMessage(eq("mala@x.com"), any(), any());
+				.sendHtmlMessage(eq("mala@x.com"), any(), any(), any());
 
 		assertDoesNotThrow(() -> listener.onTemperatureAlarm(event("mala@x.com", "buena@x.com")));
 
-		verify(emailBusiness).sendSimpleMessage("buena@x.com", SUBJECT, TEXT);
+		verify(emailBusiness).sendHtmlMessage("buena@x.com", SUBJECT, TEXT, HTML);
 		verify(alarmBusiness).markEmailSent(7L);
 	}
 
 	@Test
 	void si_no_sale_ningun_correo_no_se_propaga_el_error_ni_se_registra_envio() throws Exception {
-		doThrow(BusinessException.builder().message("sin SMTP").build()).when(emailBusiness).sendSimpleMessage(any(),
-				any(), any());
+		doThrow(BusinessException.builder().message("sin SMTP").build()).when(emailBusiness).sendHtmlMessage(any(),
+				any(), any(), any());
 
 		assertDoesNotThrow(() -> listener.onTemperatureAlarm(event("a@x.com", "b@x.com")));
 
-		verify(emailBusiness, times(2)).sendSimpleMessage(any(), any(), any());
+		verify(emailBusiness, times(2)).sendHtmlMessage(any(), any(), any(), any());
 		verify(alarmBusiness, never()).markEmailSent(any());
 	}
 
 	@Test
 	void un_error_inesperado_del_servidor_de_correo_tampoco_se_propaga() throws Exception {
-		doThrow(new IllegalStateException("caido")).when(emailBusiness).sendSimpleMessage(any(), any(), any());
+		doThrow(new IllegalStateException("caido")).when(emailBusiness).sendHtmlMessage(any(), any(), any(), any());
 
 		assertDoesNotThrow(() -> listener.onTemperatureAlarm(event("a@x.com")));
 
@@ -87,7 +88,7 @@ class TemperatureAlarmEventListenerTest {
 
 		assertDoesNotThrow(() -> listener.onTemperatureAlarm(event("a@x.com")));
 
-		verify(emailBusiness).sendSimpleMessage("a@x.com", SUBJECT, TEXT);
+		verify(emailBusiness).sendHtmlMessage("a@x.com", SUBJECT, TEXT, HTML);
 	}
 
 	@Test

@@ -1,9 +1,7 @@
 package ar.edu.iua.iw3.business;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +21,7 @@ import ar.edu.iua.iw3.model.AlarmStatus;
 import ar.edu.iua.iw3.model.Order;
 import ar.edu.iua.iw3.model.TemperatureAlarm;
 import ar.edu.iua.iw3.model.persistence.TemperatureAlarmRepository;
+import ar.edu.iua.iw3.util.TemperatureAlarmEmail;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -34,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 public class AlarmBusiness implements IAlarmBusiness {
 
 	static final int MAX_OBSERVATION = 500;
-	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
 	@Autowired
 	private TemperatureAlarmRepository alarmDAO;
@@ -68,8 +66,9 @@ public class AlarmBusiness implements IAlarmBusiness {
 				log.warn("La alarma {} no se avisa por correo: no hay destinatarios configurados", alarm.getId());
 			} else {
 				// El listener atiende el evento DESPUES del commit y en otro hilo: la lectura no espera al correo
-				publisher.publishEvent(new TemperatureAlarmEvent(this, alarm.getId(), recipients, subject(alarm),
-						text(order, alarm)));
+				TemperatureAlarmEmail email = TemperatureAlarmEmail.from(order, alarm);
+				publisher.publishEvent(new TemperatureAlarmEvent(this, alarm.getId(), recipients, email.subject(),
+						email.text(), email.html()));
 			}
 			return Optional.of(alarm);
 		} catch (BusinessException e) {
@@ -78,24 +77,6 @@ public class AlarmBusiness implements IAlarmBusiness {
 			log.error(e.getMessage(), e);
 			throw BusinessException.builder().ex(e).build();
 		}
-	}
-
-	private static String subject(TemperatureAlarm alarm) {
-		return "[IW3] Alarma de temperatura: orden " + alarm.getOrderNumber();
-	}
-
-	private static String text(Order order, TemperatureAlarm alarm) {
-		Locale ar = Locale.forLanguageTag("es-AR");
-		return "Se registró una temperatura por encima del umbral configurado.\n\n" //
-				+ "Orden: " + alarm.getOrderNumber() + "\n" //
-				+ "Camión: " + order.getTruck().getPlate() + "\n" //
-				+ "Cliente: " + order.getCustomer().getCompanyName() + "\n" //
-				+ "Producto: " + order.getProduct().getName() + "\n" //
-				+ String.format(ar, "Temperatura registrada: %.1f °C%n", alarm.getTemperature()) //
-				+ String.format(ar, "Umbral configurado: %.1f °C%n", alarm.getThreshold()) //
-				+ "Fecha y hora: " + alarm.getTriggeredAt().format(WHEN) + "\n\n" //
-				+ "Este aviso se envía una sola vez: no se enviarán más alarmas de esta orden hasta que un usuario "
-				+ "autorizado acepte esta alarma en el sistema.\n";
 	}
 
 	@Override
